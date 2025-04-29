@@ -1,0 +1,17 @@
+- name: Install Zsh
+  ansible.builtin.apt:
+    name: zsh
+    state: present
+    update_cache: true
+
+- name: Scarica lo script di installazione di Oh My Zsh
+  ansible.builtin.get_url:
+  url: https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh
+  dest: /tmp/install.sh
+  mode: '0755'
+
+- name: Esegui lo script di installazione di Oh My Zsh
+  ansible.builtin.shell: /tmp/install.sh
+  args:
+    executable: /bin/bash
+

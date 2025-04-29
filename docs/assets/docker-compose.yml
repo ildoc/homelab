@@ -1,0 +1,185 @@
+version: "3.4"
+services:
+
+    # ----------------------------------------
+    # Sonarr
+    # Tv Shows management
+    #
+    # https://hub.docker.com/r/linuxserver/sonarr
+    # ----------------------------------------
+    sonarr:
+        image: linuxserver/sonarr:preview
+        container_name: sonarr
+        environment:
+            - PUID=${PUID}
+            - PGID=${PGID}
+            - TZ=${TZ}
+        volumes:
+            - ./sonarr:/config
+            - /media/serie-tv:/tv
+            - /media/downloads:/media/downloads
+            - /etc/localtime:/etc/localtime:ro
+        network_mode: "host"
+        ports:
+            - 8989:8989
+        restart: unless-stopped
+
+
+    # ----------------------------------------
+    # Radarr
+    # Film management   
+    # 
+    # https://hub.docker.com/r/linuxserver/radarr
+    # ---------------------------------------- 
+    radarr:
+        image: linuxserver/radarr
+        container_name: radarr
+        environment:
+            - PUID=${PUID}
+            - PGID=${PGID}
+            - TZ=${TZ}
+        volumes:
+            - ./radarr:/config
+            - /media/film:/movies
+            - /media/downloads:/media/downloads
+            - /etc/localtime:/etc/localtime:ro
+        ports:
+            - 7878:7878
+        network_mode: "host"
+        restart: unless-stopped
+
+
+    # ----------------------------------------
+    # Jackett
+    # Indexers management, RSS/TORZNAB Feed Creator
+    #
+    # https://hub.docker.com/r/linuxserver/jackett
+    # ----------------------------------------
+    jackett:
+        image: linuxserver/jackett
+        container_name: jackett
+        environment:
+            - PUID=${PUID}
+            - PGID=${PGID}
+            - TZ=${TZ}
+        volumes:
+            - ./jackett:/config
+            - /media/downloads:/media/downloads
+            - /etc/localtime:/etc/localtime:ro
+        ports:
+            - 25633:25633
+        restart: unless-stopped
+
+
+    # ----------------------------------------
+    # Bazarr
+    # Subtitles management
+    #
+    # https://hub.docker.com/r/linuxserver/bazarr    
+    # ----------------------------------------
+    bazarr:
+        image: linuxserver/bazarr
+        container_name: bazarr
+        environment:
+            - PUID=${PUID}
+            - PGID=${PGID}
+            - TZ=${TZ}
+        volumes:
+            - ./bazarr:/config
+            - /media/film:/movies
+            - /media/serie-tv:/tv
+        ports:
+            - 6767:6767
+        restart: unless-stopped
+
+
+    # ----------------------------------------
+    # Portainer
+    # Containers management
+    #
+    # https://hub.docker.com/r/portainer/portainer
+    # ----------------------------------------
+    portainer:
+        image: portainer/portainer:latest
+        container_name: portainer
+        restart: unless-stopped
+        ports:
+            - 9000:9000
+        environment:
+            - TZ=${TZ}
+            - PUID=${PUID}
+            - PGID=${PGID}
+        volumes:
+            - ./portainer:/data
+            - /var/run/docker.sock:/var/run/docker.sock
+            - /etc/localtime:/etc/localtime:ro
+
+
+    # ----------------------------------------
+    # Netdata
+    # System Resource Monitoring Service
+    #
+    # https://hub.docker.com/r/netdata/netdata
+    # ----------------------------------------
+    netdata:
+        image: netdata/netdata
+        ports:
+            - 19999:19999
+        cap_add:
+            - SYS_PTRACE
+        security_opt:
+            - apparmor:unconfined
+        volumes:
+            - /proc:/host/proc:ro
+            - /sys:/host/sys:ro
+            - /var/run/docker.sock:/var/run/docker.sock:ro
+            - /etc/localtime:/etc/localtime:ro
+
+
+    # ----------------------------------------
+    # MuxiMux
+    # Web Frontend for HTPC Management
+    #
+    # https://hub.docker.com/r/linuxserver/muximux
+    # ----------------------------------------
+    muximux:
+        image: linuxserver/muximux
+        container_name: muximux
+        environment:
+            - TZ=${TZ}
+            - PUID=${PUID}
+            - PGID=${PGID}
+        volumes:
+            - ./muximux:/config
+            - /etc/localtime:/etc/localtime:ro
+        ports:
+            - 80:80
+        restart: unless-stopped
+
+
+    # ----------------------------------------
+    # WatchTower
+    # Automating Docker container base image updates.
+    #
+    # https://hub.docker.com/r/containrrr/watchtower
+    # ----------------------------------------
+    watchtower:
+        image: containrrr/watchtower
+        container_name: watchtower
+        restart: unless-stopped
+        environment:
+            - TZ=${TZ}
+            - PUID=${PUID}
+            - PGID=${PGID}
+            # - WATCHTOWER_NOTIFICATIONS=email
+            # - WATCHTOWER_NOTIFICATION_EMAIL_FROM=${SMTP_FROM}
+            # - WATCHTOWER_NOTIFICATION_EMAIL_TO=${WATCHTOWER_EMAIL}
+            # - WATCHTOWER_NOTIFICATION_EMAIL_SERVER=${SMTP_SERVER}
+            # - WATCHTOWER_NOTIFICATION_EMAIL_SERVER_PORT=${SMTP_PORT}
+            # - WATCHTOWER_NOTIFICATION_EMAIL_SERVER_USER=${SMTP_USER}
+            # - WATCHTOWER_NOTIFICATION_EMAIL_SERVER_PASSWORD=${SMTP_PASS}
+        volumes:
+            - /var/run/docker.sock:/var/run/docker.sock
+            - /etc/ssl/certs:/etc/ssl/certs
+            - /etc/localtime:/etc/localtime:ro
+        command: --schedule @midnight --cleanup

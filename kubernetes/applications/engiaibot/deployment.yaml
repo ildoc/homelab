@@ -1,0 +1,25 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: engiaibot
+  namespace: default
+spec:
+  selector:
+    matchLabels:
+      app: engiaibot
+  strategy:
+    type: RollingUpdate
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      labels:
+        app: engiaibot
+    spec:
+      containers:
+        - name: engiaibot
+          image: registry.gitlab.local.ildoc.it/ildoc/engiaibot:latest
+          resources:
+            limits:
+              cpu: 50m
+              memory: 500Mi

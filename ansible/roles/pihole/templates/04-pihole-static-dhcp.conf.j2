@@ -1,0 +1,5 @@
+# Managed by ansible {{ now(utc=true,fmt='%d/%m/%Y %H:%M:%S') }}
+
+{% for item in pihole.dhcp_reservations %}
+dhcp-host={{ item.mac }},{{ item.ip }},{{ item.hostname }}
+{% endfor %}

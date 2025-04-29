@@ -1,0 +1,19 @@
+.rules_update_invidious:
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "master"'
+      changes:
+        - ansible/roles/invidious/templates/docker-compose.yml.j2
+
+update_invidious:
+  stage: update_services
+  image: docker:latest
+  services:
+    - docker:dind
+  extends: .rules_update_invidious
+  variables:
+    DOCKER_DRIVER: overlay2
+    SERVER_IP: $INVIDIOUS_SSH_SERVER_IP
+  before_script:
+    - apk add --no-cache docker-cli
+  script:
+    - docker run --rm -e VAULT_ROLE_ID=$VAULT_ROLE_ID -e VAULT_SECRET_ID=$VAULT_SECRET_ID -v $(pwd):/app/playbooks registry.gitlab.local.ildoc.it/devops/ansible-vault:09e0f45efdcdb6abb72cc93790bf4018c4db07d8 invidious.yml

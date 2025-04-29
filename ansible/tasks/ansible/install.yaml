@@ -1,0 +1,21 @@
+- name: Installare pipx
+  ansible.builtin.apt:
+    name: pipx
+    state: present
+    update_cache: yes
+
+- name: Installare Ansible con pipx
+  community.general.pipx:
+    name: ansible
+    include_deps: true
+    state: present
+
+- name: Assicurare il percorso di pipx
+  community.general.pipx:
+    ensure_path: true
+
+- name: Iniettare netaddr in Ansible
+  community.general.pipx:
+    name: netaddr
+    state: present
+    inject: ansible

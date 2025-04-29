@@ -1,0 +1,20 @@
+- name: Imposta variabili globali
+  hosts: localhost
+  gather_facts: false
+  pre_tasks:
+    - name: Carica override variabili
+      ansible.builtin.include_vars:
+        file: vars/overrides_argocd_test.yml
+        name: overrides
+    - name: Applica override mantenendo altre variabili
+      ansible.builtin.set_fact:
+        argocd: "{{ argocd | combine(overrides.argocd, recursive=True) }}"
+      delegate_facts: true
+
+- name: Install ArgoCD
+  hosts: localhost
+  become: true
+  gather_facts: true
+  roles:
+    - external-secrets
+    - argocd

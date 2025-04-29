@@ -1,0 +1,32 @@
+---
+- name: Install packages
+  ansible.builtin.apt:
+    name:
+      - nfs-common
+      - open-iscsi
+      - curl
+    state: present
+    update_cache: true
+
+- name: Abilita il servizio iscsid all'avvio
+  ansible.builtin.systemd:
+    name: iscsid
+    enabled: true
+
+- name: Avvia il servizio iscsid
+  ansible.builtin.systemd:
+    name: iscsid
+    state: started
+
+- name: Ferma il servizio multipathd
+  ansible.builtin.systemd:
+    name: multipathd
+    state: stopped
+
+- name: Disabilita il servizio multipathd all'avvio
+  ansible.builtin.systemd:
+    name: multipathd
+    enabled: false
+
+- name: Carica il modulo iscsi_tcp
+  ansible.builtin.command: modprobe iscsi_tcp

@@ -1,0 +1,28 @@
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: root
+  namespace: argocd
+  # creationTimestamp: null
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    argocd.argoproj.io/sync-wave: "-100"
+spec:
+  project: default
+  source:
+    repoURL: https://gitlab.local.ildoc.it/ildoc/homelab.git
+    targetRevision: HEAD
+    path: kubernetes/groups
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    syncOptions:
+      - RespectIgnoreDifferences=true
+      - ApplyOutOfSyncOnly=true
+    #   - CreateNamespace=true  
+    automated: 
+      prune: true 
+      selfHeal: true

@@ -1,0 +1,119 @@
+- name: Check if swap is active
+  ansible.builtin.command: swapon --show
+  register: swap_status
+  ignore_errors: true
+
+- name: Turn off swap
+  ansible.builtin.command: swapoff -a
+  when: swap_status.rc == 0
+
+- name: Disable swap permanently
+  ansible.builtin.replace:
+    path: /etc/fstab
+    regexp: '^(.*\sswap\s.*)$'
+    replace: '#\1'
+    backup: true
+
+- name: Enable IP forwarding
+  sysctl:
+    name: net.ipv4.ip_forward
+    value: '1'
+    state: present
+
+- name: Install dependencies
+  ansible.builtin.apt:
+    name:
+      - apt-transport-https
+      - ca-certificates
+      - curl
+      - gpg
+      - nano
+      - net-tools
+      - iputils-ping
+      - nfs-common
+    state: present
+
+- name: Aggiungi alias e variabile d'ambiente
+  become: true
+  ansible.builtin.lineinfile:
+    path: "/home/{{ ansible_user }}/.bashrc"
+    line: 'alias k="kubectl"'
+    state: present
+
+- name: Esporta variabile d'ambiente
+  become: true
+  ansible.builtin.lineinfile:
+    path: "/home/{{ ansible_user }}/.bashrc"
+    line: 'export KUBE_EDITOR=nano'
+    state: present
+
+- name: Ensure Kubernetes keyrings directory exists
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Download Kubernetes repository key (raw format)
+  ansible.builtin.get_url:
+    url: "https://pkgs.k8s.io/core:/stable:/v{{ kubernetes.k8s_version }}/deb/Release.key"
+    dest: "/tmp/kubernetes-apt-keyring.raw"
+    mode: '0644'
+    owner: root
+    group: root
+  register: kubernetes_key
+
+- name: Convert Kubernetes key to GPG format
+  ansible.builtin.command:
+    cmd: "gpg --dearmor -o /tmp/kubernetes-apt-keyring.gpg /tmp/kubernetes-apt-keyring.raw"
+    creates: "/tmp/kubernetes-apt-keyring.gpg"
+  when: kubernetes_key.changed
+
+- name: Move converted key to /etc/apt/keyrings
+  ansible.builtin.copy:
+    src: "/tmp/kubernetes-apt-keyring.gpg"
+    dest: "/etc/apt/keyrings/kubernetes-apt-keyring.gpg"
+    remote_src: true
+    owner: root
+    group: root
+    mode: '0644'
+  when: kubernetes_key.changed
+
+- name: Remove temporary key files
+  ansible.builtin.file:
+    path: "/tmp/kubernetes-apt-keyring.{{ item }}"
+    state: absent
+  loop:
+    - raw
+    - gpg
+  when: kubernetes_key.changed
+
+- name: Add Kubernetes APT repository
+  ansible.builtin.copy:
+    dest: /etc/apt/sources.list.d/kubernetes.list
+    content: "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v{{ kubernetes.k8s_version }}/deb/ /"
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Update package list
+  ansible.builtin.apt:
+    update_cache: true
+
+- name: Install Kubernetes components
+  ansible.builtin.apt:
+    name:
+      - kubelet
+      - kubeadm
+      - kubectl
+    state: present
+
+- name: Hold Kubernetes packages
+  ansible.builtin.command: apt-mark hold kubelet kubeadm kubectl
+
+- name: Enable and start kubelet
+  ansible.builtin.systemd:
+    name: kubelet
+    enabled: true
+    state: started

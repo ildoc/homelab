@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: repo-credentials
+  namespace: {{ argocd.namespace }}
+  labels:
+    argocd.argoproj.io/secret-type: repository
+stringData:
+  url: {{ argocd.git_repo }}.git
+  username: {{ argocd.git_user }}
+  password: {{ argocd.git_password }}
+  type: git
+  project: default

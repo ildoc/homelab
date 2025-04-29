@@ -1,0 +1,20 @@
+{{- $issuerName := ternary "letsencrypt-staging" "letsencrypt-production" .Values.staging }}
+{{- $secretName := ternary "local-ildoc-it-staging-tls" "local-ildoc-it-tls" .Values.staging }}
+
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: local-ildoc-it
+  namespace: default
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  secretName: {{ $secretName }}
+  issuerRef:
+    name: {{ $issuerName }}
+    kind: ClusterIssuer
+  commonName: "*.local.ildoc.it"
+  dnsNames:
+  - "local.ildoc.it"
+  - "*.local.ildoc.it"

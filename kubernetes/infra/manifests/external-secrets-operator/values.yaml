@@ -1,0 +1,15 @@
+external-secrets:
+  installCRDs: true
+  replicaCount: 3
+
+  serviceAccount:
+    create: true
+    name: external-secrets
+
+apiServer: https://192.168.0.80:6443
+
+vault:
+  address: http://vault:8200
+  roleName: external-secrets
+  policyName: kubernetes-secrets
+

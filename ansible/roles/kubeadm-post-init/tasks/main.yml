@@ -1,0 +1,30 @@
+- name: Set kubeadm_init_primary_ip
+  ansible.builtin.set_fact:
+    kubeadm_init_primary_ip: "{{ ansible_default_ipv4.address }}"
+
+- name: Replace kubeconfig server IP with VIP
+  ansible.builtin.replace:
+    path: /etc/kubernetes/admin.conf
+    regexp: 'https://{{ ansible_default_ipv4.address }}:6443'
+    replace: 'https://{{ kubernetes.vip_address }}:6443'
+
+- name: Get join token
+  ansible.builtin.command: kubeadm token create --print-join-command
+  register: join_token
+  changed_when: false
+
+- name: Get cert key
+  ansible.builtin.command: kubeadm init phase upload-certs --upload-certs
+  register: cert_key
+  changed_when: false
+
+- name: Store join command with VIP
+  ansible.builtin.set_fact:
+    join_command: >-
+      {{ join_token.stdout |
+         regex_replace('https://\\d+\\.\\d+\\.\\d+\\.\\d+:6443',
+                       'https://' + kubernetes.vip_address + ':6443') }}
+      --control-plane
+      --certificate-key {{ cert_key.stdout_lines[-1] }}
+  delegate_to: localhost
+  delegate_facts: true

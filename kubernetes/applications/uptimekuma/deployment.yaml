@@ -1,0 +1,32 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: uptimekuma
+  namespace: apps
+spec:
+  selector:
+    matchLabels:
+      app: uptimekuma
+  strategy:
+    type: Recreate
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      labels:
+        app: uptimekuma
+    spec:
+      containers:
+        - name: uptimekuma
+          image: louislam/uptime-kuma:1.23.16
+          volumeMounts:
+            - name: config
+              mountPath: /app/data
+          resources:
+            limits:
+              cpu: 50m
+              memory: 500Mi
+      volumes:
+        - name: config
+          persistentVolumeClaim:
+            claimName: uptimekuma        

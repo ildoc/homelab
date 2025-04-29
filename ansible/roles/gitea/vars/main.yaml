@@ -1,0 +1,1 @@
+gitea_files_path: "{{ playbook_dir }}/roles/gitea/files/"

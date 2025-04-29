@@ -1,0 +1,37 @@
+- name: Setup Kubernetes HA cluster
+  hosts: k8s
+  become: true
+  roles:
+    - apt
+    - k8s-common
+    - containerd
+
+- name: Initialize Kubernetes master
+  hosts: "{{ groups['k8s'][0] }}"
+  become: true
+  gather_facts: true
+  roles:
+    - kubeadm-init
+    - kube-vip
+    - cni-cilium
+    - kubeadm-post-init
+
+# - name: Upgrade Cilium if needed
+#   hosts: k8s-master1
+#   become: yes
+#   roles:
+#     - cni-cilium-upgrade
+
+- name: Join other control plane nodes
+  hosts: "{{ groups['k8s'][1:] }}"
+  become: true
+  gather_facts: true
+  roles:
+    - kubeadm-join
+    - kube-vip
+
+- name: Setup Kubernetes HA cluster
+  hosts: k8s
+  become: true
+  roles:
+    - k8s-postinstall

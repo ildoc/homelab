@@ -1,0 +1,6 @@
+# - name: Install Zsh
+#   ansible.builtin.include_tasks: "{{ tasks_dir }}/zsh/zsh.yaml"
+#   when: install_zsh
+
+- name: Install docker
+  ansible.builtin.include_tasks: "{{ tasks_dir }}/docker/install.yaml"

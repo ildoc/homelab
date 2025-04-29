@@ -1,0 +1,11 @@
+---
+- name: Check if sshpass is installed
+  ansible.builtin.command: sshpass -V
+  register: sshpass_check
+  ignore_errors: true
+
+- name: Install sshpass if not present (Debian/Ubuntu)
+  ansible.builtin.apt:
+    name: sshpass
+    state: present
+  when: sshpass_check.rc != 0

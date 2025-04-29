@@ -1,0 +1,39 @@
+# SSH port
+gitlab_rails['gitlab_shell_ssh_port'] = 22
+gitlab_rails['gitlab_ssh_host'] = "{{ gitlab.domain }}"
+
+# HTTPS
+external_url 'https://{{ gitlab.domain }}'
+
+registry_external_url 'https://registry.{{ gitlab.domain }}'
+
+# Disabilita nginx interno del registry se usi nginx esterno (es: con docker)
+registry['enable'] = true
+registry['registry_http_addr'] = "0.0.0.0:5000"
+
+# Usa il certificato Let's Encrypt già usato da nginx
+registry_nginx['enable'] = false
+
+nginx['worker_processes'] = 2
+nginx['listen_port'] = 80
+nginx['listen_https'] = false
+
+gitlab_rails['gitlab_default_projects_features_snippets'] = false
+gitlab_rails['gitlab_default_projects_features_wiki'] = false
+
+mattermost['enable'] = false
+prometheus_monitoring['enable'] = false 
+# grafana['enable'] = false 
+alertmanager['enable'] = false 
+postgres_exporter['enable'] = false 
+redis_exporter['enable'] = false 
+gitlab_exporter['enable'] = false 
+geo_secondary['enable'] = false 
+# sidekiq['cluster'] = false
+
+puma['worker_processes'] = 1
+
+postgresql['max_connections'] = 50
+
+redis['maxclients'] = 100
+

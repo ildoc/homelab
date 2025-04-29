@@ -1,0 +1,15 @@
+---
+- name: Configure nut
+  ansible.builtin.include_tasks: "{{ tasks_dir }}/nut/tasks/main.yml"
+
+# - name: Creare cartella backup
+#   ansible.builtin.file:
+#     path: /tmp/backup_tmp
+#     state: directory
+#     mode: '0755'
+
+# - name: Aggiorna vzdump
+#   ansible.builtin.lineinfile:
+#     path: /etc/vzdump.conf
+#     regexp: '^#tmpdir:'
+#     line: 'tmpdir: /tmp/backup_tmp'

@@ -1,0 +1,90 @@
+- name: Get latest Cilium CLI version
+  ansible.builtin.uri:
+    url: "https://raw.githubusercontent.com/cilium/cilium-cli/main/stable.txt"
+    return_content: true
+  register: read_latest_cilium_version
+
+- name: Clear Cilium CLI version
+  ansible.builtin.set_fact:
+    latest_cilium_version: "{{ read_latest_cilium_version.content | trim }}"
+
+- name: Determine architecture
+  ansible.builtin.set_fact:
+    cli_arch: "{{ 'arm64' if ansible_architecture == 'aarch64' else 'amd64' }}"
+
+- name: Check installed Cilium CLI version
+  ansible.builtin.command: cilium version --client
+  register: installed_cilium_version
+  ignore_errors: true
+  changed_when: false
+
+- name: Compare installed and latest Cilium CLI versions
+  ansible.builtin.set_fact:
+    cilium_upgrade_needed: >
+      {{ installed_cilium_version is failed or
+         installed_cilium_version.stdout is not defined or
+         installed_cilium_version.stdout.split()[1] != latest_cilium_version }}
+
+- name: Download Cilium CLI tarball
+  ansible.builtin.get_url:
+    url: "https://github.com/cilium/cilium-cli/releases/download/{{ latest_cilium_version }}/cilium-linux-{{ cli_arch }}.tar.gz"
+    dest: "/tmp/cilium-linux-{{ cli_arch }}.tar.gz"
+    mode: '0644'
+  when: cilium_upgrade_needed
+
+- name: Download Cilium CLI checksum
+  ansible.builtin.get_url:
+    url: "https://github.com/cilium/cilium-cli/releases/download/{{ latest_cilium_version }}/cilium-linux-{{ cli_arch }}.tar.gz.sha256sum"
+    dest: "/tmp/cilium-linux-{{ cli_arch }}.tar.gz.sha256sum"
+    mode: '0644'
+  when: cilium_upgrade_needed
+
+- name: Verify Cilium CLI checksum
+  ansible.builtin.command: sha256sum --check /tmp/cilium-linux-{{ cli_arch }}.tar.gz.sha256sum
+  args:
+    chdir: "/tmp"
+  when: cilium_upgrade_needed
+
+- name: Extract Cilium CLI binary
+  ansible.builtin.unarchive:
+    src: "/tmp/cilium-linux-{{ cli_arch }}.tar.gz"
+    dest: "/usr/local/bin"
+    remote_src: true
+    mode: '0755'
+  become: true
+  when: cilium_upgrade_needed
+
+- name: Cleanup downloaded files
+  ansible.builtin.file:
+    path: "/tmp/cilium-linux-{{ cli_arch }}.tar.gz{{ item }}"
+    state: absent
+  loop:
+    - ""
+    - ".sha256sum"
+  when: cilium_upgrade_needed
+
+- name: Verifica se Cilium è già installato
+  ansible.builtin.shell: cilium status
+  environment:
+    KUBECONFIG: "/etc/kubernetes/admin.conf"
+  register: cilium_installed
+  ignore_errors: true
+  changed_when: false
+
+- name: Install Cilium in Kubernetes
+  ansible.builtin.command: cilium install --version={{ kubernetes.cilium_tag_version }}
+  environment:
+    KUBECONFIG: "/etc/kubernetes/admin.conf"
+  register: cilium_status
+  changed_when: "'✨ Cilium was successfully installed' in cilium_status.stdout"
+  when: cilium_installed.rc != 0
+
+- name: Show Cilium installation result
+  ansible.builtin.debug:
+    msg: "{{ cilium_status.stdout }}"
+  when: cilium_installed.rc != 0
+
+- name: Show Cilium già installato
+  ansible.builtin.debug:
+    msg: "Cilium è già installato"
+  when: cilium_installed.rc == 0

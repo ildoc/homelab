@@ -1,0 +1,1 @@
+ansible-playbook -i inventory/hosts.ini main.yml --ask-pass --ask-become-pass 

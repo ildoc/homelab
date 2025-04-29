@@ -1,0 +1,5 @@
+# Managed by ansible {{ now(utc=true,fmt='%d/%m/%Y %H:%M:%S') }}
+
+{% for item in pihole.dns_records %}
+{{ item.ip }} {{ item.domain }}
+{% endfor %}

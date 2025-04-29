@@ -1,0 +1,26 @@
+{{- $issuerName := ternary "letsencrypt-staging" "letsencrypt-production" .Values.staging }}
+{{- $acmeServer := ternary "https://acme-staging-v02.api.letsencrypt.org/directory" "https://acme-v02.api.letsencrypt.org/directory" .Values.staging }}
+
+---
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: {{ $issuerName }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  acme:
+    server: {{ $acmeServer }}
+    email: {{ .Values.cloudflare_email }}
+    privateKeySecretRef:
+      name: {{ $issuerName }}
+    solvers:
+      - dns01:
+          cloudflare:
+            email: {{ .Values.cloudflare_email }}
+            apiTokenSecretRef:
+              name: cloudflare-secrets
+              key: cloudflare-token
+        selector:
+          dnsZones:
+            - "ildoc.it"

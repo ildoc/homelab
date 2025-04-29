@@ -1,0 +1,46 @@
+---
+- name: Install packages
+  ansible.builtin.apt:
+    name:
+      - nut-client
+    state: present
+    update_cache: true
+
+- name: Check if the backup file exists
+  ansible.builtin.stat:
+    path: /etc/nut/upsmon.conf.bak
+  register: backup_file
+
+- name: Backup upsmon.conf if the backup does not exist
+  ansible.builtin.copy:
+    src: /etc/nut/upsmon.conf
+    dest: /etc/nut/upsmon.conf.bak
+    remote_src: true
+    mode: "0640"
+  when: not backup_file.stat.exists
+
+# - name: Remove original file
+#   ansible.builtin.file: 
+#     path: /etc/nut/upsmon.conf 
+#     state: absent
+
+- name: Create config from template
+  ansible.builtin.template:
+    src: upsmon.conf.j2
+    dest: /etc/nut/upsmon.conf
+    owner: root
+    group: root
+    mode: "0640"
+  register: upsmon_template
+
+- name: Replace a line in a file
+  ansible.builtin.lineinfile:
+    path: /etc/nut/nut.conf
+    regexp: '^MODE=none'
+    line: 'MODE=netclient'
+
+- name: Restart nut-client service
+  ansible.builtin.systemd:
+    name: nut-client
+    state: restarted
+  when: upsmon_template.changed

@@ -1,0 +1,81 @@
+- name: Creare cartella data
+  ansible.builtin.file:
+    path: ~/gitlab/data
+    state: directory
+    mode: '0755'
+    recurse: true
+
+- name: Creare cartella config
+  ansible.builtin.file:
+    path: ~/gitlab/config
+    state: directory
+    mode: '0755'
+    recurse: true
+
+- name: Creare cartella logs
+  ansible.builtin.file:
+    path: ~/gitlab/logs
+    state: directory
+    mode: '0755'
+    recurse: true
+
+- name: Creare cartella runnerconfig
+  ansible.builtin.file:
+    path: ~/runner
+    state: directory
+    mode: '0755'
+
+- name: Copia entrypoint con permessi eseguibili
+  ansible.builtin.copy:
+    src: "{{ gitlab_files_path }}/entrypoint.sh"
+    dest: ~/gitlab/entrypoint.sh
+    mode: '0755'
+
+- name: Valorizza variabili
+  ansible.builtin.set_fact:
+    remote_path: ~/docker-compose.yml
+    local_path: "{{ gitlab_files_path }}/docker-compose.yml"
+    project_path: .
+
+- name: Includi update docker docker-compose
+  ansible.builtin.include_tasks: "{{ tasks_dir }}/docker/update-compose.yaml"
+  vars:
+    update_compose_remote_path: "{{ remote_path }}"
+    update_compose_local_path: "{{ local_path }}"
+    update_compose_project_path: "{{ project_path }}"
+
+- name: Leggi il gitlab.rb remoto
+  ansible.builtin.stat:
+    path: ~/gitlab/config/gitlab.rb
+  register: remote_gitlab_rb
+
+- name: Leggi il contenuto del file remoto
+  ansible.builtin.slurp:
+    src: ~/gitlab/config/gitlab.rb
+  register: remote_gitlab_rb_content
+  when: remote_gitlab_rb.stat.exists
+
+- name: Rendi template come stringa
+  ansible.builtin.set_fact:
+    gitlab_rb_template_rendered: "{{ lookup('template', gitlab_templates_path + 'gitlab.rb.j2') }}"
+
+- name: Confronta contenuti testuali
+  ansible.builtin.set_fact:
+    gitlab_rb_different: >
+      {{ (remote_gitlab_rb_content.content | b64decode).strip() != gitlab_rb_template_rendered.strip() }}
+
+- name: Sono diversi?
+  ansible.builtin.debug:
+    msg: "{{ gitlab_rb_different }}"
+
+- name: Esegui azioni Docker se il file è stato copiato o è diverso
+  when: gitlab_rb_different
+  block:
+    - name: Copia gitlab.rb
+      ansible.builtin.template:
+        src: gitlab.rb.j2
+        dest: ~/gitlab/config/gitlab.rb
+        mode: '0644'
+
+    - name: Esegui il reconfigure di GitLab
+      ansible.builtin.command: docker exec -t gitlab gitlab-ctl reconfigure

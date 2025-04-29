@@ -1,0 +1,26 @@
+---
+- name: Create DNS records file from template
+  ansible.builtin.template:
+    src: custom.list.j2
+    dest: /etc/pihole/custom.list
+    owner: root
+    group: root
+    mode: '0644'
+  register: dns_records_result
+
+- name: Restart pihole dns
+  ansible.builtin.shell: pihole restartdns
+  when: dns_records_result.changed
+
+- name: Create DHCP leases file from template
+  ansible.builtin.template:
+    src: 04-pihole-static-dhcp.conf.j2
+    dest: /etc/dnsmasq.d/04-pihole-static-dhcp.conf
+    owner: root
+    group: root
+    mode: '0644'
+  register: dhcp_conf_result
+
+- name: Update DHCP leases if necessary
+  ansible.builtin.include_tasks: update_dhcp_leases.yml
+  when: dhcp_conf_result.changed

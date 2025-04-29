@@ -1,0 +1,10 @@
+- name: Install docker
+  ansible.builtin.include_tasks: "{{ tasks_dir }}/docker/install.yaml"
+- name: Setup GitLab
+  ansible.builtin.include_tasks: setup_gitlab.yaml
+
+- name: Certbot setup
+  ansible.builtin.include_tasks: certbot.yaml
+
+- name: Nginx setup
+  ansible.builtin.include_tasks: nginx.yaml

@@ -1,0 +1,15 @@
+- name: Install docker
+  ansible.builtin.include_tasks: "{{ tasks_dir }}/docker/install.yaml"
+
+- name: Valorizza variabili
+  ansible.builtin.set_fact:
+    remote_path: ~/docker-compose.yml
+    local_path: "{{ wireguard_templates_path }}/docker-compose.yml.j2"
+    project_path: .
+
+- name: Includi update docker docker-compose
+  ansible.builtin.include_tasks: "{{ tasks_dir }}/docker/update-compose-template.yaml"
+  vars:
+    update_compose_remote_path: "{{ remote_path }}"
+    template_file_name: "{{ local_path }}"
+    update_compose_project_path: "{{ project_path }}"

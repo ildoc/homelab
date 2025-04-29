@@ -1,0 +1,13 @@
+- name: Create temp secret
+  kubernetes.core.k8s:
+    state: present
+    namespace: default
+    definition:
+      apiVersion: v1
+      kind: Secret
+      metadata:
+        name: tmp-vault-secret
+      type: Opaque
+      data:
+        token: "{{ external_secrets.vault_token | b64encode }}"
+        address: "{{ external_secrets.vault_address | b64encode }}"

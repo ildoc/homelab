@@ -1,0 +1,48 @@
+---
+- name: Check if docker is installed
+  ansible.builtin.command: docker --version
+  register: docker_version
+  ignore_errors: true
+
+- name: Installa docker se non presente
+  when: docker_version.rc != 0
+  block:
+    - name: Install prerequisites
+      ansible.builtin.apt:
+        name:
+          - ca-certificates
+          - curl
+          - gpg
+        update_cache: true
+
+    - name: Add Docker GPG key
+      ansible.builtin.apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+
+    - name: Get ubuntu version
+      ansible.builtin.command: lsb_release -cs
+      register: ubuntu_version
+
+    - name: Add Docker repository
+      ansible.builtin.apt_repository:
+        repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ubuntu_version.stdout }} stable"
+        state: present
+
+    - name: update apt cache
+      ansible.builtin.apt:
+        update_cache: true
+
+    - name: install Docker
+      ansible.builtin.apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-compose-plugin
+          - docker-buildx-plugin
+        update_cache: true
+
+# # add the current user to the docker group
+# - name: add user permissions
+#   shell: "usermod -aG docker {{ ansible_env.SUDO_USER }}"

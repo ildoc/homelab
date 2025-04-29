@@ -1,0 +1,48 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mealie
+  namespace: apps
+spec:
+  selector:
+    matchLabels:
+      app: mealie
+  strategy:
+    type: Recreate
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      labels:
+        app: mealie
+    spec:
+      containers:
+        - name: mealie
+          image: ghcr.io/mealie-recipes/mealie:v2.8.0
+          env:
+            - name: PUID
+              value: "1000"
+            - name: PGID
+              value: "1000"
+            - name: TZ
+              value: "Europe/Rome"
+            - name: ALLOW_SIGNUP
+              value: "false"
+            - name: MAX_WORKERS
+              value: "1"
+            - name: WEB_CONCURRENCY
+              value: "1"
+            - name: BASE_URL
+              value: https://mealie.local.ildoc.it
+          volumeMounts:
+            - name: data
+              mountPath: /app/data
+          resources:
+            limits:
+              cpu: 50m
+              memory: 500Mi
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: mealie
+        

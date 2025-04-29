@@ -1,0 +1,51 @@
+- name: Create namespace
+  kubernetes.core.k8s:
+    name: "{{ argocd.namespace }}"
+    api_version: v1
+    kind: Namespace
+    state: present
+    kubeconfig: ~/.kube/config
+
+- name: Check if ArgoCD server deployment exists
+  kubernetes.core.k8s_info:
+    api_version: apps/v1
+    kind: Deployment
+    name: argocd-server
+    namespace: "{{ argocd.namespace }}"
+    kubeconfig: ~/.kube/config
+  register: argocd_deploy_info
+  failed_when: false
+  changed_when: false
+
+- name: Install ArgoCD if not already present
+  kubernetes.core.k8s:
+    state: present
+    src: "https://raw.githubusercontent.com/argoproj/argo-cd/refs/heads/master/manifests/ha/install.yaml"
+    namespace: "{{ argocd.namespace }}"
+    kubeconfig: ~/.kube/config
+  when: argocd_deploy_info.resources | length == 0
+
+- name: Create ArgoCD repository secret
+  ansible.builtin.template:
+    src: repository.yaml.j2
+    dest: /tmp/argocd-repo.yaml
+    mode: '0644'
+
+- name: Apply ArgoCD repository configuration
+  kubernetes.core.k8s:
+    state: present
+    src: /tmp/argocd-repo.yaml
+    namespace: "{{ argocd.namespace }}"
+    kubeconfig: ~/.kube/config
+
+- name: Cleanup
+  ansible.builtin.file:
+    path: /tmp/argocd-repo.yaml
+    state: absent
+
+- name: Boostrap root app
+  kubernetes.core.k8s:
+    state: present
+    src: "{{ argocd.git_repo }}/-/raw/master/kubernetes/root-applications.yaml"
+    namespace: "{{ argocd.namespace }}"
+    kubeconfig: ~/.kube/config

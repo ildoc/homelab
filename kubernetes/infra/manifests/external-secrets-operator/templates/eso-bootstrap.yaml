@@ -1,0 +1,115 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: vault-bootstrap-job
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: HookSucceeded
+spec:
+  ttlSecondsAfterFinished: 600
+  template:
+    spec:
+      serviceAccountName: {{ index .Values "external-secrets" "serviceAccount" "name" }}
+      automountServiceAccountToken: true
+      containers:
+        - name: vault-config
+          image: alpine/k8s:1.31.7
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -euo pipefail
+
+              exec > /dev/stdout
+              exec 2> /dev/stderr
+
+              echo "[INFO] Starting Vault bootstrap job..."
+
+              VAULT_SA_NAME='{{ index .Values "external-secrets" "serviceAccount" "name" }}'
+              VAULT_SA_NAMESPACE="{{ .Release.Namespace }}"
+              VAULT_ROLE_NAME="{{ .Values.vault.roleName }}"
+              VAULT_POLICY_NAME="{{ .Values.vault.policyName }}"
+              VAULT_SECRET_NAME="tmp-vault-secret"
+              VAULT_SECRET_NAMESPACE="default"
+              KUBE_API="{{ .Values.apiServer }}"
+
+              echo "[INFO] Building in-cluster kubeconfig..."
+              cat <<EOF > /tmp/kubeconfig
+              apiVersion: v1
+              kind: Config
+              clusters:
+              - cluster:
+                  certificate-authority: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+                  server: https://kubernetes.default.svc
+                name: in-cluster
+              contexts:
+              - context:
+                  cluster: in-cluster
+                  user: default
+                name: in-cluster-context
+              current-context: in-cluster-context
+              users:
+              - name: default
+                user:
+                  token: $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
+              EOF
+
+              export KUBECONFIG=/tmp/kubeconfig
+
+              echo "[INFO] Checking if temporary Vault secret exists..."
+              if ! kubectl get secret $VAULT_SECRET_NAME -n $VAULT_SECRET_NAMESPACE > /dev/null 2>&1; then
+                echo "[INFO] Secret $VAULT_SECRET_NAME not found. Skipping Vault bootstrap."
+                exit 0
+              fi
+
+              echo "[INFO] Getting Kubernetes API info..."
+              TOKEN_REVIEWER_JWT=$(kubectl create token $VAULT_SA_NAME -n $VAULT_SA_NAMESPACE)
+              KUBE_CA_CERT=$(awk '{printf "%s\\n", $0}' /var/run/secrets/kubernetes.io/serviceaccount/ca.crt)
+
+              echo "[INFO] Reading Vault credentials..."
+              VAULT_TOKEN=$(kubectl get secret $VAULT_SECRET_NAME -n $VAULT_SECRET_NAMESPACE -o jsonpath='{.data.token}' | base64 -d)
+              VAULT_ADDRESS=$(kubectl get secret $VAULT_SECRET_NAME -n $VAULT_SECRET_NAMESPACE -o jsonpath='{.data.address}' | base64 -d)
+
+              echo "[INFO] Enabling Vault Kubernetes auth method (if not present)..."
+              curl -sk -H "X-Vault-Token: $VAULT_TOKEN" $VAULT_ADDRESS/v1/sys/auth | grep -q 'kubernetes/' || \
+                curl -sk -H "X-Vault-Token: $VAULT_TOKEN" -X POST $VAULT_ADDRESS/v1/sys/auth/kubernetes -d '{"type": "kubernetes"}'
+
+              
+              curl -sk -H "X-Vault-Token: $VAULT_TOKEN" -X POST $VAULT_ADDRESS/v1/auth/kubernetes/config \
+                -d @<(cat <<EOF
+              {
+                "token_reviewer_jwt": "$TOKEN_REVIEWER_JWT",
+                "kubernetes_host": "$KUBE_API",
+                "kubernetes_ca_cert": "$KUBE_CA_CERT"
+              }
+              EOF
+              )
+
+              echo "[INFO] Writing or updating Vault policy..."
+              curl -sk -H "X-Vault-Token: $VAULT_TOKEN" -X PUT $VAULT_ADDRESS/v1/sys/policies/acl/$VAULT_POLICY_NAME \
+                -d @<(cat <<EOF
+              {
+                "policy": "path \\"kubernetes/data/*\\" { capabilities = [\\"read\\"] }\npath \\"kubernetes/metadata/*\\" { capabilities = [\\"list\\"] }"
+              }
+              EOF
+              )
+
+              echo "[INFO] Writing or updating Vault role..."
+              curl -sk -H "X-Vault-Token: $VAULT_TOKEN" -X POST $VAULT_ADDRESS/v1/auth/kubernetes/role/$VAULT_ROLE_NAME \
+                -d @<(cat <<EOF
+              {
+                "bound_service_account_names": "$VAULT_SA_NAME",
+                "bound_service_account_namespaces": "$VAULT_SA_NAMESPACE",
+                "policies": "$VAULT_POLICY_NAME",
+                "ttl": "1h"
+              }
+              EOF
+              )
+
+              echo "[INFO] Cleanup temporary Vault secret if exists..."
+              kubectl delete secret $VAULT_SECRET_NAME -n $VAULT_SECRET_NAMESPACE --ignore-not-found
+
+              echo "[INFO] Vault bootstrap completed successfully."
+      restartPolicy: Never
+  backoffLimit: 3

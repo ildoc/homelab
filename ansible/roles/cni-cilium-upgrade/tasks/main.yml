@@ -1,0 +1,41 @@
+- name: Check current Cilium version
+  ansible.builtin.shell: kubectl -n kube-system get ds cilium -o jsonpath='{.spec.template.spec.containers[0].image}'
+  environment:
+    KUBECONFIG: "/etc/kubernetes/admin.conf"
+  register: current_cilium_image
+  ignore_errors: true
+  changed_when: false
+
+- name: Extract current Cilium version
+  ansible.builtin.set_fact:
+    current_cilium_version: "{{ current_cilium_image.stdout | regex_search('cilium/cilium:v(\\d+\\.\\d+\\.\\d+)', '\\1') | first | default('none') }}"
+
+- name: Show detected Cilium version
+  ansible.builtin.debug:
+    msg: "Current Cilium version: {{ current_cilium_version }}"
+
+- name: Check if upgrade is needed
+  ansible.builtin.set_fact:
+    upgrade_needed: "{{ current_cilium_version != kubernetes.cilium_tag_version }}"
+
+- name: Show upgrade status
+  ansible.builtin.debug:
+    msg: "Upgrade needed: {{ upgrade_needed }}"
+
+- name: Apply Cilium upgrade
+  ansible.builtin.command: kubectl apply -f https://raw.githubusercontent.com/cilium/cilium/{{ kubernetes.cilium_tag_version }}/install/kubernetes/quick-install.yaml
+  environment:
+    KUBECONFIG: "/etc/kubernetes/admin.conf"
+  when: upgrade_needed
+
+- name: Wait for Cilium pods to be ready after upgrade
+  ansible.builtin.shell: |
+    kubectl wait --namespace kube-system --for=condition=ready pod -l k8s-app=cilium --timeout=300s
+  environment:
+    KUBECONFIG: "/etc/kubernetes/admin.conf"
+  when: upgrade_needed
+
+- name: Show upgrade completion message
+  ansible.builtin.debug:
+    msg: "Cilium has been upgraded to version {{ kubernetes.cilium_tag_version }}"
+  when: upgrade_needed

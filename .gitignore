@@ -1,0 +1,9 @@
+# packer
+**/downloaded_iso_path
+
+# terraform
+**/.terraform
+**/.terraform.lock.hcl
+
+# mkdocs
+.cache

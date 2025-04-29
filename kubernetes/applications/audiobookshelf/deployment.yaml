@@ -1,0 +1,61 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: audiobookshelf
+  namespace: apps
+spec:
+  selector:
+    matchLabels:
+      app: audiobookshelf
+  strategy:
+    type: Recreate
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      labels:
+        app: audiobookshelf
+    spec:
+      containers:
+        - name: audiobookshelf
+          image: ghcr.io/advplyr/audiobookshelf:2.21.0
+          env:
+            - name: PUID
+              value: "1000"
+            - name: PGID
+              value: "1000"
+            - name: TZ
+              value: "Europe/Rome"
+          volumeMounts:
+            - name: data
+              mountPath: /config
+              subPath: config
+            - name: data
+              mountPath: /metadata
+              subPath: metadata
+            - name: audiobooks
+              mountPath: /audiobooks
+            - name: podcasts
+              mountPath: /podcasts
+            - name: books
+              mountPath: /books
+          resources:
+            limits:
+              cpu: 50m
+              memory: 1Gi
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: audiobookshelf
+        - name: audiobooks
+          nfs:
+            server: 192.168.0.123
+            path: /mnt/mediadisk/audiobooks
+        - name: podcasts
+          nfs:
+            server: 192.168.0.123
+            path: /mnt/mediadisk/podcasts
+        - name: books
+          nfs:
+            server: 192.168.0.123
+            path: /mnt/mediadisk/books

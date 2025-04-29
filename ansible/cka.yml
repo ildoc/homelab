@@ -1,0 +1,7 @@
+- name: Setup and manage cka hosts
+  hosts: cka
+  become: true
+  gather_facts: true
+  roles:
+    # - role: apt
+    - role: cka

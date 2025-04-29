@@ -1,0 +1,12 @@
+- name: Creare cartella nginx
+  ansible.builtin.file:
+    path: ~/nginx
+    state: directory
+    mode: '0755'
+
+- name: Template Nginx config
+  ansible.builtin.template:
+    src: nginx.conf.j2
+    dest: "~/nginx/nginx.conf"
+    mode: '0644'
+  notify: Restart containers

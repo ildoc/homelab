@@ -1,0 +1,20 @@
+- name: Set kubeadm_init_primary_ip
+  ansible.builtin.set_fact:
+    kubeadm_init_primary_ip: "{{ ansible_default_ipv4.address }}"
+
+- name: Initialize Kubernetes
+  ansible.builtin.command: >
+    kubeadm init
+    --control-plane-endpoint "{{ kubeadm_init_primary_ip }}:6443"
+    --upload-certs
+    --apiserver-cert-extra-sans "{{ kubernetes.vip_address }}"
+  register: init_output
+  args:
+    creates: /etc/kubernetes/admin.conf
+
+- name: Save kubeadm init output
+  ansible.builtin.copy:
+    content: "{{ init_output.stdout }}"
+    dest: /tmp/kubeadm_init.log
+    mode: '775'
+  when: init_output.rc == 0

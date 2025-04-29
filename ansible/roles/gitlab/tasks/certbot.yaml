@@ -1,0 +1,50 @@
+- name: Creare cartella certbot
+  ansible.builtin.file:
+    path: ~/certbot
+    state: directory
+    mode: '0755'
+
+- name: Deploy cloudflare.ini
+  ansible.builtin.template:
+    src: cloudflare.ini.j2
+    dest: "~/certbot/cloudflare.ini"
+    mode: '0600'
+
+- name: Check if certificate already exists
+  ansible.builtin.stat:
+    path: "./certbot/conf/live/{{ gitlab.domain }}/fullchain.pem"
+  register: cert_status
+
+- name: Run certbot only if cert does not exist
+  ansible.builtin.command: >-
+    docker run --rm \
+      -v ./certbot/conf:/etc/letsencrypt \
+      -v ./certbot/www:/var/www/certbot \
+      -v ./certbot/cloudflare.ini:/cloudflare.ini \
+      certbot/dns-cloudflare:latest \
+      certonly \
+      --non-interactive \
+      --agree-tos \
+      --dns-cloudflare \
+      --dns-cloudflare-credentials /cloudflare.ini \
+      --dns-cloudflare-propagation-seconds 30 \
+      --preferred-challenges dns-01 \
+      -d {{ gitlab.domain }} \
+      -d registry.{{ gitlab.domain }} \
+      --email {{ gitlab.letsencrypt_email }} \
+      --server https://acme-v02.api.letsencrypt.org/directory
+  when: not cert_status.stat.exists
+
+- name: Copy renew script
+  ansible.builtin.template:
+    src: renew-cert.sh.j2
+    dest: "~/gitlab/renew-cert.sh"
+    mode: '0755'
+
+- name: Schedula lo script di rinnovo del certificato
+  ansible.builtin.cron:
+    name: "Rinnovo certificato {{ gitlab.domain }}"
+    minute: "0"
+    hour: "*/12"
+    job: "/home/{{ ansible_user }}/gitlab/renew-cert.sh"
+    state: present

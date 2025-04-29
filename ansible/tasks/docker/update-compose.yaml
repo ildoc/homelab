@@ -1,0 +1,43 @@
+---
+- name: Leggi il docker-compose remoto
+  ansible.builtin.stat:
+    path: "{{ update_compose_remote_path }}"
+  register: remote_file
+
+- name: Leggi il file locale
+  ansible.builtin.stat:
+    path: "{{ update_compose_local_path }}"
+  register: local_file
+  delegate_to: localhost
+
+- name: Controlla i contenuti e imposta variabili
+  ansible.builtin.set_fact:
+    contents_different: "{{ not remote_file.stat.exists or (remote_file.stat.checksum != local_file.stat.checksum) }}"
+
+- name: Sono diversi?
+  ansible.builtin.debug:
+    msg: "{{ contents_different }}"
+
+- name: Esegui azioni Docker se il file è stato copiato o è diverso
+  when: contents_different
+  block:
+    - name: Esegui docker-compose down
+      community.docker.docker_compose_v2:
+        project_src: "{{ update_compose_project_path }}"
+        state: absent
+      when: remote_file.stat.exists
+
+    - name: Copia il file docker-compose.yml se non esiste o è diverso
+      ansible.builtin.copy:
+        src: "{{ update_compose_local_path }}"
+        dest: "{{ update_compose_remote_path }}"
+        mode: '0644'
+
+    - name: Esegui docker-compose pull
+      community.docker.docker_compose_v2_pull:
+        project_src: "{{ update_compose_project_path }}"
+
+    - name: Esegui docker-compose up
+      community.docker.docker_compose_v2:
+        project_src: "{{ update_compose_project_path }}"
+        state: present

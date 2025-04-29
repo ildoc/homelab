@@ -1,0 +1,9 @@
+#!/bin/bash
+cd /home/{ ansible_user }
+docker docker run --rm \
+    -v ./certbot/conf:/etc/letsencrypt \
+    -v ./certbot/www:/var/www/certbot \
+    -v ./certbot/cloudflare.ini:/cloudflare.ini \
+    certbot/dns-cloudflare:latest \
+    renew
+docker compose restart nginx

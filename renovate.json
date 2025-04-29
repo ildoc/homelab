@@ -1,0 +1,23 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended"
+  ],
+  "assignees": [
+    "ildoc"
+  ],
+  "ignorePaths": [
+    "**/kubernetes/applications/archived/**"
+  ],
+  "kubernetes": {
+    "fileMatch": [
+      "(^|/)kubernetes/.+\\.ya?ml$"
+    ]
+  },
+  "ansible": {
+    "fileMatch": [
+      "(^|/)ansible/.+\\.ya?ml$",
+      "(^|/)ansible/.+\\.ya?ml\\.j2$"
+    ]
+  }
+}

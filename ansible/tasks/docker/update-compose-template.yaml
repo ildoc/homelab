@@ -1,0 +1,48 @@
+---
+- name: Leggi il file remoto
+  ansible.builtin.stat:
+    path: "{{ update_compose_remote_path }}"
+  register: remote_file
+
+- name: Leggi il contenuto del file remoto
+  ansible.builtin.slurp:
+    src: "{{ update_compose_remote_path }}"
+  register: remote_file_content
+  when: remote_file.stat.exists
+
+- name: Rendi template come stringa
+  ansible.builtin.set_fact:
+    template_file_rendered: "{{ lookup('template', template_file_name) }}"
+
+- name: Confronta contenuti testuali
+  ansible.builtin.set_fact:
+    contents_different: >
+      {{ (remote_file_content.content | b64decode).strip() != template_file_rendered.strip() }}
+
+- name: Sono diversi?
+  ansible.builtin.debug:
+    msg: "{{ contents_different }}"
+
+- name: Esegui azioni Docker se il file è stato copiato o è diverso
+  when: contents_different
+  block:
+    - name: Esegui docker-compose down
+      community.docker.docker_compose_v2:
+        project_src: "{{ update_compose_project_path }}"
+        state: absent
+      when: remote_file.stat.exists
+
+    - name: Copia il file docker-compose.yml se non esiste o è diverso
+      ansible.builtin.template:
+        src: "{{ template_file_name }}"
+        dest: "{{ update_compose_remote_path }}"
+        mode: '0644'
+
+    - name: Esegui docker-compose pull
+      community.docker.docker_compose_v2_pull:
+        project_src: "{{ update_compose_project_path }}"
+
+    - name: Esegui docker-compose up
+      community.docker.docker_compose_v2:
+        project_src: "{{ update_compose_project_path }}"
+        state: present

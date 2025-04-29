@@ -1,0 +1,57 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bazarr
+  namespace: apps
+spec:
+  selector:
+    matchLabels:
+      app: bazarr
+  strategy:
+    type: Recreate
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      labels:
+        app: bazarr
+    spec:
+      containers:
+        - name: bazarr
+          image: ghcr.io/linuxserver/bazarr:1.5.1
+          env:
+            - name: PUID
+              value: "1000"
+            - name: PGID
+              value: "1000"
+            - name: TZ
+              value: "Europe/Rome"
+          volumeMounts:
+            - name: config
+              mountPath: /config
+            - name: film
+              mountPath: /movies
+            - name: serie-tv
+              mountPath: /tv
+            - name: downloads
+              mountPath: /downloads
+          resources:
+            limits:
+              cpu: 50m
+              memory: 1Gi
+      volumes:
+        - name: config
+          persistentVolumeClaim:
+            claimName: bazarr
+        - name: film
+          nfs:
+            server: 192.168.0.123
+            path: /mnt/mediadisk/film
+        - name: serie-tv
+          nfs:
+            server: 192.168.0.123
+            path: /mnt/mediadisk/serie-tv
+        - name: downloads
+          nfs:
+            server: 192.168.0.123
+            path: /mnt/mediadisk/downloads

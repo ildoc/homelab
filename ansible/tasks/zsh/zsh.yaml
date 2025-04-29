@@ -1,0 +1,16 @@
+- name: Install Zsh
+  ansible.builtin.apt:
+    name: zsh
+    state: present
+    update_cache: true
+
+- name: "Get zsh installed path."
+  shell: "command -v zsh"
+  register: zsh_installed_path
+  changed_when: "false"
+
+- name: "Set user shell to zsh."
+  user:
+    name: "{{ current_username }}"
+    shell: "{{ zsh_installed_path.stdout }}"
+

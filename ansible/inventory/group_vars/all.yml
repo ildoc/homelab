@@ -1,0 +1,118 @@
+current_username: filippo
+# ansible_python_interpreter: /usr/bin/python3
+
+install_zsh: true
+install_oh_my_zsh: true
+push_ssh_keys: true
+
+pihole:
+  dns_records:
+    - { ip: 192.168.0.111, domain: "invidious" }
+    - { ip: 192.168.0.123, domain: "truenas" }
+    - { ip: 192.168.0.124, domain: "web" }
+    - { ip: 192.168.0.133, domain: "homeassistant" }
+    - { ip: 192.168.0.145, domain: "pihole" }
+    - { ip: 192.168.0.167, domain: "pihole2" }
+    - { ip: 192.168.0.183, domain: "ubuntu" }
+      
+    - { ip: 192.168.0.50, domain: "vault" }
+      
+    - { ip: 192.168.0.80, domain: "argocd.local.ildoc.it" }
+    - { ip: 192.168.0.80, domain: "longhorn.local.ildoc.it" }
+    - { ip: 192.168.0.80, domain: "rancher.local.ildoc.it" }
+    - { ip: 192.168.0.80, domain: "traefik.local.ildoc.it" }
+    - { ip: 192.168.0.80, domain: "sonarr.local.ildoc.it" }
+    - { ip: 192.168.0.80, domain: "radarr.local.ildoc.it" }
+    - { ip: 192.168.0.80, domain: "bazarr.local.ildoc.it" }
+    - { ip: 192.168.0.80, domain: "prowlarr.local.ildoc.it" }
+    - { ip: 192.168.0.80, domain: "jackett.local.ildoc.it" }
+    - { ip: 192.168.0.80, domain: "flaresolverr.local.ildoc.it" }
+    - { ip: 192.168.0.80, domain: "pdf.local.ildoc.it" }
+    - { ip: 192.168.0.80, domain: "tools.local.ildoc.it" }
+    - { ip: 192.168.0.80, domain: "change.local.ildoc.it" }
+    - { ip: 192.168.0.80, domain: "truenas.local.ildoc.it" }
+    - { ip: 192.168.0.80, domain: "gitea.local.ildoc.it" }
+    - { ip: 192.168.0.80, domain: "mealie.local.ildoc.it" }
+    - { ip: 192.168.0.80, domain: "wg.local.ildoc.it" }
+    - { ip: 192.168.0.80, domain: "uptime.local.ildoc.it" }
+    - { ip: 192.168.0.80, domain: "homepage.local.ildoc.it" }
+    - { ip: 192.168.0.80, domain: "speedtest.local.ildoc.it" }
+    - { ip: 192.168.0.80, domain: "nut.local.ildoc.it" }
+    - { ip: 192.168.0.80, domain: "romm.local.ildoc.it" }
+    - { ip: 192.168.0.80, domain: "zipline.local.ildoc.it" }
+    - { ip: 192.168.0.80, domain: "invidious.local.ildoc.it" }
+    - { ip: 192.168.0.80, domain: "readarr.local.ildoc.it" }
+    - { ip: 192.168.0.80, domain: "bookbounty.local.ildoc.it" }
+    - { ip: 192.168.0.80, domain: "kestra.local.ildoc.it" }
+    - { ip: 192.168.0.80, domain: "paperless.local.ildoc.it" }
+    - { ip: 192.168.0.80, domain: "docs.local.ildoc.it" }
+    - { ip: 192.168.0.80, domain: "audiobookshelf.local.ildoc.it" }
+    - { ip: 192.168.0.25, domain: "gitlab.local.ildoc.it" }
+    - { ip: 192.168.0.25, domain: "registry.gitlab.local.ildoc.it" }
+      
+    - { ip: 192.168.0.100, domain: "argocd2.local.ildoc.it" }
+    - { ip: 192.168.0.100, domain: "traefik2.local.ildoc.it" }
+    - { ip: 192.168.0.100, domain: "rancher2.local.ildoc.it" }
+      
+  dhcp_reservations:
+    - { mac: 60:83:E7:AC:6C:68, ip: 192.168.0.175, hostname: archlinux }
+    - { mac: 02:F1:76:00:ED:DD, ip: 192.168.0.133, hostname: homeassistant }
+    - { mac: BC:24:11:F2:C2:A4, ip: 192.168.0.111, hostname: invidious }
+    - { mac: BC:24:11:D2:18:86, ip: 192.168.0.192, hostname: mediaserver }
+    - { mac: BC:24:11:5A:5D:EC, ip: 192.168.0.124, hostname: web }
+    - { mac: 2C:CF:67:43:0B:FB, ip: 192.168.0.167, hostname: pihole2 }
+    - { mac: BC:24:11:07:CC:1D, ip: 192.168.0.180, hostname: kube-01 }
+    - { mac: BC:24:11:13:0F:8C, ip: 192.168.0.181, hostname: kube-02 }
+    - { mac: BC:24:11:41:20:6E, ip: 192.168.0.182, hostname: kube-03 }
+    - { mac: BC:24:11:0A:07:CF, ip: 192.168.0.183, hostname: ubuntu }
+    - { mac: 04:7C:16:70:7D:02, ip: 192.168.0.123, hostname: truenas }
+    - { mac: BC:24:11:F9:36:E8, ip: 192.168.0.30, hostname: gitea }
+    - { mac: BC:24:11:DE:F6:0A, ip: 192.168.0.75, hostname: wireguard }
+    - { mac: BC:24:11:B9:E8:E5, ip: 192.168.0.50, hostname: vault }
+    - { mac: AA:BB:CC:DD:EE:01, ip: 192.168.0.60, hostname: kube01-test }
+    - { mac: AA:BB:CC:DD:EE:02, ip: 192.168.0.61, hostname: kube02-test }
+    - { mac: AA:BB:CC:DD:EE:03, ip: 192.168.0.62, hostname: kube03-test }
+    - { mac: AA:AA:AA:AA:AA:AA, ip: 192.168.0.25, hostname: gitlab }
+
+nut:
+  ups_name: ups
+  server_ip: 192.168.0.123
+  username: upsmon
+  password: fixmepass
+
+tasks_dir: ./tasks
+
+gitlab:
+  domain: gitlab.local.ildoc.it
+  letsencrypt_email: "{{ lookup('community.hashi_vault.hashi_vault', 'ansible/data/gitlab:letsencrypt_email') }}"
+  cloudflare_token: "{{ lookup('community.hashi_vault.hashi_vault', 'ansible/data/gitlab:cloudflare_token') }}"
+
+kubernetes:
+  k8s_version: "1.31"
+  vip_address: "192.168.0.80"
+  vip_interface: "ens18"
+  kube_vip_tag_version: "v0.8.9"
+  cilium_tag_version: "v1.17.2"
+
+argocd:
+  namespace: argocd
+  git_repo: https://gitlab.local.ildoc.it/ildoc/homelab
+  git_user: ildoc
+  git_password: "{{ lookup('community.hashi_vault.hashi_vault', 'ansible/data/argocd:git_password') }}"
+
+external_secrets:
+  vault_token: "{{ lookup('community.hashi_vault.hashi_vault', 'ansible/data/external-secrets:vault_token') }}"
+  vault_address: http://vault:8200
+
+invidious:
+  db_user: "{{ lookup('community.hashi_vault.hashi_vault', 'ansible/data/invidious:db_user') }}"
+  db_password: "{{ lookup('community.hashi_vault.hashi_vault', 'ansible/data/invidious:db_password') }}"
+  visitor_data: "{{ lookup('community.hashi_vault.hashi_vault', 'ansible/data/invidious:visitor_data') }}"
+  po_token: "{{ lookup('community.hashi_vault.hashi_vault', 'ansible/data/invidious:po_token') }}"
+  hmac_key: "{{ lookup('community.hashi_vault.hashi_vault', 'ansible/data/invidious:hmac_key') }}"
+
+wireguard:
+  password_hash: "{{ lookup('community.hashi_vault.hashi_vault', 'ansible/data/wireguard:password_hash') }}"
+  tcp_port: "{{ lookup('community.hashi_vault.hashi_vault', 'ansible/data/wireguard:tcp_port') }}"
+  udp_port: "{{ lookup('community.hashi_vault.hashi_vault', 'ansible/data/wireguard:udp_port') }}"
+  host: "{{ lookup('community.hashi_vault.hashi_vault', 'ansible/data/wireguard:host') }}"

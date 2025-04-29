@@ -1,0 +1,63 @@
+include:
+  - project: 'devops/cicd'
+    ref: main
+    file: '/scripts/set_ssh_key.yml'
+    
+  - local: '.gitlab/ci/invidious.yml'
+
+stages:
+  - sync
+  - update_services
+
+sync-to-clean:
+  stage: sync
+  image: alpine:latest
+  only:
+    - master
+  variables:
+    GIT_STRATEGY: clone
+  before_script:
+    # Installazione delle dipendenze necessarie
+    - apk add --no-cache git rsync
+  script:
+    # Step 1: Estrazione delle informazioni della commit corrente
+    - COMMIT_AUTHOR_NAME=$(git log -1 --pretty=format:"%an")
+    - COMMIT_AUTHOR_EMAIL=$(git log -1 --pretty=format:"%ae")
+    - COMMIT_MESSAGE=$(git log -1 --pretty=format:"%s")
+    
+    # Step 2: Clonare il repository homelab-clean utilizzando il token CI già disponibile
+    - git clone https://${GIT_USERNAME}:${SYNC_PAT_TOKEN}@${CI_SERVER_HOST}/${GIT_USERNAME}/homelab-clean.git /tmp/homelab-clean
+    
+    # Step 3: Eliminare tutto tranne la cartella .git dal repository clonato
+    - find /tmp/homelab-clean -mindepth 1 -path "/tmp/homelab-clean/.git" -prune -o -exec rm -rf {} \; 2>/dev/null || true
+    
+    # Step 4: Copiare il contenuto del repository attuale (tranne .git) nel repository clonato
+    - rsync -av --exclude='.git' $CI_PROJECT_DIR/ /tmp/homelab-clean/
+    
+    # Step 5: Eliminare le cartelle e i file specificati nel file .exclude_from_github
+    - cd /tmp/homelab-clean
+    
+    # Verificare se il file .exclude_from_github esiste
+    - if [ -f ".exclude_from_github" ]; then
+    -   echo "File .exclude_from_github trovato, elaborazione delle esclusioni..."
+    -   while IFS= read -r item || [ -n "$item" ]; do
+    -     if [ -n "$item" ] && [[ ! "$item" =~ ^\s*# ]]; then
+    -       item=$(echo $item | xargs) # Rimuove eventuali spazi bianchi
+    -       echo "Rimozione di $item"
+    -       rm -rf "$item"
+    -     fi
+    -   done < .exclude_from_github
+    -   rm -f .exclude_from_github
+    - else
+    -   echo "File .exclude_from_github non trovato, nessuna esclusione da applicare"
+    - fi
+    
+    # Maschera la mail
+    - find . -type f \( -name "*.yml" -o -name "*.yaml" -o -name "*.md" -o -name "*.j2" -o -name "*.json" \) -exec sed -i "s/$(echo ${EMAIL_TO_MASK} | sed 's/[\/&]/\\&/g')/hidden@email.com/g" {} \;
+
+    # Step 6: Commit e push delle modifiche con lo stesso autore e messaggio originale
+    - git add .
+    - git config user.name "$COMMIT_AUTHOR_NAME"
+    - git config user.email "$COMMIT_AUTHOR_EMAIL"
+    - git commit -m "$COMMIT_MESSAGE" || echo "No changes to commit"
+    - git push https://${GIT_USERNAME}:${SYNC_PAT_TOKEN}@${CI_SERVER_HOST}/${GIT_USERNAME}/homelab-clean.git main

@@ -1,0 +1,23 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ittools
+  namespace: apps
+spec:
+  selector:
+    matchLabels:
+      app: ittools
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      labels:
+        app: ittools
+    spec:
+      containers:
+        - name: ittools
+          image: ghcr.io/corentinth/it-tools:2024.10.22-7ca5933
+          resources:
+            limits:
+              cpu: 50m
+              memory: 500Mi
