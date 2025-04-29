@@ -8,7 +8,6 @@ permissions:
   contents: write
 jobs:
   deploy:
-    environment: github-pages
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
