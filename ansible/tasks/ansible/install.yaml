@@ -1,8 +1,9 @@
+---
 - name: Installare pipx
   ansible.builtin.apt:
     name: pipx
     state: present
-    update_cache: yes
+    update_cache: true
 
 - name: Installare Ansible con pipx
   community.general.pipx:

@@ -20,8 +20,8 @@
   when: not backup_file.stat.exists
 
 # - name: Remove original file
-#   ansible.builtin.file: 
-#     path: /etc/nut/upsmon.conf 
+#   ansible.builtin.file:
+#     path: /etc/nut/upsmon.conf
 #     state: absent
 
 - name: Create config from template

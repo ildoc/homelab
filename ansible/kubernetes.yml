@@ -1,3 +1,4 @@
+---
 - name: Setup Kubernetes HA cluster
   hosts: k8s
   become: true

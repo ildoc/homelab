@@ -1,3 +1,4 @@
+---
 site_name: Homelab
 site_url: https://homelab.ildoc.it
 
@@ -8,8 +9,8 @@ nav:
   #   - Vault: ansible/vault.md
   # - test: test.md
   - Blog:
-    - blog/index.md
-  #   - Tags: blog/tags.md
+      - blog/index.md
+      # - Tags: blog/tags.md
 
 # Repository
 repo_name: ildoc/homelab

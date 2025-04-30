@@ -1,7 +1,8 @@
+---
 services:
   mkdocs:
     image: squidfunk/mkdocs-material:latest
     volumes:
       - .:/docs
     ports:
-      - "8000:8000"    
+      - "8000:8000"

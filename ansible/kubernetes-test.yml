@@ -1,3 +1,4 @@
+---
 - name: Imposta variabili globali
   hosts: k8s_test
   gather_facts: false

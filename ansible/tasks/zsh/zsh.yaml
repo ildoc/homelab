@@ -1,3 +1,4 @@
+---
 - name: Install Zsh
   ansible.builtin.apt:
     name: zsh
@@ -13,4 +14,3 @@
   user:
     name: "{{ current_username }}"
     shell: "{{ zsh_installed_path.stdout }}"
-

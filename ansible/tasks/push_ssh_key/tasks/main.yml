@@ -1,11 +1,11 @@
 ---
 - name: Configure SSH key and passwordless sudo
   hosts: all
-  gather_facts: yes
-  become: yes
+  gather_facts: true
+  become: true
   vars:
     public_key_path: "/home/{{ current_username }}/.ssh/id_rsa.pub"
-    
+
   tasks:
     # Gestione directory e permessi SSH
     - name: Ensure the SSH directory exists
@@ -15,7 +15,7 @@
         mode: '0700'
         owner: "{{ ansible_user }}"
         group: "{{ ansible_user }}"
-      become: yes
+      become: true
 
     - name: Ensure authorized_keys exists
       file:
@@ -24,7 +24,7 @@
         mode: '0600'
         owner: "{{ ansible_user }}"
         group: "{{ ansible_user }}"
-      become: yes
+      become: true
 
     # Verifica chiave SSH esistente
     - name: Check if SSH key already exists in authorized_keys
@@ -32,7 +32,7 @@
       register: key_exists
       changed_when: false
       failed_when: false
-      become: yes
+      become: true
       become_user: "{{ ansible_user }}"
 
     # Aggiunta chiave solo se non presente
@@ -41,8 +41,8 @@
         user: "{{ ansible_user }}"
         state: present
         key: "{{ lookup('file', public_key_path) }}"
-        manage_dir: no
-      become: yes
+        manage_dir: false
+      become: true
       when: key_exists.stdout == 'not_found'
 
     # Set permessi per authorized_keys
@@ -52,22 +52,22 @@
         mode: '0600'
         owner: "{{ ansible_user }}"
         group: "{{ ansible_user }}"
-      become: yes
+      become: true
 
     # Configura sudo senza password
     - name: Check if sudoers configuration exists
       stat:
         path: "/etc/sudoers.d/{{ ansible_user }}"
       register: sudoers_file
-      become: yes
+      become: true
 
     - name: Configure sudo without password
       lineinfile:
         path: "/etc/sudoers.d/{{ ansible_user }}"
         line: "{{ ansible_user }} ALL=(ALL) NOPASSWD: ALL"
         state: present
-        create: yes
+        create: true
         mode: '0440'
         validate: 'visudo -cf %s'
-      become: yes
+      become: true
       when: not sudoers_file.stat.exists

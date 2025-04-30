@@ -1,3 +1,4 @@
+---
 - name: Configure invidious
   hosts: invidious
   gather_facts: true

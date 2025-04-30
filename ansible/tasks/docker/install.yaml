@@ -29,11 +29,11 @@
         repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ubuntu_version.stdout }} stable"
         state: present
 
-    - name: update apt cache
+    - name: Update apt cache
       ansible.builtin.apt:
         update_cache: true
 
-    - name: install Docker
+    - name: Install Docker
       ansible.builtin.apt:
         name:
           - docker-ce

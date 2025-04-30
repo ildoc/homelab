@@ -1,3 +1,4 @@
+---
 current_username: filippo
 # ansible_python_interpreter: /usr/bin/python3
 
@@ -14,9 +15,9 @@ pihole:
     - { ip: 192.168.0.145, domain: "pihole" }
     - { ip: 192.168.0.167, domain: "pihole2" }
     - { ip: 192.168.0.183, domain: "ubuntu" }
-      
+
     - { ip: 192.168.0.50, domain: "vault" }
-      
+
     - { ip: 192.168.0.80, domain: "argocd.local.ildoc.it" }
     - { ip: 192.168.0.80, domain: "longhorn.local.ildoc.it" }
     - { ip: 192.168.0.80, domain: "rancher.local.ildoc.it" }
@@ -49,11 +50,11 @@ pihole:
     - { ip: 192.168.0.80, domain: "audiobookshelf.local.ildoc.it" }
     - { ip: 192.168.0.25, domain: "gitlab.local.ildoc.it" }
     - { ip: 192.168.0.25, domain: "registry.gitlab.local.ildoc.it" }
-      
+
     - { ip: 192.168.0.100, domain: "argocd2.local.ildoc.it" }
     - { ip: 192.168.0.100, domain: "traefik2.local.ildoc.it" }
     - { ip: 192.168.0.100, domain: "rancher2.local.ildoc.it" }
-      
+
   dhcp_reservations:
     - { mac: 60:83:E7:AC:6C:68, ip: 192.168.0.175, hostname: archlinux }
     - { mac: 02:F1:76:00:ED:DD, ip: 192.168.0.133, hostname: homeassistant }

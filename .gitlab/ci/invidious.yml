@@ -1,3 +1,8 @@
+include:
+  - project: 'devops/cicd'
+    ref: main
+    file: '/jobs/set_ssh_key.yml'
+
 .rules_update_invidious:
   rules:
     - if: '$CI_COMMIT_BRANCH == "master"'
@@ -9,7 +14,9 @@ update_invidious:
   image: docker:latest
   services:
     - docker:dind
-  extends: .rules_update_invidious
+  extends: 
+    - .rules_update_invidious
+    - .ssh_setup
   variables:
     DOCKER_DRIVER: overlay2
     SERVER_IP: $INVIDIOUS_SSH_SERVER_IP
