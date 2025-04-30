@@ -6,7 +6,7 @@ nav:
   - Hardware: hardware.md
   # - Ansible:
   #   - Vault: ansible/vault.md
-  - test: test.md
+  # - test: test.md
   - Blog:
     - blog/index.md
   #   - Tags: blog/tags.md
