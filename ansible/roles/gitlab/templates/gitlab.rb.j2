@@ -7,11 +7,9 @@ external_url 'https://{{ gitlab.domain }}'
 
 registry_external_url 'https://registry.{{ gitlab.domain }}'
 
-# Disabilita nginx interno del registry se usi nginx esterno (es: con docker)
 registry['enable'] = true
 registry['registry_http_addr'] = "0.0.0.0:5000"
 
-# Usa il certificato Let's Encrypt già usato da nginx
 registry_nginx['enable'] = false
 
 nginx['worker_processes'] = 2

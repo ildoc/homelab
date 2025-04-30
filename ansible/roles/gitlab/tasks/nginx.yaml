@@ -1,4 +1,4 @@
-- name: Creare cartella nginx
+- name: Create nginx folder
   ansible.builtin.file:
     path: ~/nginx
     state: directory

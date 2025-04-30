@@ -65,7 +65,7 @@ theme:
 
 
 ``` title=".gitignore" hl_lines="3"
---8<-- ".gitignore"
+--8<-- ".gitignore:4:6"
 ```
 
 

@@ -1,42 +1,39 @@
-# https://www.virtualizationhowto.com/2025/01/hashicorp-vault-docker-install-steps-kubernetes-not-required/
-
-
 - name: Install docker
   ansible.builtin.include_tasks: "{{ tasks_dir }}/docker/install.yaml"
 
-- name: Valorizza variabili
+- name: Set variables
   ansible.builtin.set_fact:
     remote_path: ~/docker-compose.yml
     local_path: "{{ vault_files_path }}/docker-compose.yml"
     project_path: .
 
-- name: Includi update docker docker-compose
+- name: Include update docker-compose
   ansible.builtin.include_tasks: "{{ tasks_dir }}/docker/update-compose.yaml"
   vars:
     update_compose_remote_path: "{{ remote_path }}"
     update_compose_local_path: "{{ local_path }}"
     update_compose_project_path: "{{ project_path }}"
 
-- name: Leggi il vault-config.json remoto
+- name: Read remote vault-config.json
   ansible.builtin.stat:
     path: ~/config/vault-config.json
   register: remote_config
 
-- name: Leggi il vault-config.json locale
+- name: Read local vault-config.json
   ansible.builtin.stat:
     path: "{{ vault_files_path }}/vault-config.json"
   register: local_config
   delegate_to: localhost
 
-- name: Controlla i contenuti e imposta variabili
+- name: Check file content and set variables
   ansible.builtin.set_fact:
     config_different: "{{ not remote_config.stat.exists or remote_config.stat.checksum != local_config.stat.checksum }}"
 
-- name: Sono diversi?
+- name: Are they different?
   ansible.builtin.debug:
     msg: "{{ config_different }}"
 
-- name: Esegui azioni Docker se il file è stato copiato o è diverso
+- name: Actions to do if files are different
   when: config_different
   block:
     - name: Ensures ~/config/ dir exists
@@ -45,20 +42,20 @@
         state: directory
         mode: '0755'
 
-    - name: Copia vault-config.json
+    - name: Copy vault-config.json
       ansible.builtin.copy:
         src: "{{ vault_files_path }}/vault-config.json"
         dest: ~/config/vault-config.json
         mode: '0644'
       register: config_copy_result
 
-    - name: Esegui docker-compose down
+    - name: Exec docker-compose down
       community.docker.docker_compose_v2:
         project_src: .
         state: absent
       when: remote_file.stat.exists
 
-    - name: Esegui docker-compose up
+    - name: Exec docker-compose up
       community.docker.docker_compose_v2:
         project_src: .
         state: present

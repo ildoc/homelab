@@ -4,6 +4,9 @@ site_url: https://homelab.ildoc.it
 nav:
   - Home: index.md
   - Hardware: hardware.md
+  - Ansible:
+    - Vault: ansible/vault.md
+  - test: test.md
   - Blog:
     - blog/index.md
   #   - Tags: blog/tags.md

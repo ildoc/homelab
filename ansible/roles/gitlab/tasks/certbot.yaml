@@ -1,4 +1,4 @@
-- name: Creare cartella certbot
+- name: Create certbot folder
   ansible.builtin.file:
     path: ~/certbot
     state: directory
@@ -41,9 +41,9 @@
     dest: "~/gitlab/renew-cert.sh"
     mode: '0755'
 
-- name: Schedula lo script di rinnovo del certificato
+- name: Schedule certificate renew script
   ansible.builtin.cron:
-    name: "Rinnovo certificato {{ gitlab.domain }}"
+    name: "Renew cert {{ gitlab.domain }}"
     minute: "0"
     hour: "*/12"
     job: "/home/{{ ansible_user }}/gitlab/renew-cert.sh"
