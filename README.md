@@ -31,7 +31,7 @@ Tutto l'Homelab gestito (principalmente) con playbook Ansible, ArgoCD e pipeline
         <th>Descrzione</th>
     </tr>
     <tr>
-        <td><img width="32" src="https://simpleicons.org/icons/ansible.svg"></td>
+        <td><img width="32" src="https://github.com/ansible/logos/raw/main/vscode-ansible-logo/vscode-ansible.png"></td>
         <td><a href="https://www.ansible.com">Ansible</a></td>
         <td>Automazione di deploy e configurazioni</td>
     </tr>
