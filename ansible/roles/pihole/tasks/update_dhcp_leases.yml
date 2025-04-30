@@ -1,10 +1,10 @@
 ---
-- name: Leggi il file dhcp.leases
+- name: Read dhcp.leases file
   ansible.builtin.slurp:
     src: /etc/pihole/dhcp.leases
   register: dhcp_leases_content
 
-- name: Converti il contenuto del file in una lista di righe
+- name: Convert file content to a list of strings
   ansible.builtin.set_fact:
     dhcp_leases_lines: "{{ dhcp_leases_content.content | b64decode | split('\n') }}"
 
@@ -12,29 +12,29 @@
   ansible.builtin.set_fact:
     filtered_leases: []
 
-- name: Crea una lista di stringhe "mac ip" da pihole.dhcp_reservations
+- name: Get "mac ip" string list from pihole.dhcp_reservations
   ansible.builtin.set_fact:
     mac_ip_list: >-
       {{ pihole.dhcp_reservations | map(attribute='mac') | map('lower') | zip(pihole.dhcp_reservations | map(attribute='ip')) | map('join', ' ') | list }}
 
-- name: Ottieni lease non riservati
+- name: Get not reserved leases
   ansible.builtin.set_fact:
     filtered_leases: >-
       {{ filtered_leases + (dhcp_leases_lines | reject('equalto', '') | select('match', '^((?!' + mac_ip_list | join('|') + ').)*$') | list) }}
 
-- name: Ottieni lease riservati
+- name: Get reserved leases
   ansible.builtin.set_fact:
     filtered_leases: >-
       {{ filtered_leases + (dhcp_leases_lines | select('search', '(?:' + (mac_ip_list | join('|')) + ')') | list) }}
 
-- name: Crea una lista di lease mancanti
+- name: Create a missing leases list
   ansible.builtin.set_fact:
     filtered_leases: >-
       {{ filtered_leases + [(ansible_date_time.epoch + ' ' + item.mac | lower + ' ' + item.ip + ' ' + item.hostname + ' *')] }}
   loop: "{{ pihole.dhcp_reservations }}"
   when: not (dhcp_leases_lines | select('search', item.mac | lower + ' ' + item.ip) | list | length > 0)
 
-- name: Scrivi il nuovo file dhcp.leases
+- name: Write new dhcp.leases file
   ansible.builtin.copy:
     dest: /etc/pihole/dhcp.leases
     content: "{{ filtered_leases | join('\n') }}"

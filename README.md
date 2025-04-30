@@ -88,7 +88,7 @@ Tutto l'Homelab gestito (principalmente) con playbook Ansible, ArgoCD e pipeline
     <tr>
         <td><img width="32" src="https://avatars.githubusercontent.com/u/1412239?s=200&v=4"></td>
         <td><a href="https://www.nginx.com">NGINX</a></td>
-        <td>Reverse Proxy</td>
+        <td>Reverse Proxy per GitLab</td>
     </tr>
     <tr>
         <td><img width="32" src="https://wp-cdn.pi-hole.net/wp-content/uploads/2016/12/Vortex-R.png"></td>

@@ -26,12 +26,6 @@
     mode: '0644'
   when: not containerd_config_file.stat.exists
 
-# - name: Set SystemdCgroup to true
-#   ansible.builtin.lineinfile:
-#     path: /etc/containerd/config.toml
-#     regexp: '^(\\s*SystemdCgroup\\s*=\\s*)false'
-#     line: '\1true'
-
 - name: Set SystemdCgroup to true
   ansible.builtin.replace:
     path: /etc/containerd/config.toml

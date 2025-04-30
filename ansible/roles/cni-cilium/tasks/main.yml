@@ -63,7 +63,7 @@
     - ".sha256sum"
   when: cilium_upgrade_needed
 
-- name: Verifica se Cilium è già installato
+- name: Check if Cilium is already installed
   ansible.builtin.shell: cilium status
   environment:
     KUBECONFIG: "/etc/kubernetes/admin.conf"
@@ -84,7 +84,7 @@
     msg: "{{ cilium_status.stdout }}"
   when: cilium_installed.rc != 0
 
-- name: Show Cilium già installato
+- name: Show Cilium already installed
   ansible.builtin.debug:
-    msg: "Cilium è già installato"
+    msg: "Cilium already installed"
   when: cilium_installed.rc == 0

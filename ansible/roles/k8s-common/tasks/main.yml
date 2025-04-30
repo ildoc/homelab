@@ -33,14 +33,14 @@
       - nfs-common
     state: present
 
-- name: Aggiungi alias e variabile d'ambiente
+- name: Set alias
   become: true
   ansible.builtin.lineinfile:
     path: "/home/{{ ansible_user }}/.bashrc"
     line: 'alias k="kubectl"'
     state: present
 
-- name: Esporta variabile d'ambiente
+- name: Set env var
   become: true
   ansible.builtin.lineinfile:
     path: "/home/{{ ansible_user }}/.bashrc"
