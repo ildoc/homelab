@@ -66,7 +66,7 @@ Tutto l'Homelab gestito (principalmente) con playbook Ansible, ArgoCD e pipeline
         <td>Self-hosted Git</td>
     </tr>
     <tr>
-        <td><img width="32" src="https://avatars.githubusercontent.com/u/13991055?s=200&v=4"></td>
+        <td><img width="32" src="https://raw.githubusercontent.com/ildoc/homelab/refs/heads/main/docs/assets/images/vault_logo.png"></td>
         <td><a href="https://www.hashicorp.com/en/products/vault">HashiCorp Vault</a></td>
         <td>Secrets management</td>
     </tr>
@@ -96,7 +96,7 @@ Tutto l'Homelab gestito (principalmente) con playbook Ansible, ArgoCD e pipeline
         <td>Ad blocker, DNS e DHCP</td>
     </tr>
     <tr>
-        <td><img width="32" src="https://avatars.githubusercontent.com/u/13991055?s=200&v=4"></td>
+        <td><img width="32" src="https://raw.githubusercontent.com/ildoc/homelab/refs/heads/main/docs/assets/images/proxmox_logo.png"></td>
         <td><a href="https://www.proxmox.com">Proxmox</a></td>
         <td>Virtualizzazione di VM e LXC</td>
     </tr>
