@@ -1,5 +1,7 @@
 # Hardware
 
+![Homelab 2025](/assets/images/homelab2025.jpg){ loading=lazy }
+
 ## Cluster Proxmox
 
 3x [Beelink EQR5](https://amzn.to/42NRwRZ)
