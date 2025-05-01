@@ -1,1 +1,2 @@
+---
 vault_files_path: "{{ playbook_dir }}/roles/vault/files/"

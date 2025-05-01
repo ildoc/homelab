@@ -1,3 +1,4 @@
+---
 - name: Create data folder
   ansible.builtin.file:
     path: ~/gitlab/data

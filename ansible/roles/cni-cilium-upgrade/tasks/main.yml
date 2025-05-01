@@ -1,3 +1,4 @@
+---
 - name: Check current Cilium version
   ansible.builtin.shell: kubectl -n kube-system get ds cilium -o jsonpath='{.spec.template.spec.containers[0].image}'
   environment:

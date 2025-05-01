@@ -1,3 +1,4 @@
+---
 external-secrets:
   installCRDs: true
   replicaCount: 3
@@ -12,4 +13,3 @@ vault:
   address: http://vault:8200
   roleName: external-secrets
   policyName: kubernetes-secrets
-

@@ -6,9 +6,9 @@ metadata:
   namespace: apps
 spec:
   parentRefs:
-  - name: traefik-gateway
-    kind: Gateway
-    namespace: traefik
+    - name: traefik-gateway
+      kind: Gateway
+      namespace: traefik
   hostnames:
     - "mealie.local.ildoc.it"
   rules:
@@ -19,4 +19,3 @@ spec:
       backendRefs:
         - name: mealie
           port: 9000
-

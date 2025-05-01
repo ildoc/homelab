@@ -1,3 +1,4 @@
+---
 - name: Create nginx folder
   ansible.builtin.file:
     path: ~/nginx

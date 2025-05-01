@@ -1,3 +1,4 @@
+---
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -75,7 +76,7 @@ spec:
               curl -sk -H "X-Vault-Token: $VAULT_TOKEN" $VAULT_ADDRESS/v1/sys/auth | grep -q 'kubernetes/' || \
                 curl -sk -H "X-Vault-Token: $VAULT_TOKEN" -X POST $VAULT_ADDRESS/v1/sys/auth/kubernetes -d '{"type": "kubernetes"}'
 
-              
+
               curl -sk -H "X-Vault-Token: $VAULT_TOKEN" -X POST $VAULT_ADDRESS/v1/auth/kubernetes/config \
                 -d @<(cat <<EOF
               {

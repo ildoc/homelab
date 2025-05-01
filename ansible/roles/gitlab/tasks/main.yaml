@@ -1,6 +1,7 @@
+---
 - name: Install docker
   ansible.builtin.include_tasks: "{{ tasks_dir }}/docker/install.yaml"
-  
+
 - name: Setup GitLab
   ansible.builtin.include_tasks: setup_gitlab.yaml
 

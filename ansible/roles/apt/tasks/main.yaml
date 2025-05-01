@@ -1,3 +1,4 @@
+---
 - name: Update and upgrade
   ansible.builtin.apt:
     upgrade: dist

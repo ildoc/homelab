@@ -1,1 +1,2 @@
+---
 proxmox_files_path: "{{ playbook_dir }}/roles/proxmox/files/"

@@ -1,1 +1,2 @@
+---
 invidious_templates_path: "{{ playbook_dir }}/roles/invidious/templates/"

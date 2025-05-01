@@ -31,14 +31,13 @@ spec:
               mountPath: /usr/share/tessdata
               subPath: trainingdata
             - name: data
-              mountPath: /configs   
-              subPath: config      
+              mountPath: /configs
+              subPath: config
           resources:
             limits:
               cpu: 50m
-              memory: 500Mi   
+              memory: 500Mi
       volumes:
         - name: data
           persistentVolumeClaim:
             claimName: stirlingpdf
-        

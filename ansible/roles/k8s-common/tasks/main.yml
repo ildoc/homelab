@@ -1,3 +1,4 @@
+---
 - name: Check if swap is active
   ansible.builtin.command: swapon --show
   register: swap_status

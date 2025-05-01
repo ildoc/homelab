@@ -1,3 +1,4 @@
+---
 - name: Set kubeadm_init_primary_ip
   ansible.builtin.set_fact:
     kubeadm_init_primary_ip: "{{ ansible_default_ipv4.address }}"

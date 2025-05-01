@@ -1,3 +1,4 @@
+---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -14,7 +15,7 @@ spec:
     chart: metrics-server
     targetRevision: 3.12.2
     helm:
-      valuesObject: 
+      valuesObject:
         replicas: 3
         revisionHistoryLimit: 3
         args:
@@ -24,7 +25,7 @@ spec:
     namespace: metrics-server
   syncPolicy:
     syncOptions:
-      - CreateNamespace=true 
+      - CreateNamespace=true
     automated:
       prune: true
       selfHeal: true

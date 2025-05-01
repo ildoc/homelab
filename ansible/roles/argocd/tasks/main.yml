@@ -1,3 +1,4 @@
+---
 - name: Create namespace
   kubernetes.core.k8s:
     name: "{{ argocd.namespace }}"

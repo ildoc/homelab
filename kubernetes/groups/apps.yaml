@@ -20,7 +20,7 @@ spec:
       name: '{{.path.basename}}'
       namespace: argocd
       finalizers:
-        - resources-finalizer.argocd.argoproj.io
+      - resources-finalizer.argocd.argoproj.io
     spec:
       project: default
       source:
@@ -32,7 +32,7 @@ spec:
         namespace: apps
       syncPolicy:
         syncOptions:
-          - CreateNamespace=true
+        - CreateNamespace=true
         automated:
           prune: true
           selfHeal: true

@@ -1,5 +1,5 @@
 ---
-include: 
+include:
   - local: '.gitlab/ci/invidious.yml'
 
 stages:
@@ -39,10 +39,12 @@ sync-to-clean:
       COMMIT_MESSAGE=$(git log -1 --pretty=format:"%s")
 
       # Step 2: Clonare il repository homelab-clean utilizzando il token CI già disponibile
-      git clone https://${GIT_USERNAME}:${SYNC_PAT_TOKEN}@${CI_SERVER_HOST}/${GIT_USERNAME}/homelab-clean.git /tmp/homelab-clean
+      git clone https://${GIT_USERNAME}:${SYNC_PAT_TOKEN}@${CI_SERVER_HOST}/${GIT_USERNAME}/homelab-clean.git \
+        /tmp/homelab-clean
 
       # Step 3: Eliminare tutto tranne la cartella .git dal repository clonato
-      find /tmp/homelab-clean -mindepth 1 -path "/tmp/homelab-clean/.git" -prune -o -exec rm -rf {} \; 2>/dev/null || true
+      find /tmp/homelab-clean -mindepth 1 -path "/tmp/homelab-clean/.git" \
+        -prune -o -exec rm -rf {} \; 2>/dev/null || true
 
       # Step 4: Copiare il contenuto del repository attuale (tranne .git) nel repository clonato
       rsync -av --exclude='.git' $CI_PROJECT_DIR/ /tmp/homelab-clean/
@@ -66,7 +68,8 @@ sync-to-clean:
       fi
 
       # Maschera la mail
-      find . -type f \( -name "*.yml" -o -name "*.yaml" -o -name "*.md" -o -name "*.j2" -o -name "*.json" \) -exec sed -i "s/$(echo ${EMAIL_TO_MASK} | sed 's/[\/&]/\\&/g')/hidden@email.com/g" {} \;
+      find . -type f \( -name "*.yml" -o -name "*.yaml" -o -name "*.md" -o -name "*.j2" -o -name "*.json" \) \
+        -exec sed -i "s/$(echo ${EMAIL_TO_MASK} | sed 's/[\/&]/\\&/g')/hidden@email.com/g" {} \;
 
       # Step 6: Commit e push delle modifiche con lo stesso autore e messaggio originale
       git add .

@@ -1,3 +1,4 @@
+---
 - name: Check if Kubernetes is initialized
   ansible.builtin.stat:
     path: /etc/kubernetes/admin.conf

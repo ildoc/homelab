@@ -48,7 +48,6 @@ spec:
                 secretKeyRef:
                   name: speedtest-secrets
                   key: telegram_bot_token
-                  
 
           volumeMounts:
             - name: config
@@ -60,4 +59,4 @@ spec:
       volumes:
         - name: config
           persistentVolumeClaim:
-            claimName: speedtest        
+            claimName: speedtest

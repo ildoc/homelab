@@ -1,3 +1,4 @@
+---
 {{- $issuerName := ternary "letsencrypt-staging" "letsencrypt-production" .Values.staging }}
 {{- $secretName := ternary "local-ildoc-it-staging-tls" "local-ildoc-it-tls" .Values.staging }}
 

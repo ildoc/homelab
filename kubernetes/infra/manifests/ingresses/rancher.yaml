@@ -6,9 +6,9 @@ metadata:
   namespace: cattle-system
 spec:
   parentRefs:
-  - name: traefik-gateway
-    kind: Gateway
-    namespace: traefik
+    - name: traefik-gateway
+      kind: Gateway
+      namespace: traefik
   hostnames:
     - "rancher.local.ildoc.it"
   rules:
@@ -26,4 +26,3 @@ spec:
       backendRefs:
         - name: rancher
           port: 443
-

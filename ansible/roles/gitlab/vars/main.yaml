@@ -1,2 +1,3 @@
+---
 gitlab_files_path: "{{ playbook_dir }}/roles/gitlab/files/"
 gitlab_templates_path: "{{ playbook_dir }}/roles/gitlab/templates/"

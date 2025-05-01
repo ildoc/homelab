@@ -1,3 +1,4 @@
+---
 {{- $issuerName := ternary "letsencrypt-staging" "letsencrypt-production" .Values.staging }}
 {{- $acmeServer := ternary "https://acme-staging-v02.api.letsencrypt.org/directory" "https://acme-v02.api.letsencrypt.org/directory" .Values.staging }}
 

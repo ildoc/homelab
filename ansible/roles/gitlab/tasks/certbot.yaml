@@ -1,3 +1,4 @@
+---
 - name: Create certbot folder
   ansible.builtin.file:
     path: ~/certbot

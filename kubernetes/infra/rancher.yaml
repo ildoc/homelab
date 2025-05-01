@@ -1,3 +1,4 @@
+---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -16,14 +17,14 @@ spec:
     chart: rancher
     targetRevision: 2.10.3
     helm:
-      valuesObject: 
+      valuesObject:
         ingress.enabled: false
   destination:
     server: https://kubernetes.default.svc
     namespace: cattle-system
   syncPolicy:
     syncOptions:
-      - CreateNamespace=true 
+      - CreateNamespace=true
     automated:
       prune: true
       selfHeal: true

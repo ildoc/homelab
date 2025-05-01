@@ -1,3 +1,4 @@
+---
 - name: Check if node is already joined to cluster
   ansible.builtin.stat:
     path: /etc/kubernetes/kubelet.conf
