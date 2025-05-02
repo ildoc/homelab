@@ -21,7 +21,7 @@ yaml_lint:
       - "**/*.yaml.j2"
   allow_failure: true
 
-sync-to-clean:
+sync_to_clean:
   stage: sync
   image: alpine:latest
   only:

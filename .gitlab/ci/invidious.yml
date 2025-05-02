@@ -12,15 +12,19 @@ include:
 
 update_invidious:
   stage: update_services
-  image: docker:latest
-  services: []
+  image: 
+    name: registry.gitlab.local.ildoc.it/devops/ansible-vault:92eaccbb67b7fa59dce7de1a69887132bee8fe51
+    entrypoint: [""]
   extends:
-    - .rules_update_invidious
+    # - .rules_update_invidious
     - .ssh_setup
   variables:
-    DOCKER_HOST: unix:///var/run/docker.sock
     SERVER_IP: $INVIDIOUS_SSH_SERVER_IP
-  before_script:
-    - apk add --no-cache docker-cli
+    VAULT_ROLE_ID: $VAULT_ROLE_ID
+    VAULT_SECRET_ID: $VAULT_SECRET_ID
   script:
-    - docker run --rm -e VAULT_ROLE_ID=$VAULT_ROLE_ID -e VAULT_SECRET_ID=$VAULT_SECRET_ID -v ansible:/app/playbooks registry.gitlab.local.ildoc.it/devops/ansible-vault:09e0f45efdcdb6abb72cc93790bf4018c4db07d8 invidious.yml
+    - mkdir /app/playbooks
+    - cp -R $CI_PROJECT_DIR/ansible/* /app/playbooks/
+    - echo "Starting image entrypoint..."
+    - chmod +x /app/entrypoint.sh
+    - /bin/sh /app/entrypoint.sh invidious.yml
