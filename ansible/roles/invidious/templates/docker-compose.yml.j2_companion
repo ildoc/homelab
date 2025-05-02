@@ -2,7 +2,7 @@
 services:
 
   invidious:
-    image: quay.io/invidious/invidious:2025.05.02-7579adc
+    image: quay.io/invidious/invidious:2025.04.04-0c07e9d
     restart: unless-stopped
     ports:
       - "80:3000"
@@ -18,9 +18,10 @@ services:
           host: invidious-db
           port: 5432
         check_tables: true
-        signature_server: inv_sig_helper:12999
-        visitor_data: {{ invidious.visitor_data }}
-        po_token: {{ invidious.po_token }}
+        invidious_companion:
+        - private_url: "http://companion:8282"
+          public_url: "http://localhost:8282"
+        invidious_companion_key: "{{ invidious.companion_key }}"
         # external_port:
         # domain: 
         # https_only: false
@@ -38,16 +39,25 @@ services:
     depends_on:
       - invidious-db
 
-  inv_sig_helper:
-    image: quay.io/invidious/inv-sig-helper:latest@sha256:b5466c9add729e82e4e3ee5515c30b69df02d78ebb2486dbc9c63e456f29083d
-    init: true
-    command: ["--tcp", "0.0.0.0:12999"]
+  companion:
+    image: quay.io/invidious/invidious-companion:master-0eadc21
     environment:
-      - RUST_LOG=info
+    # Use the key generated in the 2nd step
+       - SERVER_SECRET_KEY={{ invidious.companion_key }}
     restart: unless-stopped
+    # Remove "127.0.0.1:" if used from an external IP
+    ports:
+      - "127.0.0.1:8282:8282"
+    logging:
+      options:
+        max-size: "1G"
+        max-file: "4"
     cap_drop:
       - ALL
     read_only: true
+    # cache for youtube library
+    volumes:
+      - companioncache:/var/tmp/youtubei.js:rw
     security_opt:
       - no-new-privileges:true
 
@@ -67,3 +77,4 @@ services:
 
 volumes:
   postgresdata:
+  companioncache:
