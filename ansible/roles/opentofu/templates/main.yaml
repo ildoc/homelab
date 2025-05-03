@@ -1,0 +1,81 @@
+---
+- name: Install required packages
+  ansible.builtin.apt:
+    name:
+      - apt-transport-https
+      - ca-certificates
+      - curl
+      - gnupg
+    state: present
+    update_cache: yes
+    cache_valid_time: 3600
+
+- name: Ensure /etc/apt/keyrings directory exists
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: '0755'
+
+- name: Download OpenTofu GPG key if not present
+  ansible.builtin.get_url:
+    url: https://get.opentofu.org/opentofu.gpg
+    dest: /etc/apt/keyrings/opentofu.gpg
+    mode: '0644'
+    force: no
+  register: gpg_downloaded
+
+- name: Check if opentofu-repo.gpg exists
+  ansible.builtin.stat:
+    path: /etc/apt/keyrings/opentofu-repo.gpg
+  register: repo_gpg_check
+
+- name: Download and dearmor OpenTofu repo GPG key
+  ansible.builtin.shell: |
+    curl -fsSL https://packages.opentofu.org/opentofu/tofu/gpgkey | \
+    gpg --no-tty --batch --dearmor -o /etc/apt/keyrings/opentofu-repo.gpg
+  args:
+    creates: /etc/apt/keyrings/opentofu-repo.gpg
+  when: not repo_gpg_check.stat.exists
+  register: repo_gpg_downloaded
+
+- name: Ensure correct permissions on GPG key files
+  ansible.builtin.file:
+    path: "{{ item }}"
+    mode: '0644'
+  loop:
+    - /etc/apt/keyrings/opentofu.gpg
+    - /etc/apt/keyrings/opentofu-repo.gpg
+  when: gpg_downloaded.changed or repo_gpg_downloaded.changed or repo_gpg_check.stat.exists
+
+- name: Add OpenTofu binary apt repository
+  ansible.builtin.apt_repository:
+    repo: "deb [signed-by=/etc/apt/keyrings/opentofu.gpg,/etc/apt/keyrings/opentofu-repo.gpg] https://packages.opentofu.org/opentofu/tofu/any/ any main"
+    filename: opentofu
+    state: present
+    update_cache: no
+  register: repo_added
+
+- name: Add OpenTofu source apt repository
+  ansible.builtin.apt_repository:
+    repo: "deb-src [signed-by=/etc/apt/keyrings/opentofu.gpg,/etc/apt/keyrings/opentofu-repo.gpg] https://packages.opentofu.org/opentofu/tofu/any/ any main"
+    filename: opentofu-src
+    state: present
+    update_cache: no
+  register: src_repo_added
+
+- name: Update apt cache if any repository or GPG changed
+  ansible.builtin.apt:
+    update_cache: yes
+  when: gpg_downloaded.changed or repo_gpg_downloaded.changed or repo_added.changed or src_repo_added.changed
+
+- name: Check if OpenTofu is already installed
+  ansible.builtin.command: dpkg-query -W -f='${Status}' tofu
+  register: tofu_check
+  changed_when: false
+  failed_when: false
+
+- name: Install OpenTofu
+  ansible.builtin.apt:
+    name: tofu
+    state: present
+  when: tofu_check.rc != 0 or "'install ok installed'" not in tofu_check.stdout

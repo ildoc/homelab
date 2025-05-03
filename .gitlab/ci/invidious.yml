@@ -16,7 +16,7 @@ update_invidious:
     name: registry.gitlab.local.ildoc.it/devops/ansible-vault:92eaccbb67b7fa59dce7de1a69887132bee8fe51
     entrypoint: [""]
   extends:
-    # - .rules_update_invidious
+    - .rules_update_invidious
     - .ssh_setup
   variables:
     SERVER_IP: $INVIDIOUS_SSH_SERVER_IP
