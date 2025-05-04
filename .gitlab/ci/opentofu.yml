@@ -1,0 +1,128 @@
+# GitLab CI configuration for OpenTofu/Terraform with GitOps approach
+
+stages:
+  - validate
+  - plan
+  - apply
+  - cleanup
+
+# Variables
+variables:
+  TOFU_VERSION: "1.6.0"
+  VAULT_ADDR: ${VAULT_ADDR}
+  # Non inserire qui valori sensibili, usare le variabili CI/CD di GitLab
+
+# Cache terraform modules between runs
+cache:
+  key: ${CI_COMMIT_REF_SLUG}
+  paths:
+    - .terraform
+
+# Base container image for all jobs
+image: alpine:3.19
+
+# Base configuration
+.tofu_base:
+  before_script:
+    # Install OpenTofu, curl, jq and other dependencies
+    - apk add --no-cache curl unzip jq git bash ca-certificates
+    # Install OpenTofu
+    - |
+      curl -SL "https://github.com/opentofu/opentofu/releases/download/v${TOFU_VERSION}/tofu_${TOFU_VERSION}_linux_amd64.zip" -o /tmp/tofu.zip
+      unzip /tmp/tofu.zip -d /usr/local/bin/
+      rm /tmp/tofu.zip
+    # Configure OpenTofu state backend
+    - |
+      cat > backend.tf << EOF
+      terraform {
+        backend "http" {
+          address = "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/terraform/state/${CI_PROJECT_NAME}-${CI_ENVIRONMENT_NAME}"
+          lock_address = "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/terraform/state/${CI_PROJECT_NAME}-${CI_ENVIRONMENT_NAME}/lock"
+          unlock_address = "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/terraform/state/${CI_PROJECT_NAME}-${CI_ENVIRONMENT_NAME}/lock"
+          username = "gitlab-ci-token"
+          password = "${CI_JOB_TOKEN}"
+          lock_method = "POST"
+          unlock_method = "DELETE"
+          retry_wait_min = 5
+        }
+      }
+      EOF
+    # Login in Vault e recupera i token necessari
+    - |
+      if [ -n "$VAULT_TOKEN" ]; then
+        echo "Using provided VAULT_TOKEN"
+      else
+        echo "Logging into Vault with CI role"
+        export VAULT_TOKEN=$(curl -s --request POST --data "{\"role\":\"ci-role\",\"jwt\":\"$CI_JOB_JWT\"}" "${VAULT_ADDR}/v1/auth/jwt/login" | jq -r '.auth.client_token')
+      fi
+    - tofu init
+
+# Validate stage
+validate:
+  extends: .tofu_base
+  stage: validate
+  script:
+    - tofu validate
+  rules:
+    - if: $CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH
+      when: always
+
+# Plan stage
+plan:
+  extends: .tofu_base
+  stage: plan
+  script:
+    - tofu plan -out=plan.tfplan
+    # Convert the plan to JSON for the approval
+    - tofu show -json plan.tfplan > plan.json
+    # Extract a readable summary for the MR comment
+    - jq -r '.resource_changes[] | "\(.address) will be \(.change.actions[0])"' plan.json > plan_summary.txt
+  artifacts:
+    paths:
+      - plan.tfplan
+      - plan.json
+      - plan_summary.txt
+    expire_in: 1 week
+  rules:
+    - if: $CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH
+      when: always
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      when: always
+
+# Apply stage - only on the default branch
+apply:
+  extends: .tofu_base
+  stage: apply
+  script:
+    - |
+      if [ -f plan.tfplan ]; then
+        echo "Applying existing plan"
+        tofu apply plan.tfplan
+      else 
+        echo "No plan found, creating and applying"
+        tofu apply -auto-approve
+      fi
+  artifacts:
+    paths:
+      - terraform.tfstate
+  dependencies:
+    - plan
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      when: manual
+
+# Clean cached files periodically
+cleanup:
+  stage: cleanup
+  script:
+    - rm -rf .terraform
+    - echo "Removed cached files"
+  when: manual
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      when: manual
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}
+    paths:
+      - .terraform
+    policy: pull
