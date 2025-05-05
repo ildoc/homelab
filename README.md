@@ -63,7 +63,7 @@ Tutto l'Homelab gestito (principalmente) con playbook Ansible, ArgoCD e pipeline
     <tr>
         <td><img width="32" src="https://images.ctfassets.net/xz1dnu24egyd/1IRkfXmxo8VP2RAE5jiS1Q/ea2086675d87911b0ce2d34c354b3711/gitlab-logo-500.png"></td>
         <td><a href="https://gitlab.com">GitLab</a></td>
-        <td>Self-hosted Git</td>
+        <td>Self-hosted Git e runner di pipeline CI/CD</td>
     </tr>
     <tr>
         <td><img width="32" src="https://raw.githubusercontent.com/ildoc/homelab/refs/heads/main/docs/assets/images/vault_logo.png"></td>
@@ -89,6 +89,11 @@ Tutto l'Homelab gestito (principalmente) con playbook Ansible, ArgoCD e pipeline
         <td><img width="32" src="https://avatars.githubusercontent.com/u/1412239?s=200&v=4"></td>
         <td><a href="https://www.nginx.com">NGINX</a></td>
         <td>Reverse Proxy per GitLab</td>
+    </tr>
+    <tr>
+        <td><img width="32" src="https://avatars.githubusercontent.com/u/142061836?s=200&v=4"></td>
+        <td><a href="https://opentofu.org/">OpenTofu</a></td>
+        <td>Infrastructure as Code</td>
     </tr>
     <tr>
         <td><img width="32" src="https://wp-cdn.pi-hole.net/wp-content/uploads/2016/12/Vortex-R.png"></td>
