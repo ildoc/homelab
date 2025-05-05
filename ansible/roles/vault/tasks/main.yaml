@@ -15,6 +15,12 @@
     update_compose_local_path: "{{ local_path }}"
     update_compose_project_path: "{{ project_path }}"
 
+- name: Copy init-vault.sh
+  ansible.builtin.copy:
+    src: "{{ vault_files_path }}/init-vault.sh"
+    dest: ~/init-vault.sh
+    mode: '0644'
+
 - name: Read remote vault-config.json
   ansible.builtin.stat:
     path: ~/config/vault-config.json
