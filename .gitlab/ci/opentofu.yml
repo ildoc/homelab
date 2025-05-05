@@ -11,6 +11,13 @@ variables:
   TOFU_VERSION: "1.6.0"
   VAULT_ADDR: ${VAULT_ADDR}
   # Non inserire qui valori sensibili, usare le variabili CI/CD di GitLab
+  
+  # Configurazione per ambienti
+  # Queste variabili possono essere sovrascritte per ogni ambiente
+  TF_VAR_default_node: "pve-node1"
+  TF_VAR_default_datastore: "local-lvm"
+  TF_VAR_network_bridge: "vmbr0"
+  TF_VAR_proxmox_endpoint: "https://proxmox.example.com:8006/api2/json"
 
 # Cache terraform modules between runs
 cache:
@@ -21,16 +28,47 @@ cache:
 # Base container image for all jobs
 image: alpine:3.19
 
-# Base configuration
+# Dichiarazione degli ambienti
+.environments:
+  development:
+    variables:
+      CI_ENVIRONMENT_NAME: dev
+      TF_VAR_default_node: "pve-dev-node"
+      TF_VAR_proxmox_endpoint: "https://proxmox-dev.example.com:8006/api2/json"
+      # Path Vault per l'ambiente di sviluppo
+      TF_VAR_vault_proxmox_credentials_path: "terraform/dev/proxmox/api_credentials"
+      TF_VAR_vault_ssh_keys_path: "terraform/dev/ssh_keys/ubuntu"
+      
+  staging:
+    variables:
+      CI_ENVIRONMENT_NAME: staging
+      TF_VAR_default_node: "pve-staging-node"
+      TF_VAR_proxmox_endpoint: "https://proxmox-staging.example.com:8006/api2/json"
+      # Path Vault per l'ambiente di staging
+      TF_VAR_vault_proxmox_credentials_path: "terraform/staging/proxmox/api_credentials"
+      TF_VAR_vault_ssh_keys_path: "terraform/staging/ssh_keys/ubuntu"
+      
+  production:
+    variables:
+      CI_ENVIRONMENT_NAME: prod
+      TF_VAR_default_node: "pve-prod-node"
+      TF_VAR_proxmox_endpoint: "https://proxmox-prod.example.com:8006/api2/json"
+      # Path Vault per l'ambiente di produzione
+      TF_VAR_vault_proxmox_credentials_path: "terraform/prod/proxmox/api_credentials"
+      TF_VAR_vault_ssh_keys_path: "terraform/prod/ssh_keys/ubuntu"
+
+# Base configuration with Vault authentication
 .tofu_base:
   before_script:
     # Install OpenTofu, curl, jq and other dependencies
     - apk add --no-cache curl unzip jq git bash ca-certificates
+    
     # Install OpenTofu
     - |
       curl -SL "https://github.com/opentofu/opentofu/releases/download/v${TOFU_VERSION}/tofu_${TOFU_VERSION}_linux_amd64.zip" -o /tmp/tofu.zip
       unzip /tmp/tofu.zip -d /usr/local/bin/
       rm /tmp/tofu.zip
+    
     # Configure OpenTofu state backend
     - |
       cat > backend.tf << EOF
@@ -47,14 +85,41 @@ image: alpine:3.19
         }
       }
       EOF
-    # Login in Vault e recupera i token necessari
+      
+    # Login in Vault con AppRole (metodo consigliato per CI/CD)
     - |
-      if [ -n "$VAULT_TOKEN" ]; then
+      if [ -n "${VAULT_APPROLE_ROLE_ID}" ] && [ -n "${VAULT_APPROLE_SECRET_ID}" ]; then
+        echo "Logging into Vault with AppRole"
+        export VAULT_TOKEN=$(curl -s --request POST \
+          --data "{\"role_id\":\"${VAULT_APPROLE_ROLE_ID}\",\"secret_id\":\"${VAULT_APPROLE_SECRET_ID}\"}" \
+          "${VAULT_ADDR}/v1/auth/approle/login" | jq -r '.auth.client_token')
+          
+        # Verifica che il token sia stato ottenuto correttamente
+        if [ -z "${VAULT_TOKEN}" ] || [ "${VAULT_TOKEN}" = "null" ]; then
+          echo "Failed to obtain Vault token using AppRole"
+          exit 1
+        fi
+        
+        # Configura le variabili per Terraform/OpenTofu
+        export TF_VAR_vault_approle_enabled=true
+        export TF_VAR_vault_approle_role_id=${VAULT_APPROLE_ROLE_ID}
+        export TF_VAR_vault_approle_secret_id=${VAULT_APPROLE_SECRET_ID}
+        
+      elif [ -n "${VAULT_TOKEN}" ]; then
         echo "Using provided VAULT_TOKEN"
       else
-        echo "Logging into Vault with CI role"
-        export VAULT_TOKEN=$(curl -s --request POST --data "{\"role\":\"ci-role\",\"jwt\":\"$CI_JOB_JWT\"}" "${VAULT_ADDR}/v1/auth/jwt/login" | jq -r '.auth.client_token')
+        echo "No Vault authentication method available. Trying to use CI JWT token"
+        export VAULT_TOKEN=$(curl -s --request POST \
+          --data "{\"role\":\"ci-role\",\"jwt\":\"${CI_JOB_JWT}\"}" \
+          "${VAULT_ADDR}/v1/auth/jwt/login" | jq -r '.auth.client_token')
+          
+        if [ -z "${VAULT_TOKEN}" ] || [ "${VAULT_TOKEN}" = "null" ]; then
+          echo "Failed to obtain Vault token using JWT"
+          exit 1
+        fi
       fi
+      
+    # Inizializza OpenTofu
     - tofu init
 
 # Validate stage
@@ -67,8 +132,8 @@ validate:
     - if: $CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH
       when: always
 
-# Plan stage
-plan:
+# Plan stage for different environments
+.plan_template: &plan_definition
   extends: .tofu_base
   stage: plan
   script:
@@ -77,20 +142,51 @@ plan:
     - tofu show -json plan.tfplan > plan.json
     # Extract a readable summary for the MR comment
     - jq -r '.resource_changes[] | "\(.address) will be \(.change.actions[0])"' plan.json > plan_summary.txt
+    # Mostra un riassunto delle modifiche
+    - echo "Plan summary:"
+    - cat plan_summary.txt
   artifacts:
     paths:
       - plan.tfplan
       - plan.json
       - plan_summary.txt
     expire_in: 1 week
+  allow_failure: false
+
+# Plan per ambiente di sviluppo
+plan:dev:
+  <<: *plan_definition
+  extends: .environments.development
+  environment: 
+    name: dev
   rules:
     - if: $CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH
       when: always
-    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_PIPELINE_SOURCE == "merge_request_event"
       when: always
 
+# Plan per ambiente di staging
+plan:staging:
+  <<: *plan_definition
+  extends: .environments.staging
+  environment: 
+    name: staging
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      when: manual
+
+# Plan per ambiente di produzione
+plan:production:
+  <<: *plan_definition
+  extends: .environments.production
+  environment: 
+    name: prod
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      when: manual
+
 # Apply stage - only on the default branch
-apply:
+.apply_template: &apply_definition
   extends: .tofu_base
   stage: apply
   script:
@@ -100,16 +196,52 @@ apply:
         tofu apply plan.tfplan
       else 
         echo "No plan found, creating and applying"
-        tofu apply -auto-approve
+        tofu plan -out=new_plan.tfplan
+        tofu apply new_plan.tfplan
       fi
   artifacts:
     paths:
       - terraform.tfstate
+    reports:
+      terraform: terraform.tfstate
+  allow_failure: false
+
+# Apply per ambiente di sviluppo
+apply:dev:
+  <<: *apply_definition
+  extends: .environments.development
+  environment: 
+    name: dev
   dependencies:
-    - plan
+    - plan:dev
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
       when: manual
+
+# Apply per ambiente di staging
+apply:staging:
+  <<: *apply_definition
+  extends: .environments.staging
+  environment: 
+    name: staging
+  dependencies:
+    - plan:staging
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      when: manual
+
+# Apply per ambiente di produzione
+apply:production:
+  <<: *apply_definition
+  extends: .environments.production
+  environment: 
+    name: prod
+  dependencies:
+    - plan:production
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      when: manual
+      allow_failure: false
 
 # Clean cached files periodically
 cleanup:
