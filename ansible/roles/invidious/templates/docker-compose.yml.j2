@@ -53,10 +53,10 @@ services:
       - no-new-privileges:true
 
   invidious-db:
-    image: postgres:14
+    image: postgres:17
     restart: unless-stopped
     volumes:
-      - postgresdata:/var/lib/postgresql/data
+      - postgresdatacompanion:/var/lib/postgresql/data
       - ./config/sql:/config/sql
       - ./docker/init-invidious-db.sh:/docker-entrypoint-initdb.d/init-invidious-db.sh
     environment:
@@ -67,5 +67,5 @@ services:
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
 
 volumes:
-  postgresdata:
+  postgresdatacompanion:
   companioncache:
