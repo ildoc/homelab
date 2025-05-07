@@ -35,7 +35,6 @@ services:
   companion:
     image: quay.io/invidious/invidious-companion:master-56cda4f 
     environment:
-    # Use the key generated in the 2nd step
        - SERVER_SECRET_KEY={{ invidious.companion_key }}
     restart: unless-stopped
     # Remove "127.0.0.1:" if used from an external IP
