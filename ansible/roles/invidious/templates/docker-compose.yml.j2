@@ -37,7 +37,6 @@ services:
     environment:
        - SERVER_SECRET_KEY={{ invidious.companion_key }}
     restart: unless-stopped
-    # Remove "127.0.0.1:" if used from an external IP
     ports:
       - "127.0.0.1:8282:8282"
     logging:
