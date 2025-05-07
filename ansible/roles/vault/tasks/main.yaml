@@ -19,7 +19,7 @@
   ansible.builtin.copy:
     src: "{{ vault_files_path }}/init-vault.sh"
     dest: ~/init-vault.sh
-    mode: '0644'
+    mode: '0755'
 
 - name: Read remote vault-config.json
   ansible.builtin.stat:

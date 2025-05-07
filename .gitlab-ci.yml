@@ -1,15 +1,20 @@
 ---
 include:
   - local: '.gitlab/ci/invidious.yml'
+  # - local: '.gitlab/ci/opentofu.yml'
 
 stages:
   - lint
+  - validate
+  - plan
+  - apply
+  - cleanup
   - update_services
   - sync
 
 yaml_lint:
   stage: lint
-  image: python:3.10
+  image: python:3.13
   script:
     - pip install yamllint
     - yamllint . -c .yamllint

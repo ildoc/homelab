@@ -33,6 +33,7 @@ spec:
               VAULT_POLICY_NAME="{{ .Values.vault.policyName }}"
               VAULT_SECRET_NAME="tmp-vault-secret"
               VAULT_SECRET_NAMESPACE="default"
+              VAULT_ADDRESS="{{ .Values.vault.address }}"
               KUBE_API="{{ .Values.apiServer }}"
 
               echo "[INFO] Building in-cluster kubeconfig..."
@@ -70,7 +71,6 @@ spec:
 
               echo "[INFO] Reading Vault credentials..."
               VAULT_TOKEN=$(kubectl get secret $VAULT_SECRET_NAME -n $VAULT_SECRET_NAMESPACE -o jsonpath='{.data.token}' | base64 -d)
-              VAULT_ADDRESS=$(kubectl get secret $VAULT_SECRET_NAME -n $VAULT_SECRET_NAMESPACE -o jsonpath='{.data.address}' | base64 -d)
 
               echo "[INFO] Enabling Vault Kubernetes auth method (if not present)..."
               curl -sk -H "X-Vault-Token: $VAULT_TOKEN" $VAULT_ADDRESS/v1/sys/auth | grep -q 'kubernetes/' || \
@@ -103,7 +103,7 @@ spec:
                 "bound_service_account_names": "$VAULT_SA_NAME",
                 "bound_service_account_namespaces": "$VAULT_SA_NAMESPACE",
                 "policies": "$VAULT_POLICY_NAME",
-                "ttl": "1h"
+                "ttl": "720h"
               }
               EOF
               )

@@ -1,0 +1,31 @@
+#cloud-config
+package_update: true
+package_upgrade: true
+
+# Pacchetti base comuni a tutte le VM
+packages:
+  - qemu-guest-agent
+  - curl
+  - nano
+  - zsh
+  - git
+
+# Creazione degli utenti
+users:
+  - name: filippo
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    shell: /bin/bash
+    ssh_authorized_keys:
+      - ${ssh_pub_key}
+
+# Comandi base comuni a tutte le VM
+runcmd:
+  - systemctl enable qemu-guest-agent
+  - systemctl start qemu-guest-agent
+  - chsh -s /usr/bin/zsh myuser
+  - mkdir -p /home/myuser/.zsh
+  - wget https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh -O /home/myuser/install_oh_my_zsh.sh
+  - chmod +x /home/myuser/install_oh_my_zsh.sh
+  - sudo -u myuser /home/myuser/install_oh_my_zsh.sh --unattended
+  - rm /home/myuser/install_oh_my_zsh.sh
+  - chown -R myuser:myuser /home/myuser

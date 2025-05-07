@@ -1,4 +1,3 @@
----
 stages:
   - validate
   - plan
@@ -22,6 +21,7 @@ variables:
   TOFU_VERSION: "1.6.0"
   TF_STATE_NAME: "proxmox-infra"
   TOFU_DIR: "opentofu"  # Directory che contiene i file OpenTofu
+  ALPINE_IMAGE: "alpine:3.21"  # Definito per Renovate
 
 # Cache dei moduli OpenTofu
 cache:
@@ -31,7 +31,7 @@ cache:
 
 # Configurazione di base per i job OpenTofu
 .tofu_base:
-  image: alpine:3.21
+  image: ${ALPINE_IMAGE}
   before_script: |
     # Installazione OpenTofu e dipendenze
     apk add --no-cache curl unzip jq git bash ca-certificates iputils bind-tools
@@ -135,8 +135,6 @@ tofu-plan:
     expire_in: 1 week
     reports:
       terraform: ${TOFU_DIR}/plan.json
-  dependencies:
-    - tofu-validate
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event" || $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
       when: on_success
@@ -192,7 +190,7 @@ tofu-apply:
 # Pulizia cache - automatico dopo apply riuscito
 tofu-cleanup:
   stage: cleanup
-  image: alpine:3.21
+  image: ${ALPINE_IMAGE}
   script: |
     if [ -d "${TOFU_DIR}/.terraform" ]; then
       rm -rf ${TOFU_DIR}/.terraform

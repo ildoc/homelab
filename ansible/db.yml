@@ -1,0 +1,7 @@
+---
+- name: Manage db
+  hosts: db
+  gather_facts: true
+  roles:
+    - role: apt
+    - role: db

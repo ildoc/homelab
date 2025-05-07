@@ -17,7 +17,7 @@
 - name: Confronta contenuti testuali
   ansible.builtin.set_fact:
     contents_different: >
-      {{ (remote_file_content.content | b64decode).strip() != template_file_rendered.strip() }}
+      {{ not remote_file.stat.exists or ((remote_file_content.content | b64decode).strip() != template_file_rendered.strip()) }}
 
 - name: Sono diversi?
   ansible.builtin.debug:

@@ -1,11 +1,11 @@
-#!/bin/bash
+#!/bin/sh
 set -euo pipefail
 
 # CONFIGURATIONS
-POLICY_NAME="ansible-policy"
-ROLE_NAME="ansible-role"
+POLICY_NAME="ci-policy"
+ROLE_NAME="ci-role"
 # Usa un array per i percorsi dei segreti
-SECRET_PATHS=("ansible" "terraform")
+SECRET_PATHS="ansible terraform"
 VAULT_ADDR="${VAULT_ADDR:-http://127.0.0.1:8200}"
 VAULT_TOKEN="${VAULT_TOKEN:?VAULT_TOKEN missing}"
 
@@ -15,7 +15,7 @@ apk add jq
 echo "[+] Init Vault..."
 
 # Abilita tutti i motori di segreti specificati nell'array
-for SECRET_PATH in "${SECRET_PATHS[@]}"; do
+for SECRET_PATH in $SECRET_PATHS; do
   # Check if secret engine is already enabled
   if vault secrets list -format=json | jq -e ".[\"$SECRET_PATH/\"]" > /dev/null 2>&1; then
     echo "[+] Secret engine '$SECRET_PATH/' already enabled."
@@ -40,12 +40,17 @@ echo "[+] Writing policy '$POLICY_NAME'..."
 POLICY_CONTENT=""
 
 # Aggiungi ogni percorso alla policy
-for SECRET_PATH in "${SECRET_PATHS[@]}"; do
-  POLICY_CONTENT+="path \"$SECRET_PATH/data/*\" {
-  capabilities = [\"create\", \"read\", \"update\", \"delete\", \"list\"]
-}
-"
+for SECRET_PATH in $SECRET_PATHS; do
+  POLICY_CONTENT="$POLICY_CONTENT
+  path \"$SECRET_PATH/data/*\" {
+    capabilities = [\"create\", \"read\", \"update\", \"delete\", \"list\"]
+  }"
 done
+
+POLICY_CONTENT="$POLICY_CONTENT
+path "auth/token/create" {
+  capabilities = ["update"]
+}"
 
 # Scrivi la policy completa
 echo "$POLICY_CONTENT" | vault policy write "$POLICY_NAME" -

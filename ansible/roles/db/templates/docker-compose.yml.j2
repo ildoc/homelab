@@ -1,0 +1,39 @@
+---
+services:
+  postgres:
+    image: postgres:17
+    container_name: postgres_db
+    restart: always
+    environment:
+      POSTGRES_USER: {{ db.postgres.admin_user }}
+      POSTGRES_PASSWORD: {{ db.postgres.admin_password }}
+      POSTGRES_DB: default
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./postgres:/var/lib/postgresql/data
+    networks:
+      - postgres-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+
+  pgadmin:
+    image: dpage/pgadmin4:9.3.0
+    container_name: pgadmin
+    restart: always
+    environment:
+      PGADMIN_DEFAULT_EMAIL: {{ db.postgres.pgadmin_email }}
+      PGADMIN_DEFAULT_PASSWORD: {{ db.postgres.pgadmin_password }}
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "5050:80"
+    volumes:
+      - ./pgadmin:/var/lib/pgadmin
+    networks:
+      - postgres-network
+    depends_on:
+      - postgres
+
+networks:
+  postgres-network:
+    driver: bridge

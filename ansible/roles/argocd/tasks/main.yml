@@ -21,7 +21,7 @@
 - name: Install ArgoCD if not already present
   kubernetes.core.k8s:
     state: present
-    src: "https://raw.githubusercontent.com/argoproj/argo-cd/refs/heads/master/manifests/ha/install.yaml"
+    src: "https://raw.githubusercontent.com/argoproj/argo-cd/v3.0.0/manifests/ha/install.yaml"
     namespace: "{{ argocd.namespace }}"
     kubeconfig: ~/.kube/config
   when: argocd_deploy_info.resources | length == 0

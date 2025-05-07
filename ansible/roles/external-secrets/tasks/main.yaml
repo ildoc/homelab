@@ -11,4 +11,3 @@
       type: Opaque
       data:
         token: "{{ external_secrets.vault_token | b64encode }}"
-        address: "{{ external_secrets.vault_address | b64encode }}"

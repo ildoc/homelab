@@ -1,0 +1,9 @@
+# Questo file può essere usato per lo sviluppo locale
+# Copia questo file su backend.tf durante lo sviluppo locale
+# Non committare mai questo file con credenziali
+
+terraform {
+  backend "local" {
+    path = "terraform.tfstate.local"
+  }
+}
