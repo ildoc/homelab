@@ -112,6 +112,7 @@ invidious:
   visitor_data: "{{ lookup('community.hashi_vault.hashi_vault', 'ansible/data/invidious:visitor_data') }}"
   po_token: "{{ lookup('community.hashi_vault.hashi_vault', 'ansible/data/invidious:po_token') }}"
   hmac_key: "{{ lookup('community.hashi_vault.hashi_vault', 'ansible/data/invidious:hmac_key') }}"
+  companion_key: "{{ lookup('community.hashi_vault.hashi_vault', 'ansible/data/invidious:companion_key') }}"
 
 wireguard:
   password_hash: "{{ lookup('community.hashi_vault.hashi_vault', 'ansible/data/wireguard:password_hash') }}"
