@@ -7,6 +7,9 @@ services:
     ports:
       - "80:3000"
     environment:
+      # Please read the following file for a comprehensive list of all available
+      # configuration options and their associated syntax:
+      # https://github.com/iv-org/invidious/blob/master/config/config.example.yml
       INVIDIOUS_CONFIG: |
         db:
           dbname: invidious
@@ -15,10 +18,13 @@ services:
           host: invidious-db
           port: 5432
         check_tables: true
-        invidious_companion:
-        - private_url: "http://companion:8282"
-          public_url: "http://localhost:8282"
-        invidious_companion_key: "{{ invidious.companion_key }}"
+        signature_server: inv_sig_helper:12999
+        visitor_data: {{ invidious.visitor_data }}
+        po_token: {{ invidious.po_token }}
+        # external_port:
+        # domain: 
+        # https_only: false
+        # statistics_enabled: false
         hmac_key: "{{ invidious.hmac_key }}"
     healthcheck:
       test: wget -nv --tries=1 --spider http://127.0.0.1:3000/api/v1/trending || exit 1
@@ -32,31 +38,24 @@ services:
     depends_on:
       - invidious-db
 
-  companion:
-    image: quay.io/invidious/invidious-companion:master-56cda4f 
+  inv_sig_helper:
+    image: quay.io/invidious/inv-sig-helper:latest@sha256:b5466c9add729e82e4e3ee5515c30b69df02d78ebb2486dbc9c63e456f29083d
+    init: true
+    command: ["--tcp", "0.0.0.0:12999"]
     environment:
-       - SERVER_SECRET_KEY={{ invidious.companion_key }}
+      - RUST_LOG=info
     restart: unless-stopped
-    ports:
-      - "127.0.0.1:8282:8282"
-    logging:
-      options:
-        max-size: "1G"
-        max-file: "4"
     cap_drop:
       - ALL
     read_only: true
-    # cache for youtube library
-    volumes:
-      - companioncache:/var/tmp/youtubei.js:rw
     security_opt:
       - no-new-privileges:true
 
   invidious-db:
-    image: postgres:17
+    image: postgres:14
     restart: unless-stopped
     volumes:
-      - postgresdatacompanion:/var/lib/postgresql/data
+      - postgresdata:/var/lib/postgresql/data
       - ./config/sql:/config/sql
       - ./docker/init-invidious-db.sh:/docker-entrypoint-initdb.d/init-invidious-db.sh
     environment:
@@ -67,5 +66,4 @@ services:
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
 
 volumes:
-  postgresdatacompanion:
-  companioncache:
+  postgresdata:
