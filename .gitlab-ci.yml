@@ -2,10 +2,10 @@
 include:
   - template: Security/SAST-IaC.latest.gitlab-ci.yml
   - local: '.gitlab/ci/invidious.yml'
-  # - local: '.gitlab/ci/opentofu.yml'
+  - local: '.gitlab/ci/opentofu.yml'
 
 stages:
-  # - lint
+  - lint
   - test
   - auth
   - validate
@@ -15,19 +15,19 @@ stages:
   - update_services
   - sync
 
-# yaml_lint:
-#   stage: lint
-#   image: python:3.13
-#   script:
-#     - pip install yamllint
-#     - yamllint . -c .yamllint
-#   only:
-#     changes:
-#       - "**/*.yml"
-#       - "**/*.yml.j2"
-#       - "**/*.yaml"
-#       - "**/*.yaml.j2"
-#   allow_failure: true
+yaml_lint:
+  stage: lint
+  image: python:3.13
+  script:
+    - pip install yamllint
+    - yamllint . -c .yamllint
+  only:
+    changes:
+      - "**/*.yml"
+      - "**/*.yml.j2"
+      - "**/*.yaml"
+      - "**/*.yaml.j2"
+  allow_failure: true
 
 sync_to_clean:
   stage: sync

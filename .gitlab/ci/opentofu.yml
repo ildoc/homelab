@@ -30,10 +30,18 @@ cache:
   paths:
     - ${TOFU_DIR}/.terraform
 
+.rules_opentofu:
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes:
+        - opentofu/**/*
+
 # Autenticazione Proxmox (eseguita una sola volta per pipeline)
 auth-proxmox:
   stage: auth
   image: alpine:3.21
+  extends:
+    - .rules_opentofu
   script:
     # Installazione dipendenze
     - apk add --no-cache curl jq bash ca-certificates
@@ -146,13 +154,12 @@ auth-proxmox:
     reports:
       dotenv: proxmox_auth.env
     expire_in: 1 hour
-  rules:
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event" || $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
-      when: always
 
 # Configurazione di base per i job OpenTofu
 .tofu_base:
   image: alpine:3.21
+  extends:
+    - .rules_opentofu
   before_script: |
     # Installazione OpenTofu e dipendenze
     apk add --no-cache curl unzip jq git bash ca-certificates iputils bind-tools openssh-client
@@ -194,9 +201,6 @@ tofu-validate:
   script: |
     echo "Validazione configurazione..."
     tofu validate
-  rules:
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event" || $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
-      when: always
 
 # Piano modifiche
 tofu-plan:
@@ -276,9 +280,6 @@ tofu-plan:
   dependencies:
     - auth-proxmox
     - tofu-validate
-  rules:
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event" || $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
-      when: on_success
 
 # Applicazione modifiche
 tofu-apply:
@@ -325,14 +326,13 @@ tofu-apply:
   dependencies:
     - auth-proxmox
     - tofu-plan
-  rules:
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event" || $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
-      when: on_success
 
 # Pulizia cache - automatico dopo apply riuscito
 tofu-cleanup:
   stage: cleanup
   image: alpine:3.21
+  extends:
+    - .rules_opentofu
   script: |
     if [ -d "${TOFU_DIR}/.terraform" ]; then
       rm -rf ${TOFU_DIR}/.terraform
@@ -342,9 +342,6 @@ tofu-cleanup:
     fi
   dependencies:
     - tofu-apply
-  rules:
-    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
-      when: on_success
   cache:
     key: ${CI_COMMIT_REF_SLUG}-opentofu
     paths:
