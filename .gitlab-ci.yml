@@ -1,10 +1,12 @@
 ---
 include:
+  - template: Security/SAST-IaC.latest.gitlab-ci.yml
   - local: '.gitlab/ci/invidious.yml'
   # - local: '.gitlab/ci/opentofu.yml'
 
 stages:
   # - lint
+  - test
   - auth
   - validate
   - plan
