@@ -8,6 +8,11 @@ push_ssh_keys: true
 
 pihole:
   dns_records:
+    
+    - { ip: 192.168.0.10, domain: "pve01" }
+    - { ip: 192.168.0.11, domain: "pve02" }
+    - { ip: 192.168.0.12, domain: "pve03" }
+    
     - { ip: 192.168.0.111, domain: "invidious" }
     - { ip: 192.168.0.123, domain: "truenas" }
     - { ip: 192.168.0.124, domain: "web" }
@@ -76,6 +81,9 @@ pihole:
     - { mac: AA:AA:AA:AA:AA:AA, ip: 192.168.0.25, hostname: gitlab }
     - { mac: AA:AA:AA:AA:AA:DB, ip: 192.168.0.30, hostname: db }
     - { mac: AA:AA:AA:AA:CA:CE, ip: 192.168.0.40, hostname: redis }
+      
+    - { mac: aa:bb:cc:11:22:88, ip: 192.168.0.41, hostname: webserver-app }
+    - { mac: aa:bb:cc:22:11:77, ip: 192.168.0.42, hostname: mongodb-db }   
 
 nut:
   ups_name: ups

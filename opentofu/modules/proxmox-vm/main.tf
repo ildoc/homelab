@@ -1,23 +1,37 @@
 locals {
-  # Usa il base cloud-init fornito o quello predefinito
-  base_cloud_init = var.base_cloud_init != "" ? var.base_cloud_init : templatefile("${path.module}/templates/base-cloud-init.yaml", {
-    ssh_pub_key = var.ssh_public_key
-    hostname    = var.vm_name
+  # Genera cloud-init base come snippet su Proxmox
+  base_cloud_init_content = templatefile("${path.module}/templates/base-cloud-init.yaml", {
+    ssh_pub_key  = var.ssh_public_key
+    default_user = var.default_user
+    hostname     = var.vm_name
   })
   
-  # Genera la parte personalizzata del cloud-init
-  custom_cloud_init = templatefile("${path.module}/templates/custom-packages.yaml.tpl", {
+  # Genera configurazione custom per i pacchetti
+  packages_cloud_init = templatefile("${path.module}/templates/custom-packages.yaml.tpl", {
     packages = var.packages
     scripts  = var.custom_scripts
   })
   
-  # Combina le configurazioni cloud-init
-  cloud_init_rendered = templatefile("${path.module}/templates/combine.tpl", {
-    base_config   = local.base_cloud_init
+  # Completa configurazione cloud-init
+  cloud_init_content = templatefile("${path.module}/templates/combine.tpl", {
+    base_config   = var.base_cloud_init != "" ? var.base_cloud_init : local.base_cloud_init_content
     hostname      = var.vm_name
     ssh_pub_key   = var.ssh_public_key
-    custom_config = local.custom_cloud_init
+    default_user  = var.default_user
+    custom_config = local.packages_cloud_init
   })
+}
+
+# Crea snippet cloud-init su Proxmox
+resource "proxmox_virtual_environment_file" "cloud_init_snippet" {
+  content_type = "snippets"
+  datastore_id = var.snippets_datastore_id
+  node_name    = var.node_name
+  
+  source_raw {
+    data = local.cloud_init_content
+    file_name    = "${var.vm_id}-${var.vm_name}-cloud-init.yaml"
+  }
 }
 
 resource "proxmox_virtual_environment_vm" "vm" {
@@ -40,7 +54,7 @@ resource "proxmox_virtual_environment_vm" "vm" {
   disk {
     datastore_id = var.datastore_id
     file_id      = var.cloud_image_id
-    interface    = "scsi0"
+    interface    = "virtio0"
     size         = var.disk_size
     iothread     = var.disk_iothread
   }
@@ -52,6 +66,16 @@ resource "proxmox_virtual_environment_vm" "vm" {
     model       = var.network_model
   }
 
+  agent {
+    enabled = true
+    timeout = var.agent_timeout
+  }
+
+  operating_system {
+    type = "l26" # Linux kernel 2.6+
+  }
+
+  # Usa lo snippet cloud-init
   initialization {
     datastore_id = var.datastore_id
     
@@ -62,38 +86,10 @@ resource "proxmox_virtual_environment_vm" "vm" {
       }
     }
     
-    # Configurazione dell'account utente
-    user_account {
-      keys     = [var.ssh_public_key]
-    }
-
-    user_data = local.cloud_init_rendered
-    keyboad_layout = var.keyboad_layout
-  }
-
-  operating_system {
-    type = "l26" # Linux kernel 2.6+
-  }
-
-  agent {
-    enabled = true
-    timeout = var.agent_timeout
+    user_data_file_id = proxmox_virtual_environment_file.cloud_init_snippet.id
   }
   
   # Opzioni di avvio
   on_boot = var.start_on_boot
   started = true
-
-  # Gestione ciclo di vita
-  lifecycle {
-    ignore_changes = [
-      initialization[0].user_data_file_id
-    ]
-  }
-  
-  # Dipendenze
-  depends_on = [
-    var.cloud_image_id,
-    var.template_id
-  ]
 }

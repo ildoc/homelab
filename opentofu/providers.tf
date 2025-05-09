@@ -2,11 +2,11 @@ terraform {
   required_providers {
     proxmox = {
       source  = "bpg/proxmox"
-      version = ">=0.77.0"
+      version = "0.77.1"
     }
     vault = {
       source  = "hashicorp/vault"
-      version = "~> 4.8.0"
+      version = "4.8.0"
     }
   }
 }
@@ -32,10 +32,13 @@ provider "proxmox" {
   endpoint      = var.proxmox_endpoint
   insecure      = var.proxmox_insecure
   
-  api_token = "${local.proxmox_credentials.token_id}=${local.proxmox_credentials.token_secret}"
+  # api_token = "${local.proxmox_credentials.token_id}=${local.proxmox_credentials.token_secret}"
+  auth_ticket           = var.proxmox_auth_ticket
+  csrf_prevention_token = var.proxmox_csrf_prevention_token
 
-#   ssh {
-#     agent = true
-#     username = "root"
-#   }
+  ssh {
+    agent       = false
+    username    = "root"
+    private_key = module.vault_secrets.proxmox_ssh_private_key
+  }
 }

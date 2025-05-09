@@ -1,11 +1,7 @@
 #cloud-config
 hostname: ${hostname}
-users:
-  - name: ubuntu
-    sudo: ALL=(ALL) NOPASSWD:ALL
-    shell: /bin/bash
-    ssh_authorized_keys:
-      - ${ssh_pub_key}
+package_update: true
+package_upgrade: true
 
 # Pacchetti base comuni a tutte le VM
 packages:
@@ -13,6 +9,14 @@ packages:
   - curl
   - nano
   - openssh-server
+
+# Utente principale
+users:
+  - name: ${default_user}
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    shell: /bin/bash
+    ssh_authorized_keys:
+      - ${ssh_pub_key}
 
 # Comandi base comuni a tutte le VM
 runcmd:

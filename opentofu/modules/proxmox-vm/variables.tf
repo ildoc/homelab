@@ -31,6 +31,12 @@ variable "datastore_id" {
   default     = "local-lvm"
 }
 
+variable "snippets_datastore_id" {
+  description = "ID del datastore dove salvare gli snippet cloud-init"
+  type        = string
+  default     = "local"
+}
+
 variable "network_bridge" {
   description = "Bridge di rete da utilizzare"
   type        = string
@@ -145,8 +151,8 @@ variable "ssh_private_key" {
   sensitive   = true
 }
 
-variable "keuboad_layout" {
-  description = "Layout della tastiera"
+variable "default_user" {
+  description = "ID del datastore dove salvare il container"
   type        = string
-  default     = "it"
+  default     = "ubuntu"
 }

@@ -21,7 +21,7 @@
     url: https://get.opentofu.org/opentofu.gpg
     dest: /etc/apt/keyrings/opentofu.gpg
     mode: '0644'
-    force: no
+    force: false
   register: gpg_downloaded
 
 - name: Check if opentofu-repo.gpg exists
@@ -52,7 +52,7 @@
     repo: "deb [signed-by=/etc/apt/keyrings/opentofu.gpg,/etc/apt/keyrings/opentofu-repo.gpg] https://packages.opentofu.org/opentofu/tofu/any/ any main"
     filename: opentofu
     state: present
-    update_cache: no
+    update_cache: false
   register: repo_added
 
 - name: Add OpenTofu source apt repository
@@ -60,12 +60,12 @@
     repo: "deb-src [signed-by=/etc/apt/keyrings/opentofu.gpg,/etc/apt/keyrings/opentofu-repo.gpg] https://packages.opentofu.org/opentofu/tofu/any/ any main"
     filename: opentofu-src
     state: present
-    update_cache: no
+    update_cache: false
   register: src_repo_added
 
 - name: Update apt cache if any repository or GPG changed
   ansible.builtin.apt:
-    update_cache: yes
+    update_cache: true
   when: gpg_downloaded.changed or repo_gpg_downloaded.changed or repo_added.changed or src_repo_added.changed
 
 - name: Check if OpenTofu is already installed

@@ -12,7 +12,7 @@ include:
 
 update_invidious:
   stage: update_services
-  image: 
+  image:
     name: registry.gitlab.local.ildoc.it/devops/ansible-vault:92eaccbb67b7fa59dce7de1a69887132bee8fe51
     entrypoint: [""]
   extends:

@@ -12,9 +12,9 @@ packages:
 
 # Creazione degli utenti
 users:
-  - name: filippo
+  - name: ${default_user}
     sudo: ALL=(ALL) NOPASSWD:ALL
-    shell: /bin/bash
+    shell: /bin/zsh
     ssh_authorized_keys:
       - ${ssh_pub_key}
 
@@ -22,10 +22,11 @@ users:
 runcmd:
   - systemctl enable qemu-guest-agent
   - systemctl start qemu-guest-agent
-  - chsh -s /usr/bin/zsh myuser
-  - mkdir -p /home/myuser/.zsh
-  - wget https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh -O /home/myuser/install_oh_my_zsh.sh
-  - chmod +x /home/myuser/install_oh_my_zsh.sh
-  - sudo -u myuser /home/myuser/install_oh_my_zsh.sh --unattended
-  - rm /home/myuser/install_oh_my_zsh.sh
-  - chown -R myuser:myuser /home/myuser
+  # - apt-get update
+  # - apt-get install -y qemu-guest-agent curl nano zsh git
+  - mkdir -p /home/${default_user}/.zsh
+  - wget https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh -O /home/${default_user}/install_oh_my_zsh.sh
+  - chmod +x /home/${default_user}/install_oh_my_zsh.sh
+  - sudo -u ${default_user} /home/${default_user}/install_oh_my_zsh.sh --unattended
+  - rm /home/${default_user}/install_oh_my_zsh.sh
+  - chown -R ${default_user}:${default_user} /home/${default_user}

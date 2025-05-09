@@ -25,10 +25,22 @@ variable "ostemplate_url" {
   default     = null
 }
 
+variable "default_user" {
+  description = "ID del datastore dove salvare il container"
+  type        = string
+  default     = "ubuntu"
+}
+
 variable "datastore_id" {
   description = "ID del datastore dove salvare il container"
   type        = string
   default     = "local-lvm"
+}
+
+variable "snippets_datastore_id" {
+  description = "ID del datastore dove salvare gli snippet di configurazione"
+  type        = string
+  default     = "local"
 }
 
 variable "network_bridge" {

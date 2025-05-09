@@ -62,6 +62,20 @@ variable "proxmox_timeout" {
   default     = 300
 }
 
+variable "proxmox_auth_ticket" {
+  description = "Proxmox API endpoint URL"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "proxmox_csrf_prevention_token" {
+  description = "Proxmox API endpoint URL"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
 variable "use_token_auth" {
   description = "Utilizza l'autenticazione token invece di username/password per Proxmox"
   type        = bool
@@ -86,6 +100,12 @@ variable "iso_datastore" {
   default     = "iso"
 }
 
+variable "snippets_datastore_id" {
+  description = "Datastore per gli snippet cloud-init"
+  type        = string
+  default     = "local"
+}
+
 variable "network_bridge" {
   description = "Bridge di rete predefinito per le VM e i container"
   type        = string
@@ -93,10 +113,10 @@ variable "network_bridge" {
 }
 
 # Configurazioni globali
-variable "default_ssh_user" {
+variable "default_user" {
   description = "Nome utente SSH predefinito per le VM"
   type        = string
-  default     = "myuser"
+  default     = "filippo"
 }
 
 variable "default_timezone" {
@@ -117,3 +137,4 @@ variable "default_lxc_template" {
   type        = string
   default     = "local:vztmpl/ubuntu-24.04-standard_24.04-2_amd64.tar.zst"
 }
+

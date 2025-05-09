@@ -1,13 +1,17 @@
 ${base_config}
 
+# Configurazioni personalizzate per questa VM
 # Hostname specifico
 hostname: ${hostname}
 
-# Chiave SSH
+# Chiave SSH aggiuntiva
 users:
-  - name: ubuntu
+  - name: root
+    ssh_authorized_keys:
+      - ${ssh_pub_key}
+  - name: ${default_user}
     ssh_authorized_keys:
       - ${ssh_pub_key}
 
-# Configurazioni personalizzate
+# Configurazioni custom
 ${custom_config}

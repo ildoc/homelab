@@ -1,9 +1,5 @@
-# Esempio di file di configurazione terraform.tfvars
-# Questo file deve essere copiato in terraform.tfvars e personalizzato
-# NON COMMITTARE MAI QUESTO FILE CON CREDENZIALI REALI
-
 # Configurazione Vault
-vault_addr = "http://vault.example.com:8200"
+vault_addr = "http://vault:8200"
 vault_proxmox_credentials_path = "terraform/proxmox/api_credentials"
 vault_ssh_keys_path = "terraform/ssh_keys/ubuntu"
 vault_retry = 3
@@ -17,15 +13,18 @@ vault_approle_secret_id = "xxxxx-xxxx-xxxx-xxxx-xxxxxxxx"  # Da impostare come v
 proxmox_endpoint = "https://proxmox.example.com:8006/api2/json"
 proxmox_insecure = false  # impostare su true solo per test se si ha un certificato autofirmato
 proxmox_timeout = 300
+proxmox_auth_ticket = "xxxxxx"
+proxmox_csrf_prevention_token = "xxxxxx"
 
 # Configurazione di base di VM e LXC
 default_node = "pve-node1"  # Nome del nodo Proxmox
 default_datastore = "local-lvm"
 iso_datastore = "local"  # Datastore per immagini ISO
+snippets_datastore_id = "local"  # Datastore per gli snippet cloud-init
 network_bridge = "vmbr0"
 
 # Configurazioni aggiuntive
-default_ssh_user = "ubuntu"  # Utente SSH predefinito per accedere alle VM
+default_user = "filippo"  # Utente SSH predefinito per accedere alle VM
 default_timezone = "Europe/Rome" 
 default_locale = "it_IT.UTF-8"
-default_lxc_template = "local:vztmpl/ubuntu-22.04-standard_22.04-1_amd64.tar.zst"
+default_lxc_template = "local:vztmpl/ubuntu-24.04-standard_24.04-2_amd64.tar.zst"

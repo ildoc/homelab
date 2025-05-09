@@ -1,23 +1,28 @@
 locals {
-  # Usa il base cloud-init fornito o quello predefinito
-  base_cloud_init = var.base_cloud_init != "" ? var.base_cloud_init : templatefile("${path.module}/templates/base-lxc-config.yaml", {
-    ssh_pub_key = var.ssh_public_key
-    hostname    = var.container_name
-  })
-  
-  # Genera la parte personalizzata del cloud-init
-  custom_cloud_init = templatefile("${path.module}/templates/custom-packages.yaml.tpl", {
-    packages = var.packages
-    scripts  = var.custom_scripts
-  })
-  
-  # Combina le configurazioni cloud-init
-  cloud_init_rendered = templatefile("${path.module}/templates/combine.tpl", {
-    base_config   = local.base_cloud_init
-    hostname      = var.container_name
+  # Genera script di inizializzazione per LXC
+  init_script = templatefile("${path.module}/templates/init-script.sh.tpl", {
+    default_user  = var.default_user
     ssh_pub_key   = var.ssh_public_key
-    custom_config = local.custom_cloud_init
+    hostname      = var.container_name
+    packages      = join(" ", var.packages)
+    custom_scripts = var.custom_scripts
   })
+
+  hook_file_name = "${var.container_id}-${var.container_name}-hook.sh"
+}
+
+# Crea script di hook come snippet su Proxmox
+resource "proxmox_virtual_environment_file" "lxc_hook_script" {
+  content_type = "snippets"
+  datastore_id = var.snippets_datastore_id
+  node_name    = var.node_name
+
+  file_mode    = "0700"
+  
+  source_raw {
+    data      = local.init_script
+    file_name = local.hook_file_name
+  }
 }
 
 resource "proxmox_virtual_environment_container" "lxc" {
@@ -31,6 +36,9 @@ resource "proxmox_virtual_environment_container" "lxc" {
     template_file_id = var.template_id != null ? var.template_id : var.ostemplate_url
     type             = "ubuntu"  # o il tipo appropriato
   }
+  
+  # Hook script da eseguire dopo la creazione
+  hook_script_file_id = proxmox_virtual_environment_file.lxc_hook_script.id
   
   # Risorse
   cpu {
@@ -57,12 +65,9 @@ resource "proxmox_virtual_environment_container" "lxc" {
     firewall    = var.firewall
   }
 
+  # Configurazione iniziale del container
   initialization {
     hostname = var.container_name
-    
-    # dns {
-    #   servers = var.dns_servers
-    # }
     
     ip_config {
       ipv4 {
@@ -88,46 +93,4 @@ resource "proxmox_virtual_environment_container" "lxc" {
   start_on_boot = var.start_on_boot
   unprivileged  = var.unprivileged
   started       = true
-  
-  # Provisioner per cloud-init
-  provisioner "file" {
-    content     = local.cloud_init_rendered
-    destination = "/tmp/cloud-init-custom.yaml"
-    
-    connection {
-      type        = "ssh"
-      user        = "root"
-      host        = "${var.container_name}.lan"
-      private_key = var.ssh_private_key
-    }
-  }
-  
-  # Provisioner per configurazione aggiuntiva
-  provisioner "remote-exec" {
-    inline = [
-      "if command -v cloud-init >/dev/null 2>&1; then",
-      "  cp /tmp/cloud-init-custom.yaml /etc/cloud/cloud.cfg.d/99-custom.cfg",
-      "  cloud-init clean && cloud-init init",
-      "  rm /tmp/cloud-init-custom.yaml",
-      "else",
-      "  # Fallback per container senza cloud-init",
-      "  bash -c 'grep -q \"^AllowTcpForwarding\" /etc/ssh/sshd_config && sed -i \"s/^AllowTcpForwarding.*/AllowTcpForwarding yes/\" /etc/ssh/sshd_config || echo \"AllowTcpForwarding yes\" >> /etc/ssh/sshd_config'",
-      "  # Installa pacchetti specificati manualmente",
-      "  if command -v apt-get >/dev/null 2>&1; then",
-      "    apt-get update && apt-get install -y ${join(" ", var.packages)}",
-      "  elif command -v yum >/dev/null 2>&1; then", 
-      "    yum -y install ${join(" ", var.packages)}",
-      "  fi",
-      "  # Esegui script personalizzati",
-      "  ${join("\n  ", var.custom_scripts)}",
-      "fi"
-    ]
-    
-    connection {
-      type        = "ssh"
-      user        = "root"
-      host        = "${var.container_name}.lan"
-      private_key = var.ssh_private_key
-    }
-  }
 }
