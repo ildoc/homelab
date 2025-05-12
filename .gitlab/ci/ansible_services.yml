@@ -8,9 +8,19 @@ include:
 update_invidious:
   extends: .update_service_template
   variables:
-    SERVICE_SSH_SERVER_IP: $INVIDIOUS_SSH_SERVER_IP
+    SERVICE_SSH_SERVER_IP: invidious
     SERVICE_PLAYBOOK: "invidious.yml"
   rules:
     - if: '$CI_COMMIT_BRANCH == "master"'
       changes:
         - ansible/roles/invidious/templates/docker-compose.yml.j2
+
+update_redis:
+  extends: .update_service_template
+  variables:
+    SERVICE_SSH_SERVER_IP: redis
+    SERVICE_PLAYBOOK: "redis.yml"
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "master"'
+      changes:
+        - ansible/roles/redis/**/*

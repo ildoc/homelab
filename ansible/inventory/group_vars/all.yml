@@ -21,9 +21,9 @@ pihole:
     - { ip: 192.168.0.167, domain: "pihole2" }
     - { ip: 192.168.0.183, domain: "ubuntu" }
 
-    - { ip: 192.168.0.50, domain: "vault" }
     - { ip: 192.168.0.30, domain: "db" }
     - { ip: 192.168.0.40, domain: "redis" }
+    - { ip: 192.168.0.50, domain: "vault" }
 
     - { ip: 192.168.0.80, domain: "argocd.local.ildoc.it" }
     - { ip: 192.168.0.80, domain: "longhorn.local.ildoc.it" }
@@ -134,3 +134,6 @@ db:
     admin_password: "{{ lookup('community.hashi_vault.hashi_vault', 'ansible/data/postgres:admin_password') }}"
     pgadmin_email: "{{ lookup('community.hashi_vault.hashi_vault', 'ansible/data/postgres:pgadmin_email') }}"
     pgadmin_password: "{{ lookup('community.hashi_vault.hashi_vault', 'ansible/data/postgres:pgadmin_password') }}"
+
+redis:
+  users_acl: "{{ lookup('community.hashi_vault.hashi_vault', 'ansible/data/redis:users_acl') }}"

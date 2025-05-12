@@ -3,5 +3,4 @@
   hosts: redis
   gather_facts: true
   roles:
-    - role: apt
     - role: redis
