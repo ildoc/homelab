@@ -12,4 +12,3 @@ services:
     cap_add:
       - IPC_LOCK
     command: "vault server -config=/vault/config/vault-config.json"
-    restart: unless-stopped
