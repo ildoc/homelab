@@ -8,6 +8,6 @@ spec:
   type: ClusterIP
   ports:
     - port: 8080
-      targetPort: 8091
+      targetPort: 8080
   selector:
     app: kitchenowl

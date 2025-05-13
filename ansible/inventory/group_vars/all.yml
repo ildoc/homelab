@@ -52,7 +52,7 @@ pihole:
     - { ip: 192.168.0.80, domain: "bookbounty.local.ildoc.it" }
     - { ip: 192.168.0.80, domain: "kestra.local.ildoc.it" }
     - { ip: 192.168.0.80, domain: "paperless.local.ildoc.it" }
-    - { ip: 192.168.0.80, domain: "docs.local.ildoc.it" }
+    - { ip: 192.168.0.80, domain: "kitchenowl.local.ildoc.it" }
     - { ip: 192.168.0.80, domain: "audiobookshelf.local.ildoc.it" }
     - { ip: 192.168.0.25, domain: "gitlab.local.ildoc.it" }
     - { ip: 192.168.0.25, domain: "registry.gitlab.local.ildoc.it" }
