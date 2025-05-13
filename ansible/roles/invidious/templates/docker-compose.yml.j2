@@ -7,9 +7,6 @@ services:
     ports:
       - "80:3000"
     environment:
-      # Please read the following file for a comprehensive list of all available
-      # configuration options and their associated syntax:
-      # https://github.com/iv-org/invidious/blob/master/config/config.example.yml
       INVIDIOUS_CONFIG: |
         db:
           dbname: invidious
@@ -21,10 +18,6 @@ services:
         signature_server: inv_sig_helper:12999
         visitor_data: {{ invidious.visitor_data }}
         po_token: {{ invidious.po_token }}
-        # external_port:
-        # domain: 
-        # https_only: false
-        # statistics_enabled: false
         hmac_key: "{{ invidious.hmac_key }}"
     healthcheck:
       test: wget -nv --tries=1 --spider http://127.0.0.1:3000/api/v1/trending || exit 1

@@ -4,5 +4,6 @@
   become: true
   gather_facts: true
   roles:
+    - apt
     - external-secrets
     - argocd
