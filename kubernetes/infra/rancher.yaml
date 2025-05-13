@@ -17,8 +17,9 @@ spec:
     chart: rancher
     targetRevision: 2.10.3
     helm:
-      valuesObject:
-        ingress.enabled: false
+      parameters:
+        - name: "ingress.enabled"
+          value: "false"
   destination:
     server: https://kubernetes.default.svc
     namespace: cattle-system
