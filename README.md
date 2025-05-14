@@ -41,6 +41,11 @@ Tutto l'Homelab gestito (principalmente) con playbook Ansible, ArgoCD e pipeline
         <td>Tool GitOps per deployare su Kubernetes</td>
     </tr>
     <tr>
+        <td><img width="32" src="https://www.backblaze.com/blog/wp-content/uploads/2017/12/backblaze_icon_transparent-150x150.png"></td>
+        <td><a href="https://www.backblaze.com">Backblaze B2</a></td>
+        <td>Backup cloud di Truenas su bucket s3</td>
+    </tr>
+    <tr>
         <td><img width="32" src="https://github.com/jetstack/cert-manager/raw/master/logo/logo.png"></td>
         <td><a href="https://cert-manager.io">cert-manager</a></td>
         <td>Cloud native certificate management</td>
