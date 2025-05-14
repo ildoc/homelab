@@ -1,7 +1,7 @@
 ---
 date: 2025-04-30
 authors: [ildoc]
-title: "It's alive!"
+title: "Finalmente open!"
 tags:
   - kubernetes
   - gitops
@@ -28,7 +28,7 @@ Come ultima novità ho introdotto [MkDocs](https://squidfunk.github.io/mkdocs-ma
 Di cose da fare ce ne sono un sacco...
 
 - Voglio implementare Harbor per fare il caching delle immagini Docker di DockerHub in modo da non sforare i nuovi limiti di pull orari
-- Vorrei approfondire Terraform e Packer per fare il provisioning delle vm su Proxmox in modo da poter collegare il tutto ai due playbook con cui faccio il setup del cluster Kubernetes e la sua configurazione iniziale
+- Vorrei approfondire Terraform/Opentofu per fare il provisioning delle vm su Proxmox in modo da poter collegare il tutto ai due playbook con cui faccio il setup del cluster Kubernetes e la sua configurazione iniziale
 - Devo implementare il monitoring e le notifiche su tutti i servizi
 - Vorrei un SSO centralizzato per tutto, tipo Autentik
 - Mi piacerebbe scorporare dei roles Ansible per poterli distribuire in repository a sé stanti

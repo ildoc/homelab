@@ -93,7 +93,7 @@ Tutto l'Homelab gestito (principalmente) con playbook Ansible, ArgoCD e pipeline
     <tr>
         <td><img width="32" src="https://avatars.githubusercontent.com/u/142061836?s=200&v=4"></td>
         <td><a href="https://opentofu.org/">OpenTofu</a></td>
-        <td>Infrastructure as Code</td>
+        <td>Infrastructure as Code (work in progress)</td>
     </tr>
     <tr>
         <td><img width="32" src="https://wp-cdn.pi-hole.net/wp-content/uploads/2016/12/Vortex-R.png"></td>
