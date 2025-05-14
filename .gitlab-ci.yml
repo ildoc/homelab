@@ -37,7 +37,6 @@ sync_to_clean:
   variables:
     GIT_STRATEGY: clone
   before_script:
-    # Installazione delle dipendenze necessarie
     - apk add --no-cache git rsync
   script:
     - |
@@ -46,7 +45,7 @@ sync_to_clean:
       COMMIT_AUTHOR_EMAIL=$(git log -1 --pretty=format:"%ae")
       COMMIT_MESSAGE=$(git log -1 --pretty=format:"%s")
 
-      # Step 2: Clonare il repository homelab-clean utilizzando il token CI già disponibile
+      # Step 2: Clone del repo homelab-clean utilizzando il token CI già disponibile
       git clone https://${GIT_USERNAME}:${SYNC_PAT_TOKEN}@${CI_SERVER_HOST}/${GIT_USERNAME}/homelab-clean.git \
         /tmp/homelab-clean
 
@@ -60,7 +59,7 @@ sync_to_clean:
       # Step 5: Eliminare le cartelle e i file specificati nel file .exclude_from_github
       cd /tmp/homelab-clean
 
-      # Verificare se il file .exclude_from_github esiste
+      # Check se il file .exclude_from_github esiste
       if [ -f ".exclude_from_github" ]; then
         echo "File .exclude_from_github trovato, elaborazione delle esclusioni..."
         while IFS= read -r item || [ -n "$item" ]; do
