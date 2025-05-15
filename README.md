@@ -1,7 +1,9 @@
 # Homelab
 
 [![documentation](https://img.shields.io/website?label=document&logo=gitbook&logoColor=white&style=flat-square&url=https%3A%2F%2Fhomelab.ildoc.it)](https://homelab.ildoc.it)
+[![GitHub last commit](https://img.shields.io/github/last-commit/ildoc/homelab?label=last%20sync)](https://github.com/ildoc/homelab)
 [![license](https://img.shields.io/github/license/ildoc/homelab?style=flat-square&logo=gnu&logoColor=white)](https://www.gnu.org/licenses/gpl-3.0.html)
+
 
 Questo progetto mira a utilizzare [Infrastructure as Code](https://en.wikipedia.org/wiki/Infrastructure_as_code) e [GitOps](https://www.weave.works/technologies/gitops) per automatizzare il più possibile l'installazione e la configurazione del software che gira sul mio Homelab.
 

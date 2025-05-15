@@ -88,8 +88,8 @@ pihole:
 nut:
   ups_name: ups
   server_ip: 192.168.0.123
-  username: upsmon
-  password: fixmepass
+  username: "{{ lookup('community.hashi_vault.hashi_vault', 'ansible/data/nut:username') }}"
+  password: "{{ lookup('community.hashi_vault.hashi_vault', 'ansible/data/nut:password') }}"
 
 tasks_dir: ./tasks
 

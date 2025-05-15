@@ -2,7 +2,7 @@
 include:
   # - template: Security/SAST-IaC.latest.gitlab-ci.yml
   - local: '.gitlab/ci/ansible_services.yml'
-  - local: '.gitlab/ci/opentofu.yml'
+  # - local: '.gitlab/ci/opentofu.yml'
 
 stages:
   - lint
