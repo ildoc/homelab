@@ -53,6 +53,16 @@ plugins:
   # - rss:
   #     date_from_meta:
   #       as_creation: date
+  - i18n:
+      docs_structure: suffix
+      languages:
+        - locale: it
+          default: true
+          name: Italiano
+          build: true
+        - locale: en
+          name: English
+          build: true
 
 markdown_extensions:
   - abbr
