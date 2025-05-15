@@ -32,7 +32,6 @@ jobs:
               mkdocs-redirects \
               mkdocs-rss-plugin \
               mkdocs-glightbox \
-              "mkdocs-material[imaging]" \
-              mkdocs-static-i18n
+              "mkdocs-material[imaging]"
       - name: Build and push
         run: mkdocs gh-deploy --force
