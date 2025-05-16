@@ -91,8 +91,8 @@ spec:
               curl -sk -H "X-Vault-Token: $VAULT_TOKEN" -X PUT $VAULT_ADDRESS/v1/sys/policies/acl/$VAULT_POLICY_NAME \
                 -d @<(cat <<EOF
               {
-                "policy": "path \"kubernetes/data/*\" { capabilities = [\"read\"] }\n
-              path \"kubernetes/metadata/*\" { capabilities = [\"list\"] }\n
+                "policy": "path \"kubernetes/data/*\" { capabilities = [\"read\", \"list\"] }\n
+              path \"kubernetes/metadata/*\" { capabilities = [\"read\", \"list\"] }\n
               path \"auth/token/renew-self\" { capabilities = [\"update\"] }\n
               path \"auth/kubernetes/config\" { capabilities = [\"read\", \"update\"] }"
               }
