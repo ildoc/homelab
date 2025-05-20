@@ -10,7 +10,6 @@ tags:
 
 Circa a maggio 2020 in mezzo ai lockdown del COVID ho iniziato a tirarmi su un mediaserver con un semplice docker-compose e oggi, dopo quasi 5 anni di smarmellamenti, ho deciso di provare a rendere pubblico il repository del mio homelab.
 <!-- more -->
-
 Sostanzialmente è diviso in due grosse parti:
 
 - [Ansible](https://github.com/ildoc/homelab/tree/main/ansible): per installare e configurare i servizi che stanno su delle VM o dei LXC sul cluster di Proxmox (Vault, Gitlab, PiHole)

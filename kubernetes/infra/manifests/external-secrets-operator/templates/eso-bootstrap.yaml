@@ -66,7 +66,6 @@ spec:
               fi
 
               echo "[INFO] Getting Kubernetes API info..."
-              TOKEN_REVIEWER_JWT=$(kubectl create token $VAULT_SA_NAME -n $VAULT_SA_NAMESPACE)
               KUBE_CA_CERT=$(awk '{printf "%s\\n", $0}' /var/run/secrets/kubernetes.io/serviceaccount/ca.crt)
 
               echo "[INFO] Reading Vault credentials..."
@@ -80,9 +79,9 @@ spec:
               curl -sk -H "X-Vault-Token: $VAULT_TOKEN" -X POST $VAULT_ADDRESS/v1/auth/kubernetes/config \
                 -d @<(cat <<EOF
               {
-                "token_reviewer_jwt": "$TOKEN_REVIEWER_JWT",
                 "kubernetes_host": "$KUBE_API",
-                "kubernetes_ca_cert": "$KUBE_CA_CERT"
+                "kubernetes_ca_cert": "$KUBE_CA_CERT",
+                "disable_iss_validation": true
               }
               EOF
               )
