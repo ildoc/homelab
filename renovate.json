@@ -10,14 +10,14 @@
     "**/kubernetes/applications/archived/**"
   ],
   "kubernetes": {
-    "fileMatch": [
-      "(^|/)kubernetes/.+\\.ya?ml$"
+    "managerFilePatterns": [
+      "/(^|/)kubernetes/.+\\.ya?ml$/"
     ]
   },
   "ansible": {
-    "fileMatch": [
-      "(^|/)ansible/.+\\.ya?ml$",
-      "(^|/)ansible/.+\\.ya?ml\\.j2$"
+    "managerFilePatterns": [
+      "/(^|/)ansible/.+\\.ya?ml$/",
+      "/(^|/)ansible/.+\\.ya?ml\\.j2$/"
     ]
   }
 }
