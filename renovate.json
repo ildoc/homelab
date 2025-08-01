@@ -1,23 +1,46 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
-    "config:recommended"
+    "config:recommended",
+    ":disableRateLimiting",
+    "group:allNonMajor"
   ],
-  "assignees": [
-    "ildoc"
-  ],
+  "assignees": ["ildoc"],
   "ignorePaths": [
     "**/kubernetes/applications/archived/**"
   ],
   "kubernetes": {
-    "managerFilePatterns": [
-      "/(^|/)kubernetes/.+\\.ya?ml$/"
+    "fileMatch": [
+      "\\.ya?ml$"
+    ],
+    "matchPaths": [
+      "kubernetes/**"
     ]
   },
   "ansible": {
-    "managerFilePatterns": [
-      "/(^|/)ansible/.+\\.ya?ml$/",
-      "/(^|/)ansible/.+\\.ya?ml\\.j2$/"
+    "fileMatch": [
+      "\\.ya?ml$",
+      "\\.ya?ml\\.j2$"
+    ],
+    "matchPaths": [
+      "ansible/**"
     ]
-  }
+  },
+  "regexManagers": [
+    {
+      "description": "Update Docker images in Kubernetes files",
+      "fileMatch": ["^kubernetes/.+\\.ya?ml$"],
+      "matchStrings": [
+        "image:\\s+(?<depName>.*?):(?<currentValue>.*?)\\s"
+      ],
+      "datasourceTemplate": "docker"
+    }
+  ],
+  "packageRules": [
+    {
+      "description": "Automerge non-major updates",
+      "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
+      "automerge": true
+    }
+  ]
 }
