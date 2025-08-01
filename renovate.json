@@ -11,19 +11,13 @@
   ],
   "kubernetes": {
     "fileMatch": [
-      "\\.ya?ml$"
-    ],
-    "matchPaths": [
-      "kubernetes/**"
+      "kubernetes/.+\\.ya?ml$"
     ]
   },
   "ansible": {
     "fileMatch": [
-      "\\.ya?ml$",
-      "\\.ya?ml\\.j2$"
-    ],
-    "matchPaths": [
-      "ansible/**"
+      "ansible/.+\\.ya?ml$",
+      "ansible/.+\\.ya?ml\\.j2$"
     ]
   },
   "regexManagers": [
