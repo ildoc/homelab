@@ -3,7 +3,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: engiaibot
-  namespace: default
+  namespace: apps
 spec:
   selector:
     matchLabels:
