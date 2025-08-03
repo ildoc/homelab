@@ -2,9 +2,10 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
     "config:recommended",
-    ":disableRateLimiting"
+    ":disableRateLimiting",
+    ":dependencyDashboard",
+    ":semanticCommits"
   ],
-  "automerge": false,
   "assignees": ["ildoc"],
   "ignorePaths": [
     "**/kubernetes/applications/archived/**"
@@ -32,9 +33,25 @@
   ],
   "packageRules": [
     {
-      "description": "Automerge non-major updates",
-      "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
-      "automerge": true
+      "description": "Disable automerge",
+      "matchPackagePatterns": ["*"],
+      "automerge": false
+    },
+    {
+      "description": "Gruppo per aggiornamenti security",
+      "matchUpdateTypes": ["patch"],
+      "matchPackagePatterns": ["*"],
+      "groupName": "Security patches",
+      "prPriority": 10
+    },
+    {
+      "description": "Dipendenze critiche con priorità alta",
+      "matchPackageNames": ["critical-package-1", "critical-package-2"],
+      "prPriority": 5
     }
-  ]
+  ],
+  "prConcurrentLimit": 3,
+  "prHourlyLimit": 2,
+  "minimumReleaseAge": "3 days",
+  "schedule": ["after 10pm and before 5am every weekday", "every weekend"]
 }
