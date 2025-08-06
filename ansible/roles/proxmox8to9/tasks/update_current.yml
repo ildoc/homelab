@@ -1,0 +1,47 @@
+- name: Update package cache
+  apt:
+    update_cache: yes
+    cache_valid_time: 0
+
+- name: Upgrade current Proxmox VE 8 system
+  apt:
+    upgrade: dist
+    autoremove: yes
+    autoclean: yes
+  register: current_upgrade
+  retries: 3
+  delay: 10
+
+- name: Check Proxmox VE version
+  command: pveversion
+  register: pve_version
+  changed_when: false
+
+- name: Parse Proxmox VE version
+  set_fact:
+    pve_major_version: "{{ pve_version.stdout | regex_search('pve-manager/([0-9]+)\\.', '\\1') | first }}"
+    pve_minor_version: "{{ pve_version.stdout | regex_search('pve-manager/[0-9]+\\.([0-9]+)', '\\1') | first }}"
+
+- name: Display current Proxmox VE version
+  debug:
+    msg: |
+      Current Proxmox VE version: {{ pve_version.stdout }}
+      Major version: {{ pve_major_version }}
+      Minor version: {{ pve_minor_version }}
+
+- name: Verify version requirement (if still on version 8)
+  fail:
+    msg: "Proxmox VE version must be at least 8.4.1. Current: {{ pve_version.stdout }}"
+  when: 
+    - pve_major_version == "8"
+    - pve_minor_version | int < 4
+
+- name: Check if already upgraded to version 9
+  debug:
+    msg: "System already upgraded to Proxmox VE 9.x: {{ pve_version.stdout }}"
+  when: pve_major_version == "9"
+
+- name: Skip further upgrade steps if already on version 9
+  set_fact:
+    already_upgraded: true
+  when: pve_major_version == "9"

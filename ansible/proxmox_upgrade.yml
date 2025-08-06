@@ -1,0 +1,36 @@
+---
+- name: Upgrade Proxmox VE 8 to 9
+  hosts: proxmox
+  become: yes
+  gather_facts: yes
+  serial: 1  # Upgrade one node at a time
+  
+  vars:
+    proxmox_upgrade_use_enterprise: false
+    proxmox_upgrade_interactive: true
+    proxmox_upgrade_auto_reboot: true
+  
+  pre_tasks:
+    - name: Ensure we're running on Proxmox VE 8
+      fail:
+        msg: "This playbook is designed for Proxmox VE 8.x only"
+      when: 
+        - ansible_distribution != "Debian"
+        - not (ansible_distribution_version is version('12', '>='))
+  
+  roles:
+    - proxmox8to9
+  
+  post_tasks:
+    - name: Final verification
+      command: pveversion
+      register: final_version
+      changed_when: false
+      when: not (proxmox_upgrade_auto_reboot | default(false))
+    
+    - name: Display final version
+      debug:
+        msg: "Upgrade completed. Version: {{ final_version.stdout }}"
+      when: 
+        - final_version is defined
+        - not (proxmox_upgrade_auto_reboot | default(false))

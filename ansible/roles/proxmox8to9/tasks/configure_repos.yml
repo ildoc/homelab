@@ -1,0 +1,20 @@
+- name: Skip repository configuration if already upgraded
+  debug:
+    msg: "Skipping repository configuration - already on Proxmox VE 9"
+  when: already_upgraded | default(false)
+
+- name: Configure repositories for Proxmox VE 9 (NO-SUBSCRIPTION)
+  when: not (already_upgraded | default(false))
+  block:
+    - name: Update Debian repositories to Trixie
+      replace:
+        path: /etc/apt/sources.list
+        regexp: 'bookworm'
+        replace: 'trixie'
+        backup: yes
+      register: debian_repo_update
+
+    - name: Disable/comment enterprise repository if present
+      replace:
+        path: /etc/apt/sources.list.d/pve-enterprise.list
+        regexp: '^(deb.*)$'

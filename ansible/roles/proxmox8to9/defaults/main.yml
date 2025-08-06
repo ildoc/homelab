@@ -1,0 +1,14 @@
+---
+# Default variables for Proxmox VE upgrade
+
+# Use enterprise repositories (requires valid subscription)
+proxmox_upgrade_use_enterprise: false
+
+# Enable interactive prompts for manual review
+proxmox_upgrade_interactive: true
+
+# Automatically reboot after upgrade
+proxmov_upgrade_auto_reboot: true
+
+# Backup configuration files before upgrade
+proxmox_upgrade_backup_configs: true

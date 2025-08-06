@@ -1,0 +1,52 @@
+- name: Check if pve8to9 exists
+  stat:
+    path: /usr/bin/pve8to9
+  register: pve8to9_exists
+
+- name: Fail if pve8to9 not found
+  fail:
+    msg: "pve8to9 script not found. Make sure you're running Proxmox VE 8.4+"
+  when: not pve8to9_exists.stat.exists
+
+- name: Run pve8to9 checklist (basic)
+  command: pve8to9
+  register: pve8to9_basic
+  changed_when: false
+  failed_when: pve8to9_basic.rc not in [0, 1]
+
+- name: Run pve8to9 checklist (full)
+  command: pve8to9 --full
+  register: pve8to9_full
+  changed_when: false
+  failed_when: pve8to9_full.rc not in [0, 1]
+
+- name: Save pve8to9 results to file
+  copy:
+    content: |
+      pve8to9 Basic Check Results:
+      {{ pve8to9_basic.stdout }}
+      {{ pve8to9_basic.stderr }}
+      
+      pve8to9 Full Check Results:
+      {{ pve8to9_full.stdout }}
+      {{ pve8to9_full.stderr }}
+    dest: "/root/pve8to9-check-{{ ansible_date_time.date }}.log"
+  delegate_to: "{{ inventory_hostname }}"
+
+- name: Display pve8to9 results
+  debug:
+    msg: |
+      pve8to9 check completed. Results saved to /root/pve8to9-check-{{ ansible_date_time.date }}.log
+      Basic check return code: {{ pve8to9_basic.rc }}
+      Full check return code: {{ pve8to9_full.rc }}
+      
+      STDOUT: {{ pve8to9_full.stdout }}
+      STDERR: {{ pve8to9_full.stderr }}
+
+- name: Pause for manual review of pve8to9 results
+  pause:
+    prompt: |
+      Controlla i risultati di pve8to9 sopra riportati.
+      Risolvi eventuali problemi critici prima di continuare.
+      Premi ENTER per continuare o Ctrl+C per interrompere.
+  when: proxmox_upgrade_interactive | default(true)
