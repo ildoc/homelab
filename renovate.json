@@ -4,25 +4,40 @@
     "config:recommended",
     ":disableRateLimiting",
     ":dependencyDashboard",
-    ":semanticCommits"
+    ":semanticCommits",
+    ":timezone(Europe/Rome)"
   ],
-  "assignees": [
-    "ildoc"
-  ],
+  
+  "automerge": false,
+  "platformAutomerge": false,
+  
+  "separateMajorMinor": true,
+  "separateMinorPatch": true,
+  "separateMultipleMajor": true,
+  "groupName": null,
+  
+  "assignees": ["ildoc"],
+  
+  "prConcurrentLimit": 50,
+  "prHourlyLimit": 0,
+  
   "ignorePaths": [
     "**/kubernetes/applications/archived/**"
   ],
+  
   "kubernetes": {
     "managerFilePatterns": [
       "/kubernetes/.+\\.ya?ml$/"
     ]
   },
+  
   "ansible": {
     "managerFilePatterns": [
       "/ansible/.+\\.ya?ml$/",
       "/ansible/.+\\.ya?ml\\.j2$/"
     ]
   },
+  
   "customManagers": [
     {
       "customType": "regex",
@@ -36,24 +51,14 @@
       "datasourceTemplate": "docker"
     }
   ],
+  
   "packageRules": [
     {
-      "description": "Disable automerge",
+      "description": "Disabilita automerge per tutto",
+      "matchPackageNames": ["*"],
       "automerge": false,
-      "matchPackageNames": [
-        "*"
-      ]
-    },
-    {
-      "description": "Gruppo per aggiornamenti security",
-      "matchUpdateTypes": [
-        "patch"
-      ],
-      "groupName": "Security patches",
-      "prPriority": 10,
-      "matchPackageNames": [
-        "*"
-      ]
+      "platformAutomerge": false,
+      "groupName": null
     },
     {
       "description": "Dipendenze critiche con priorità alta",
@@ -61,11 +66,11 @@
         "critical-package-1",
         "critical-package-2"
       ],
-      "prPriority": 5
+      "prPriority": 5,
+      "groupName": null
     }
   ],
-  "prConcurrentLimit": 3,
-  "prHourlyLimit": 2,
+  
   "minimumReleaseAge": "3 days",
   "schedule": [
     "after 10pm every weekday",
