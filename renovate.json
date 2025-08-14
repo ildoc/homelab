@@ -6,25 +6,30 @@
     ":dependencyDashboard",
     ":semanticCommits"
   ],
-  "assignees": ["ildoc"],
+  "assignees": [
+    "ildoc"
+  ],
   "ignorePaths": [
     "**/kubernetes/applications/archived/**"
   ],
   "kubernetes": {
-    "fileMatch": [
-      "kubernetes/.+\\.ya?ml$"
+    "managerFilePatterns": [
+      "/kubernetes/.+\\.ya?ml$/"
     ]
   },
   "ansible": {
-    "fileMatch": [
-      "ansible/.+\\.ya?ml$",
-      "ansible/.+\\.ya?ml\\.j2$"
+    "managerFilePatterns": [
+      "/ansible/.+\\.ya?ml$/",
+      "/ansible/.+\\.ya?ml\\.j2$/"
     ]
   },
-  "regexManagers": [
+  "customManagers": [
     {
+      "customType": "regex",
       "description": "Update Docker images in Kubernetes files",
-      "fileMatch": ["^kubernetes/.+\\.ya?ml$"],
+      "managerFilePatterns": [
+        "/^kubernetes/.+\\.ya?ml$/"
+      ],
       "matchStrings": [
         "image:\\s+(?<depName>.*?):(?<currentValue>.*?)\\s"
       ],
@@ -34,24 +39,37 @@
   "packageRules": [
     {
       "description": "Disable automerge",
-      "matchPackagePatterns": ["*"],
-      "automerge": false
+      "automerge": false,
+      "matchPackageNames": [
+        "*"
+      ]
     },
     {
       "description": "Gruppo per aggiornamenti security",
-      "matchUpdateTypes": ["patch"],
-      "matchPackagePatterns": ["*"],
+      "matchUpdateTypes": [
+        "patch"
+      ],
       "groupName": "Security patches",
-      "prPriority": 10
+      "prPriority": 10,
+      "matchPackageNames": [
+        "*"
+      ]
     },
     {
       "description": "Dipendenze critiche con priorità alta",
-      "matchPackageNames": ["critical-package-1", "critical-package-2"],
+      "matchPackageNames": [
+        "critical-package-1",
+        "critical-package-2"
+      ],
       "prPriority": 5
     }
   ],
   "prConcurrentLimit": 3,
   "prHourlyLimit": 2,
   "minimumReleaseAge": "3 days",
-  "schedule": ["after 10pm and before 5am every weekday", "every weekend"]
+  "schedule": [
+    "after 10pm every weekday",
+    "every weekend",
+    "before 5am every weekday"
+  ]
 }
