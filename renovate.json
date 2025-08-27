@@ -27,6 +27,15 @@
   "ignorePaths": [
     "**/kubernetes/applications/archived/**"
   ],
+
+  "docker-compose": {
+    "fileMatch": [
+      "(^|/)docker-compose[^/]*\\.ya?ml$",
+      "(^|/)docker-compose[^/]*\\.ya?ml\\.j2$",
+      "(^|/)compose[^/]*\\.ya?ml$",
+      "(^|/)compose[^/]*\\.ya?ml\\.j2$"
+    ]
+  },
   
   "kubernetes": {
     "managerFilePatterns": [
