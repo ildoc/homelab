@@ -21,6 +21,9 @@
   "prConcurrentLimit": 50,
   "prHourlyLimit": 0,
   
+  "prCreation": "not-pending",
+  "internalChecksFilter": "flexible",
+  
   "ignorePaths": [
     "**/kubernetes/applications/archived/**"
   ],
@@ -61,17 +64,23 @@
       "groupName": null
     },
     {
-      "description": "Dipendenze critiche con priorità alta",
-      "matchPackageNames": [
-        "critical-package-1",
-        "critical-package-2"
-      ],
-      "prPriority": 5,
-      "groupName": null
+      "description": "Security updates - senza stability days",
+      "matchUpdateTypes": ["patch"],
+      "minimumReleaseAge": null,
+      "prCreation": "immediate"
+    },
+    {
+      "description": "Major updates - più giorni di stability",
+      "matchUpdateTypes": ["major"],
+      "minimumReleaseAge": "7 days"
+    },
+    {
+      "description": "Minor updates - periodo standard",
+      "matchUpdateTypes": ["minor"],
+      "minimumReleaseAge": "3 days"
     }
   ],
   
-  "minimumReleaseAge": "3 days",
   "schedule": [
     "after 10pm every weekday",
     "every weekend",
