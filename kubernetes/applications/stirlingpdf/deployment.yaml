@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
         - name: stirlingpdf
-          image: frooodle/s-pdf:1.1.1
+          image: frooodle/s-pdf:1.2.0
           env:
             - name: DOCKER_ENABLE_SECURITY
               value: "false"
