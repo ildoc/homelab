@@ -97,6 +97,12 @@ gitlab:
   domain: gitlab.local.ildoc.it
   letsencrypt_email: "{{ lookup('community.hashi_vault.hashi_vault', 'ansible/data/gitlab:letsencrypt_email') }}"
   cloudflare_token: "{{ lookup('community.hashi_vault.hashi_vault', 'ansible/data/gitlab:cloudflare_token') }}"
+  cleanup:
+    interval_hours: 6
+    aggressive_hour: 2
+    disk_threshold: 85
+    prune_until_hours: 24
+    max_builds: 10
 
 kubernetes:
   k8s_version: "1.31"

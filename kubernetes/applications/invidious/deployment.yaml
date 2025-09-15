@@ -1,0 +1,66 @@
+# ho questo template jinjia di un docker compose
+
+# ---
+# services:
+
+#   invidious:
+#     image: quay.io/invidious/invidious:2025.05.28-df8839d
+#     restart: unless-stopped
+#     ports:
+#       - "80:3000"
+#     environment:
+#       INVIDIOUS_CONFIG: |
+#         db:
+#           dbname: invidious
+#           user: {{ invidious.db_user }}
+#           password: {{ invidious.db_password }}
+#           host: invidious-db
+#           port: 5432
+#         check_tables: true
+#         signature_server: inv_sig_helper:12999
+#         visitor_data: {{ invidious.visitor_data }}
+#         po_token: {{ invidious.po_token }}
+#         hmac_key: "{{ invidious.hmac_key }}"
+#     healthcheck:
+#       test: wget -nv --tries=1 --spider http://127.0.0.1:3000/api/v1/trending || exit 1
+#       interval: 30s
+#       timeout: 5s
+#       retries: 2
+#     logging:
+#       options:
+#         max-size: "1G"
+#         max-file: "4"
+#     depends_on:
+#       - invidious-db
+
+#   inv_sig_helper:
+#     image: quay.io/invidious/inv-sig-helper:latest@sha256:b5466c9add729e82e4e3ee5515c30b69df02d78ebb2486dbc9c63e456f29083d
+#     init: true
+#     command: ["--tcp", "0.0.0.0:12999"]
+#     environment:
+#       - RUST_LOG=info
+#     restart: unless-stopped
+#     cap_drop:
+#       - ALL
+#     read_only: true
+#     security_opt:
+#       - no-new-privileges:true
+
+#   invidious-db:
+#     image: postgres:14
+#     restart: unless-stopped
+#     volumes:
+#       - postgresdata:/var/lib/postgresql/data
+#       - ./config/sql:/config/sql
+#       - ./docker/init-invidious-db.sh:/docker-entrypoint-initdb.d/init-invidious-db.sh
+#     environment:
+#       POSTGRES_DB: invidious
+#       POSTGRES_USER: {{ invidious.db_user }}
+#       POSTGRES_PASSWORD: {{ invidious.db_password }}
+#     healthcheck:
+#       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+
+# volumes:
+#   postgresdata:
+
+# vorrei scrivere un deployment kubernetes per sostituirlo

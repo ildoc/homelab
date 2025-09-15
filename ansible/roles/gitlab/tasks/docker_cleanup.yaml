@@ -1,0 +1,75 @@
+---
+- name: Create docker cleanup script directory
+  ansible.builtin.file:
+    path: ~/scripts
+    state: directory
+    mode: '0755'
+
+- name: Copy docker cleanup script
+  ansible.builtin.template:
+    src: docker-cleanup.sh.j2
+    dest: ~/scripts/docker-cleanup.sh
+    mode: '0755'
+
+- name: Create log directory for cleanup
+  ansible.builtin.file:
+    path: /var/log
+    state: directory
+    mode: '0755'
+
+- name: Configure runner with cleanup settings
+  ansible.builtin.template:
+    src: runner-config.toml.j2
+    dest: ~/runner/config.toml
+    mode: '0600'
+  notify: Restart runner
+
+- name: Schedule docker cleanup via cron (every 6 hours)
+  ansible.builtin.cron:
+    name: "Docker cleanup for GitLab"
+    minute: "0"
+    hour: "*/6"
+    job: "/root/scripts/docker-cleanup.sh > /dev/null 2>&1"
+    state: present
+
+- name: Schedule aggressive cleanup (daily at 2 AM)
+  ansible.builtin.cron:
+    name: "Docker aggressive cleanup"
+    minute: "0"
+    hour: "2"
+    job: "docker system prune -af --volumes > /var/log/docker-prune.log 2>&1"
+    state: present
+
+- name: Monitor disk usage and alert
+  ansible.builtin.cron:
+    name: "Check docker disk usage"
+    minute: "*/30"
+    job: |
+      USAGE=$(df -h /var/lib/docker | awk 'NR==2 {print $5}' | sed 's/%//');
+      if [ "$USAGE" -gt 85 ]; then
+        echo "WARNING: Docker disk usage is at ${USAGE}%" | logger -t docker-monitor;
+        /root/scripts/docker-cleanup.sh;
+      fi
+    state: present
+
+- name: Configure Docker daemon with size limits
+  ansible.builtin.template:
+    src: daemon.json.j2
+    dest: /etc/docker/daemon.json
+    mode: '0644'
+  notify: Restart docker
+
+- name: Setup log rotation for docker logs
+  ansible.builtin.copy:
+    content: |
+      /var/log/docker-cleanup.log {
+          daily
+          rotate 7
+          compress
+          delaycompress
+          missingok
+          notifempty
+          create 640 root root
+      }
+    dest: /etc/logrotate.d/docker-cleanup
+    mode: '0644'

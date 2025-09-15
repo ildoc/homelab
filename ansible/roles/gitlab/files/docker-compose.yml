@@ -23,6 +23,8 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./runner:/etc/gitlab-runner
     restart: always
+    environment:
+      - DOCKER_HOST=unix:///var/run/docker.sock
 
   nginx:
     image: nginx:stable
@@ -36,3 +38,27 @@ services:
       - ./certbot/conf:/etc/letsencrypt:ro
       - ./certbot/www:/var/www/certbot
     restart: always
+
+  # Nuovo servizio per pulizia automatica
+  docker-cleanup:
+    image: docker:latest
+    container_name: docker-cleanup
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - CLEANUP_INTERVAL=86400  # 24 ore in secondi
+      - PRUNE_UNTIL=24h          # Rimuovi immagini più vecchie di 24 ore
+    command: >
+      sh -c "
+        echo 'Docker cleanup service started';
+        while true; do
+          echo 'Running cleanup at' $$(date);
+          docker system prune -af --filter 'until=$${PRUNE_UNTIL}' --volumes;
+          docker image prune -af --filter 'until=$${PRUNE_UNTIL}';
+          docker container prune -f --filter 'until=$${PRUNE_UNTIL}';
+          docker volume prune -f;
+          echo 'Cleanup completed. Sleeping for $${CLEANUP_INTERVAL} seconds';
+          sleep $${CLEANUP_INTERVAL};
+        done
+      "
+    restart: unless-stopped
