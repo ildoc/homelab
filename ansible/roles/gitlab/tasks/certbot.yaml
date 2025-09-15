@@ -5,18 +5,62 @@
     state: directory
     mode: '0755'
 
+- name: Check existing cloudflare.ini
+  ansible.builtin.stat:
+    path: ~/certbot/cloudflare.ini
+  register: cloudflare_ini_stat
+
+- name: Read existing cloudflare.ini if exists
+  ansible.builtin.slurp:
+    src: ~/certbot/cloudflare.ini
+  register: existing_cloudflare_ini
+  when: cloudflare_ini_stat.stat.exists
+
+- name: Generate cloudflare.ini content
+  ansible.builtin.set_fact:
+    cloudflare_ini_content: "{{ lookup('template', 'cloudflare.ini.j2') }}"
+
+- name: Check if cloudflare.ini needs update
+  ansible.builtin.set_fact:
+    cloudflare_ini_needs_update: >-
+      {{
+        not cloudflare_ini_stat.stat.exists or
+        (existing_cloudflare_ini.content | b64decode) != cloudflare_ini_content
+      }}
+
 - name: Deploy cloudflare.ini
   ansible.builtin.template:
     src: cloudflare.ini.j2
-    dest: "~/certbot/cloudflare.ini"
+    dest: ~/certbot/cloudflare.ini
     mode: '0600'
+    backup: yes
+  when: cloudflare_ini_needs_update
 
 - name: Check if certificate already exists
   ansible.builtin.stat:
     path: "./certbot/conf/live/{{ gitlab.domain }}/fullchain.pem"
   register: cert_status
 
-- name: Run certbot only if cert does not exist
+- name: Check certificate expiry if exists
+  ansible.builtin.command: >
+    openssl x509 -in "./certbot/conf/live/{{ gitlab.domain }}/fullchain.pem" 
+    -noout -enddate
+  register: cert_expiry
+  when: cert_status.stat.exists
+  changed_when: false
+  failed_when: false
+
+- name: Parse certificate expiry date
+  ansible.builtin.set_fact:
+    cert_needs_renewal: >-
+      {{
+        not cert_status.stat.exists or
+        (cert_expiry.rc != 0) or
+        ((cert_expiry.stdout | regex_search('notAfter=(.+)', '\\1') | first | to_datetime('%b %d %H:%M:%S %Y %Z')) - ansible_date_time.date | to_datetime('%Y-%m-%d')).days < 30
+      }}
+  when: cert_status.stat.exists
+
+- name: Run certbot only if cert does not exist or needs renewal
   ansible.builtin.command: >-
     docker run --rm \
       -v ./certbot/conf:/etc/letsencrypt \
@@ -33,19 +77,48 @@
       -d {{ gitlab.domain }} \
       -d registry.{{ gitlab.domain }} \
       --email {{ gitlab.letsencrypt_email }} \
-      --server https://acme-v02.api.letsencrypt.org/directory
-  when: not cert_status.stat.exists
+      --server https://acme-v02.api.letsencrypt.org/directory \
+      --force-renewal
+  when: not cert_status.stat.exists or (cert_needs_renewal | default(false))
+  register: certbot_result
+
+- name: Check existing renew script
+  ansible.builtin.stat:
+    path: ~/gitlab/renew-cert.sh
+  register: renew_script_stat
+
+- name: Read existing renew script if exists
+  ansible.builtin.slurp:
+    src: ~/gitlab/renew-cert.sh
+  register: existing_renew_script
+  when: renew_script_stat.stat.exists
+
+- name: Generate renew script content
+  ansible.builtin.set_fact:
+    renew_script_content: "{{ lookup('template', 'renew-cert.sh.j2') }}"
+
+- name: Check if renew script needs update
+  ansible.builtin.set_fact:
+    renew_script_needs_update: >-
+      {{
+        not renew_script_stat.stat.exists or
+        (existing_renew_script.content | b64decode) != renew_script_content
+      }}
 
 - name: Copy renew script
   ansible.builtin.template:
     src: renew-cert.sh.j2
-    dest: "~/gitlab/renew-cert.sh"
+    dest: ~/gitlab/renew-cert.sh
     mode: '0755'
+    backup: yes
+  when: renew_script_needs_update
 
+# Cron è già idempotente per natura
 - name: Schedule certificate renew script
   ansible.builtin.cron:
     name: "Renew cert {{ gitlab.domain }}"
     minute: "0"
     hour: "*/12"
-    job: "/home/{{ ansible_user }}/gitlab/renew-cert.sh"
+    job: "/root/gitlab/renew-cert.sh"
     state: present
+    user: root

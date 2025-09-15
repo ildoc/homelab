@@ -64,10 +64,10 @@ docker images | grep -E "runner-.*project-.*concurrent-" | awk '{print $3}' | xa
 log_message "Pulizia layer intermedi..."
 docker image prune -a -f --filter "dangling=true" 2>&1 | tee -a "$LOG_FILE"
 
-# 9. Se lo spazio su disco è ancora sopra l'80%, pulizia più aggressiva
+# 9. Se lo spazio su disco è ancora sopra DISK_THRESHOLD%, pulizia più aggressiva
 DISK_USAGE=$(get_disk_usage)
-if [ "$DISK_USAGE" -gt 80 ]; then
-    log_message "ATTENZIONE: Spazio disco ancora sopra 80% ($DISK_USAGE%). Pulizia aggressiva..."
+if [ "$DISK_USAGE" -gt "$DISK_THRESHOLD" ]; then
+    log_message "ATTENZIONE: Spazio disco ancora sopra ${DISK_THRESHOLD}% ($DISK_USAGE%). Pulizia aggressiva..."
     
     # Rimuovi TUTTE le immagini non in uso
     docker image prune -a -f 2>&1 | tee -a "$LOG_FILE"

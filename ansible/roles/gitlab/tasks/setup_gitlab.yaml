@@ -31,6 +31,7 @@
     src: "{{ gitlab_files_path }}/entrypoint.sh"
     dest: ~/gitlab/entrypoint.sh
     mode: '0755'
+  register: entrypoint_result
 
 - name: Set variables
   ansible.builtin.set_fact:
@@ -62,21 +63,48 @@
 
 - name: Check text differences
   ansible.builtin.set_fact:
-    gitlab_rb_different: >
-      {{ (remote_gitlab_rb_content.content | b64decode).strip() != gitlab_rb_template_rendered.strip() }}
+    gitlab_rb_different: >-
+      {{
+        not remote_gitlab_rb.stat.exists or
+        (remote_gitlab_rb_content.content | b64decode).strip() != gitlab_rb_template_rendered.strip()
+      }}
 
 - name: Are they different?
   ansible.builtin.debug:
-    msg: "{{ gitlab_rb_different }}"
+    msg: "GitLab.rb needs update: {{ gitlab_rb_different }}"
 
 - name: Actions to do if files are different
   when: gitlab_rb_different
   block:
+    - name: Backup existing gitlab.rb if exists
+      ansible.builtin.copy:
+        src: ~/gitlab/config/gitlab.rb
+        dest: ~/gitlab/config/gitlab.rb.{{ ansible_date_time.epoch }}
+        remote_src: yes
+      when: remote_gitlab_rb.stat.exists
+
     - name: Copy gitlab.rb
       ansible.builtin.template:
         src: gitlab.rb.j2
         dest: ~/gitlab/config/gitlab.rb
         mode: '0644'
+        backup: yes
 
-    - name: Reconfigure GitLab
+    - name: Check if GitLab container is running
+      ansible.builtin.command: docker ps -q -f name=gitlab
+      register: gitlab_container_running
+      changed_when: false
+      failed_when: false
+
+    - name: Reconfigure GitLab (only if container is running)
       ansible.builtin.command: docker exec -t gitlab gitlab-ctl reconfigure
+      when: gitlab_container_running.stdout != ""
+      register: reconfigure_result
+      # Timeout dopo 5 minuti se la riconfigurazione si blocca
+      async: 300
+      poll: 10
+
+    - name: Report reconfigure result
+      ansible.builtin.debug:
+        msg: "GitLab reconfigured successfully"
+      when: reconfigure_result is defined and reconfigure_result.changed

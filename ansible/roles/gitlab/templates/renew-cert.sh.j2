@@ -1,6 +1,6 @@
 #!/bin/bash
-cd /home/{ ansible_user }
-docker docker run --rm \
+cd /home/{{ ansible_user }}
+docker run --rm \
     -v ./certbot/conf:/etc/letsencrypt \
     -v ./certbot/www:/var/www/certbot \
     -v ./certbot/cloudflare.ini:/cloudflare.ini \
