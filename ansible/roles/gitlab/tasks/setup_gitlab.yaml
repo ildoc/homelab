@@ -80,7 +80,7 @@
       ansible.builtin.copy:
         src: ~/gitlab/config/gitlab.rb
         dest: ~/gitlab/config/gitlab.rb.{{ ansible_date_time.epoch }}
-        remote_src: yes
+        remote_src: true
       when: remote_gitlab_rb.stat.exists
 
     - name: Copy gitlab.rb
@@ -88,7 +88,7 @@
         src: gitlab.rb.j2
         dest: ~/gitlab/config/gitlab.rb
         mode: '0644'
-        backup: yes
+        backup: true
 
     - name: Check if GitLab container is running
       ansible.builtin.command: docker ps -q -f name=gitlab
