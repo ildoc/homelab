@@ -1,28 +1,28 @@
-# ---
-# apiVersion: gateway.networking.k8s.io/v1
-# kind: HTTPRoute
-# metadata:
-#   name: harbor-route
-#   namespace: harbor
-# spec:
-#   parentRefs:
-#     - name: traefik-gateway
-#       kind: Gateway
-#       namespace: traefik
-#   hostnames:
-#     - "harbor.local.ildoc.it"
-#   rules:
-#     - matches:
-#         - path:
-#             type: PathPrefix
-#             value: /
-#       # filters:
-#       #   - type: ExtensionRef
-#       #     extensionRef:
-#       #       group: traefik.io
-#       #       kind: Middleware
-#       #       name: default-headers
-#       #       namespace: default
-#       backendRefs:
-#         - name: harbor
-#           port: 443
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: harbor-route
+  namespace: harbor
+spec:
+  parentRefs:
+    - name: traefik-gateway
+      kind: Gateway
+      namespace: traefik
+  hostnames:
+    - "harbor.local.ildoc.it"
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      # filters:
+      #   - type: ExtensionRef
+      #     extensionRef:
+      #       group: traefik.io
+      #       kind: Middleware
+      #       name: default-headers
+      #       namespace: default
+      backendRefs:
+        - name: harbor
+          port: 443
