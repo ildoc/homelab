@@ -1,6 +1,6 @@
 ---
 - name: Configure gitlab
-  hosts: gitlab_new
+  hosts: gitlab
   gather_facts: true
   roles:
     - role: gitlab

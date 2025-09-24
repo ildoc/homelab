@@ -46,6 +46,10 @@
     - name: Esegui docker-compose pull
       community.docker.docker_compose_v2_pull:
         project_src: "{{ update_compose_project_path }}"
+      register: pull_result
+      retries: 5 
+      delay: 20  
+      until: not pull_result.failed
 
     - name: Esegui docker-compose up
       community.docker.docker_compose_v2:

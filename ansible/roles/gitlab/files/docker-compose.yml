@@ -17,14 +17,14 @@ services:
     shm_size: '256m'
     restart: unless-stopped
 
-  runner:
-    image: 'gitlab/gitlab-runner:latest'
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - ./runner:/etc/gitlab-runner
-    restart: always
-    environment:
-      - DOCKER_HOST=unix:///var/run/docker.sock
+  # runner:
+  #   image: 'gitlab/gitlab-runner:latest'
+  #   volumes:
+  #     - /var/run/docker.sock:/var/run/docker.sock
+  #     - ./runner:/etc/gitlab-runner
+  #   restart: always
+  #   environment:
+  #     - DOCKER_HOST=unix:///var/run/docker.sock
 
   nginx:
     image: nginx:stable
@@ -39,7 +39,6 @@ services:
       - ./certbot/www:/var/www/certbot
     restart: always
 
-  # Nuovo servizio per pulizia automatica
   docker-cleanup:
     image: docker:latest
     container_name: docker-cleanup
