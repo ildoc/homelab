@@ -42,9 +42,8 @@ gitlab-runner:
           
           # Cache volume
           [[runners.kubernetes.volumes.pvc]]
-            name = "cache"
+            name = "gitlab-runner-cache"
             mount_path = "/cache"
-            claim_name = "gitlab-runner-cache"
   
   rbac:
     create: true
