@@ -1,0 +1,62 @@
+n8n:
+  image:
+    repository: n8nio/n8n
+    tag: "1.112.0"
+    pullPolicy: IfNotPresent
+
+  main:
+    config:
+      n8n:
+        editor_base_url: https://n8n.local.ildoc.it
+        hide_usage_page: true
+      # SQLite è il default, non serve specificare nulla per il DB
+      generic:
+        timezone: Europe/Rome
+    
+    # Solo l'encryption key viene gestita tramite External Secrets
+    extraEnv:
+      N8N_ENCRYPTION_KEY:
+        valueFrom:
+          secretKeyRef:
+            name: n8n-secrets
+            key: encryption_key
+    
+    persistence:
+      enabled: true
+      type: dynamic
+      storageClass: nfs-storage
+      accessModes:
+        - ReadWriteOnce
+      size: 5Gi  # Più spazio perché contiene anche il DB SQLite
+    
+    resources:
+      limits:
+        cpu: 500m
+        memory: 1Gi
+      requests:
+        cpu: 100m
+        memory: 256Mi
+    
+    service:
+      enabled: true
+      type: ClusterIP
+      port: 80
+    
+    deploymentStrategy:
+      type: Recreate
+    
+    replicaCount: 1
+
+  # Worker e Webhook disabilitati con SQLite (non supportati)
+  worker:
+    enabled: false
+
+  webhook:
+    enabled: false
+
+  # Valkey non serve con SQLite
+  valkey:
+    enabled: false
+
+  ingress:
+    enabled: false  # Usiamo HTTPRoute invece
