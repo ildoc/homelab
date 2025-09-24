@@ -15,7 +15,7 @@ spec:
   source:
     repoURL: https://releases.rancher.com/server-charts/stable
     chart: rancher
-    targetRevision: 2.10.3
+    targetRevision: 2.12.2
     helm:
       parameters:
         - name: "ingress.enabled"
