@@ -1,39 +1,40 @@
 ---
-# apiVersion: argoproj.io/v1alpha1
-# kind: ApplicationSet
-# metadata:
-#   name: helmcharts
-#   namespace: argocd
-# spec:
-#   goTemplate: true
-#   goTemplateOptions: ["missingkey=error"]
-#   generators:
-#   - git:
-#       repoURL: https://gitlab.local.ildoc.it/ildoc/homelab.git
-#       revision: HEAD
-#       directories:
-#       - path: kubernetes/test/*
-#   template:
-#     metadata:
-#       name: '{{.path.basename}}'
-#       namespace: argocd
-#       finalizers:
-#         - resources-finalizer.argocd.argoproj.io
-#     spec:
-#       project: default
-#       source:
-#         repoURL: https://gitlab.local.ildoc.it/ildoc/homelab.git
-#         targetRevision: HEAD
-#         path: '{{.path.path}}'
-#         helm:
-#           valueFiles:
-#             - values.yaml
-#       destination:
-#         server: https://kubernetes.default.svc
-#         namespace: '{{.path.basename}}'
-#       syncPolicy:
-#         syncOptions:
-#         - CreateNamespace=true
-#         automated:
-#           prune: true
-#           selfHeal: true
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: helmcharts
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+  - git:
+      repoURL: https://gitlab.local.ildoc.it/ildoc/homelab.git
+      revision: HEAD
+      directories:
+      - path: kubernetes/charts/*
+  template:
+    metadata:
+      name: '{{.path.basename}}'
+      namespace: argocd
+      finalizers:
+        - resources-finalizer.argocd.argoproj.io
+    spec:
+      project: default
+      source:
+        repoURL: https://gitlab.local.ildoc.it/ildoc/homelab.git
+        targetRevision: HEAD
+        path: '{{.path.path}}'
+        helm:
+          valueFiles:
+            - values.yaml
+          releaseName: '{{.path.basename}}'
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: apps
+      syncPolicy:
+        syncOptions:
+        - CreateNamespace=true
+        automated:
+          prune: true
+          selfHeal: true
