@@ -1,7 +1,12 @@
 ---
 external-secrets:
-  installCRDs: true
+  installCRDs: false
   replicaCount: 3
+  crds:
+    install: false
+    createClusterExternalSecret: false
+    createClusterSecretStore: false
+    createPushSecret: false
 
   serviceAccount:
     create: true
