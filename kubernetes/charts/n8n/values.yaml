@@ -8,7 +8,11 @@ n8n:
     config:
       n8n:
         editor_base_url: https://n8n.local.ildoc.it
-        hide_usage_page: true
+        # hide_usage_page: true
+        # license:
+        #   activation:
+        #     key: 22b42862-6ac6-4213-805b-b7ff6be26fcc
+            
       # SQLite è il default, non serve specificare nulla per il DB
       generic:
         timezone: Europe/Rome
