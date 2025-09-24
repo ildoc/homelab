@@ -1,0 +1,130 @@
+---
+gitlab-runner:
+  gitlabUrl: http://gitlab.local.ildoc.it/
+  
+  replicas: 2
+  concurrent: 10
+  checkInterval: 30
+  logLevel: info
+  
+  # RBAC
+  rbac:
+    create: true
+    clusterWideAccess: false
+    serviceAccountName: gitlab-runner
+    
+  # Metrics
+  metrics:
+    enabled: true
+    port: 9252
+    serviceMonitor:
+      enabled: false  # Abilita se hai Prometheus Operator
+  
+  # Pod Security Policy
+  podSecurityPolicy:
+    enabled: false
+    resourceNames:
+      - gitlab-runner
+  
+  # Resources
+  resources:
+    limits:
+      memory: 256Mi
+      cpu: 200m
+    requests:
+      memory: 128Mi
+      cpu: 100m
+  
+  # Affinity per evitare che i runner siano sullo stesso nodo
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          podAffinityTerm:
+            labelSelector:
+              matchLabels:
+                app: gitlab-runner
+            topologyKey: kubernetes.io/hostname
+  
+  # Volume per la cache locale (opzionale)
+  volumeMounts:
+    - name: cache
+      mountPath: /cache
+  
+  volumes:
+    - name: cache
+      emptyDir:
+        medium: "Memory"
+  
+  # Configurazione del runner
+  runners:
+    # Usa il token dal secret di Vault
+    secret: gitlab-runner-auth-secret
+    
+    # Configurazione del runner in formato TOML
+    config: |
+      [[runners]]
+        name = "kubernetes-runner-{{.index}}"
+        executor = "kubernetes"
+        output_limit = 16384
+        
+        [runners.kubernetes]
+          namespace = "{{.Release.Namespace}}"
+          image = "docker:24-dind"
+          pull_policy = ["always", "if-not-present"]
+          
+          # CPU e Memory limits per i job
+          cpu_limit = "2"
+          cpu_request = "500m"
+          memory_limit = "4Gi"
+          memory_request = "512Mi"
+          
+          # CPU e Memory per i container helper
+          helper_cpu_limit = "500m"
+          helper_cpu_request = "100m"
+          helper_memory_limit = "256Mi"
+          helper_memory_request = "128Mi"
+          
+          # Service account
+          service_account = "gitlab-runner"
+          
+          # Poll timeout
+          poll_interval = 3
+          poll_timeout = 180
+          
+          # DNS config
+          dns_policy = "ClusterFirst"
+          
+          # Node selector (opzionale)
+          # [runners.kubernetes.node_selector]
+          #   "node-role.kubernetes.io/worker" = "true"
+          
+          # Tolerations (opzionale)
+          # [[runners.kubernetes.node_tolerations]]
+          #   key = "node-role.kubernetes.io/master"
+          #   operator = "Exists"
+          #   effect = "NoSchedule"
+          
+          # Abilita Docker in Docker se necessario
+          privileged = false
+          
+          # Volumes per Docker socket (se usi Docker in Docker)
+          # [[runners.kubernetes.volumes.host_path]]
+          #   name = "docker-sock"
+          #   mount_path = "/var/run/docker.sock"
+          #   host_path = "/var/run/docker.sock"
+          
+          # Volume per la cache distribuita (usa NFS)
+          [[runners.kubernetes.volumes.pvc]]
+            name = "cache"
+            mount_path = "/cache"
+            claim_name = "gitlab-runner-cache"
+          
+        # Cache configuration (opzionale, per S3 o simili)
+        # [runners.cache]
+        #   Type = "s3"
+        #   Shared = true
+        #   [runners.cache.s3]
+        #     ServerAddress = "s3.amazonaws.com"
+        #     BucketName = "runner-cache"
+        #     BucketLocation = "eu-west-1"
