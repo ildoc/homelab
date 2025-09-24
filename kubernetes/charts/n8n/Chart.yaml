@@ -5,4 +5,4 @@ version: 1.0.0
 dependencies:
   - name: n8n
     version: "1.0.15"
-    repository: https://8gears.github.io/n8n-helm-chart/
+    repository: https://8gears.github.io/n8n-helm-chart
