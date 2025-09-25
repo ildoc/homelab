@@ -1,6 +1,5 @@
 {{- if .Values.monitoring.pveExporter.enabled }}
 ---
-# kubernetes/infra/manifests/prometheus-stack/templates/pve-exporter/deployment.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -33,15 +32,14 @@ spec:
             secretKeyRef:
               name: pve-credentials
               key: password
-        - name: PVE_VERIFY_SSL
-          value: "{{ .Values.monitoring.pveExporter.verifySsl | default false }}"
-        # Configurazione corretta per pve-exporter usando file di config
+        # Rimuovi PVE_VERIFY_SSL dall'env, va nel config file
         volumeMounts:
         - name: config
-          mountPath: /etc/pve
+          mountPath: /etc/prometheus-pve-exporter
+          readOnly: true
         command: ["/usr/local/bin/pve_exporter"]
         args:
-          - "--config.file=/etc/pve/pve.yml"
+          - "--config.file=/etc/prometheus-pve-exporter/pve.yml"
           - "--web.listen-address=:9221"
         resources:
           limits:

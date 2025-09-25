@@ -115,6 +115,14 @@ kube-prometheus-stack:
         cpu: 100m
         memory: 128Mi
     
+    additionalDataSources:
+      - name: AlertManager
+        type: alertmanager
+        url: http://prometheus-stack-kube-prom-alertmanager:9093
+        access: proxy
+        jsonData:
+          implementation: prometheus
+
     # Grafana configuration
     grafana.ini:
       server:
@@ -143,7 +151,7 @@ kube-prometheus-stack:
         uid: prometheus
         name: Prometheus
         type: prometheus
-        url: http://prometheus-stack-kube-prome-prometheus:9090
+        url: http://prometheus-stack-kube-prom-prometheus:9090
         access: proxy
     
     # Dashboard configuration - usando il metodo standard del chart
@@ -292,6 +300,8 @@ kube-prometheus-stack:
     enabled: false
   kubeScheduler:
     enabled: false
+  kubeProxy:
+    enabled: false
 
 ## Configurazioni custom per il monitoring aggiuntivo
 ## Queste sono utilizzate dai template custom
@@ -362,15 +372,10 @@ monitoring:
     scrapeInterval: "30s"
     # Configurazione corretta per pve-exporter
     targets:
-      - name: "proxmox-node1"
-        address: "192.168.0.10"
-        port: 8006
-      - name: "proxmox-node2"
-        address: "192.168.0.11"
-        port: 8006
-      - name: "proxmox-node3"
-        address: "192.168.0.12"
-        port: 8006
+      targets:
+      - "192.168.0.10"
+      - "192.168.0.11"
+      - "192.168.0.12"
     resources:
       limits:
         cpu: "100m"

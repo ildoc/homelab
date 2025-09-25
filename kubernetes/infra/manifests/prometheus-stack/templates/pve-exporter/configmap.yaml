@@ -8,11 +8,13 @@ metadata:
 data:
   pve.yml: |
     default:
+      user: "{{ .Values.monitoring.pveExporter.user }}"
+      password: "{{ .Values.monitoring.pveExporter.password }}"
       verify_ssl: {{ .Values.monitoring.pveExporter.verifySsl | default false }}
       {{- if .Values.monitoring.pveExporter.targets }}
       targets:
         {{- range .Values.monitoring.pveExporter.targets }}
-        - {{ . }}
+        - "{{ . }}"  # IP dei nodi Proxmox
         {{- end }}
       {{- end }}
 {{- end }}
