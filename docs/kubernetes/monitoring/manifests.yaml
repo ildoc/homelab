@@ -1,0 +1,583 @@
+################################################################################
+# 1. kubernetes/infra/prometheus-stack.yaml
+################################################################################
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: prometheus-stack
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    argocd.argoproj.io/sync-wave: "-85"
+spec:
+  project: default
+  source:
+    repoURL: https://gitlab.local.ildoc.it/ildoc/homelab.git
+    targetRevision: HEAD
+    path: kubernetes/infra/manifests/prometheus-stack
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    automated:
+      prune: true
+      selfHeal: true
+
+################################################################################
+# 2. kubernetes/infra/manifests/prometheus-stack/Chart.yaml
+################################################################################
+---
+apiVersion: v2
+name: prometheus-stack-bootstrap
+version: 0.1.0
+dependencies:
+  - name: kube-prometheus-stack
+    version: "67.10.0"
+    repository: https://prometheus-community.github.io/helm-charts
+
+################################################################################
+# 3. kubernetes/infra/manifests/prometheus-stack/values.yaml
+################################################################################
+---
+kube-prometheus-stack:
+  prometheusOperator:
+    admissionWebhooks:
+      enabled: false  # Semplifica gestione con ArgoCD
+    resources:
+      limits:
+        cpu: 200m
+        memory: 200Mi
+      requests:
+        cpu: 100m
+        memory: 100Mi
+
+  prometheus:
+    prometheusSpec:
+      replicas: 2
+      retention: 30d
+      retentionSize: 15GB
+      
+      resources:
+        requests:
+          cpu: 250m
+          memory: 1Gi
+        limits:
+          cpu: 1000m
+          memory: 2Gi
+      
+      storageSpec:
+        volumeClaimTemplate:
+          spec:
+            storageClassName: nfs-storage
+            accessModes: ["ReadWriteOnce"]
+            resources:
+              requests:
+                storage: 20Gi
+      
+      # Selettori per ServiceMonitors e Probes
+      serviceMonitorSelectorNilUsesHelmValues: false
+      podMonitorSelectorNilUsesHelmValues: false
+      ruleSelectorNilUsesHelmValues: false
+      probeSelectorNilUsesHelmValues: false
+      
+      externalLabels:
+        cluster: homelab
+      
+      # Configurazione per GitLab e Proxmox
+      additionalScrapeConfigs:
+        # GitLab Omnibus metrics
+        - job_name: 'gitlab-omnibus'
+          static_configs:
+            - targets: ['gitlab.local.ildoc.it:9090']  # GitLab Prometheus
+          relabel_configs:
+            - source_labels: [__address__]
+              target_label: instance
+              replacement: gitlab
+        
+        # GitLab application metrics
+        - job_name: 'gitlab-app'
+          static_configs:
+            - targets: ['gitlab.local.ildoc.it:8080']  # GitLab Exporter
+          metrics_path: /metrics
+          relabel_configs:
+            - source_labels: [__address__]
+              target_label: instance
+              replacement: gitlab
+        
+        # GitLab Sidekiq
+        - job_name: 'gitlab-sidekiq'
+          static_configs:
+            - targets: ['gitlab.local.ildoc.it:8082']
+          relabel_configs:
+            - source_labels: [__address__]
+              target_label: instance
+              replacement: gitlab-sidekiq
+        
+        # GitLab Workhorse
+        - job_name: 'gitlab-workhorse'
+          static_configs:
+            - targets: ['gitlab.local.ildoc.it:9229']
+          relabel_configs:
+            - source_labels: [__address__]
+              target_label: instance
+              replacement: gitlab-workhorse
+
+  grafana:
+    enabled: true
+    replicas: 1
+    
+    adminPassword: "changeme"  # CAMBIA QUESTO!
+    
+    persistence:
+      enabled: true
+      storageClassName: nfs-storage
+      size: 5Gi
+    
+    resources:
+      limits:
+        cpu: 200m
+        memory: 256Mi
+      requests:
+        cpu: 100m
+        memory: 128Mi
+    
+    grafana.ini:
+      server:
+        domain: grafana.local.ildoc.it
+        root_url: https://grafana.local.ildoc.it
+      auth.anonymous:
+        enabled: true
+        org_role: Viewer
+    
+    dashboards:
+      default:
+        # Kubernetes cluster overview
+        kubernetes-cluster:
+          gnetId: 7249
+          revision: 1
+          datasource: Prometheus
+        # Node Exporter per i server Linux
+        node-exporter-full:
+          gnetId: 1860
+          revision: 37
+          datasource: Prometheus
+        # Proxmox VE
+        proxmox:
+          gnetId: 10347
+          revision: 5
+          datasource: Prometheus
+        # GitLab Performance
+        gitlab-performance:
+          gnetId: 10902
+          revision: 1
+          datasource: Prometheus
+        # GitLab Statistics
+        gitlab-stats:
+          gnetId: 10485
+          revision: 2
+          datasource: Prometheus
+        # Traefik
+        traefik:
+          gnetId: 17347
+          revision: 9
+          datasource: Prometheus
+    
+    datasources:
+      datasources.yaml:
+        apiVersion: 1
+        datasources:
+          - name: Prometheus
+            type: prometheus
+            url: http://prometheus-stack-kube-prome-prometheus:9090
+            access: proxy
+            isDefault: true
+
+  alertmanager:
+    alertmanagerSpec:
+      replicas: 1
+      retention: 120h
+      
+      storage:
+        volumeClaimTemplate:
+          spec:
+            storageClassName: nfs-storage
+            resources:
+              requests:
+                storage: 1Gi
+      
+      resources:
+        requests:
+          cpu: 50m
+          memory: 64Mi
+        limits:
+          cpu: 100m
+          memory: 128Mi
+    
+    config:
+      global:
+        resolve_timeout: 5m
+      route:
+        group_by: ['alertname', 'cluster', 'service']
+        group_wait: 10s
+        group_interval: 10s
+        repeat_interval: 12h
+        receiver: 'null'
+        routes:
+          - match:
+              severity: critical
+            receiver: 'telegram'  # Configura il tuo bot
+            repeat_interval: 1h
+      receivers:
+        - name: 'null'
+        # - name: 'telegram'
+        #   telegram_configs:
+        #     - bot_token: 'YOUR_BOT_TOKEN'
+        #       chat_id: YOUR_CHAT_ID
+
+  # Componenti aggiuntivi
+  nodeExporter:
+    enabled: true
+  kubeStateMetrics:
+    enabled: true
+  
+  # Disabilita componenti non accessibili
+  kubeControllerManager:
+    enabled: false
+  kubeEtcd:
+    enabled: false
+  kubeScheduler:
+    enabled: false
+
+################################################################################
+# 4. kubernetes/infra/manifests/prometheus-stack/templates/httproutes.yaml
+################################################################################
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: grafana-route
+  namespace: monitoring
+spec:
+  parentRefs:
+    - name: traefik-gateway
+      kind: Gateway
+      namespace: traefik
+  hostnames:
+    - "grafana.local.ildoc.it"
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: prometheus-stack-grafana
+          port: 80
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: prometheus-route
+  namespace: monitoring
+spec:
+  parentRefs:
+    - name: traefik-gateway
+      kind: Gateway
+      namespace: traefik
+  hostnames:
+    - "prometheus.local.ildoc.it"
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: prometheus-stack-kube-prome-prometheus
+          port: 9090
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: alertmanager-route
+  namespace: monitoring
+spec:
+  parentRefs:
+    - name: traefik-gateway
+      kind: Gateway
+      namespace: traefik
+  hostnames:
+    - "alertmanager.local.ildoc.it"
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: prometheus-stack-kube-prome-alertmanager
+          port: 9093
+
+################################################################################
+# 5. kubernetes/infra/manifests/prometheus-stack/templates/pve-exporter.yaml
+################################################################################
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: pve-credentials
+  namespace: monitoring
+type: Opaque
+stringData:
+  username: "monitoring@pve"  # Crea questo user read-only in Proxmox
+  password: "CHANGE_ME"       # CAMBIA QUESTO!
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pve-exporter-config
+  namespace: monitoring
+data:
+  pve.yml: |
+    default:
+      user: monitoring@pve
+      password: CHANGE_ME  # DEVE MATCHARE IL SECRET SOPRA
+      verify_ssl: false
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pve-exporter
+  namespace: monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pve-exporter
+  template:
+    metadata:
+      labels:
+        app: pve-exporter
+    spec:
+      containers:
+      - name: pve-exporter
+        image: prompve/prometheus-pve-exporter:3.4.5
+        ports:
+        - containerPort: 9221
+          name: metrics
+        env:
+        - name: PVE_USER
+          valueFrom:
+            secretKeyRef:
+              name: pve-credentials
+              key: username
+        - name: PVE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: pve-credentials
+              key: password
+        - name: PVE_VERIFY_SSL
+          value: "false"
+        volumeMounts:
+        - name: config
+          mountPath: /etc/pve_exporter
+        resources:
+          limits:
+            cpu: 100m
+            memory: 128Mi
+          requests:
+            cpu: 50m
+            memory: 64Mi
+      volumes:
+      - name: config
+        configMap:
+          name: pve-exporter-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pve-exporter
+  namespace: monitoring
+  labels:
+    app: pve-exporter
+spec:
+  type: ClusterIP
+  ports:
+  - port: 9221
+    name: metrics
+    targetPort: 9221
+  selector:
+    app: pve-exporter
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: pve-exporter
+  namespace: monitoring
+spec:
+  endpoints:
+  - port: metrics
+    interval: 30s
+    path: /pve
+    params:
+      module: [default]
+      cluster: ['1']
+      node: ['1']
+    relabelConfigs:
+    - sourceLabels: [__param_target]
+      targetLabel: target
+  selector:
+    matchLabels:
+      app: pve-exporter
+
+################################################################################
+# 6. kubernetes/infra/manifests/prometheus-stack/templates/monitoring-targets.yaml
+################################################################################
+---
+# Probe per monitorare servizi HTTP/HTTPS (sostitutivo di Uptime Kuma)
+apiVersion: monitoring.coreos.com/v1
+kind: Probe
+metadata:
+  name: http-services
+  namespace: monitoring
+spec:
+  interval: 60s
+  module: http_2xx
+  prober:
+    url: prometheus-blackbox-exporter:9115
+  targets:
+    staticConfig:
+      static:
+        # Servizi interni
+        - "https://grafana.local.ildoc.it"
+        - "https://argocd.local.ildoc.it"
+        - "https://rancher.local.ildoc.it"
+        - "https://gitlab.local.ildoc.it"
+        # Apps
+        - "https://audiobookshelf.local.ildoc.it"
+        - "https://bazarr.local.ildoc.it"
+        - "https://mealie.local.ildoc.it"
+        - "https://n8n.local.ildoc.it"
+        - "https://speedtest.local.ildoc.it"
+        - "https://tools.local.ildoc.it"
+        - "https://uptime.local.ildoc.it"
+      labels:
+        environment: homelab
+---
+# ServiceMonitor per Traefik
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: traefik
+  namespace: monitoring
+spec:
+  namespaceSelector:
+    matchNames:
+      - traefik
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: traefik
+  endpoints:
+    - port: metrics
+      interval: 30s
+---
+# ServiceMonitor per ArgoCD
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: argocd-metrics
+  namespace: monitoring
+spec:
+  namespaceSelector:
+    matchNames:
+      - argocd
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: argocd-metrics
+  endpoints:
+    - port: metrics
+      interval: 30s
+---
+# Blackbox Exporter per i Probe
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus-blackbox-exporter
+  namespace: monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: prometheus-blackbox-exporter
+  template:
+    metadata:
+      labels:
+        app: prometheus-blackbox-exporter
+    spec:
+      containers:
+        - name: blackbox-exporter
+          image: quay.io/prometheus/blackbox-exporter:v0.25.0
+          args:
+            - "--config.file=/config/blackbox.yml"
+          ports:
+            - containerPort: 9115
+              name: http
+          resources:
+            limits:
+              cpu: 50m
+              memory: 64Mi
+            requests:
+              cpu: 20m
+              memory: 32Mi
+          volumeMounts:
+            - name: config
+              mountPath: /config
+      volumes:
+        - name: config
+          configMap:
+            name: blackbox-config
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: blackbox-config
+  namespace: monitoring
+data:
+  blackbox.yml: |
+    modules:
+      http_2xx:
+        prober: http
+        timeout: 5s
+        http:
+          valid_http_versions: ["HTTP/1.1", "HTTP/2.0"]
+          valid_status_codes: []
+          method: GET
+          follow_redirects: true
+      https_2xx:
+        prober: http
+        timeout: 5s
+        http:
+          valid_http_versions: ["HTTP/1.1", "HTTP/2.0"]
+          valid_status_codes: []
+          method: GET
+          follow_redirects: true
+          tls_config:
+            insecure_skip_verify: true
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus-blackbox-exporter
+  namespace: monitoring
+  labels:
+    app: prometheus-blackbox-exporter
+spec:
+  type: ClusterIP
+  ports:
+    - port: 9115
+      targetPort: 9115
+      name: http
+  selector:
+    app: prometheus-blackbox-exporter

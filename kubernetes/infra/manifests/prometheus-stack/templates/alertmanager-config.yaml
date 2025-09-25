@@ -1,0 +1,90 @@
+################################################################################
+# kubernetes/infra/manifests/prometheus-stack/templates/alertmanager-config.yaml
+################################################################################
+
+# ConfigMap per le configurazioni non sensibili
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alertmanager-config
+  namespace: monitoring
+data:
+  alertmanager.yaml: |
+    global:
+      resolve_timeout: 5m
+    
+    route:
+      group_by: ['alertname', 'cluster', 'service']
+      group_wait: 10s
+      group_interval: 10s
+      repeat_interval: 12h
+      receiver: 'default'
+      routes:
+        # Alert critici - notifica immediata
+        - match:
+            severity: critical
+          receiver: 'telegram'
+          repeat_interval: 1h
+          continue: true
+        
+        # Alert warning - notifica ogni 4h
+        - match:
+            severity: warning  
+          receiver: 'telegram'
+          repeat_interval: 4h
+        
+        # Ignora il Watchdog alert
+        - match:
+            alertname: Watchdog
+          receiver: 'null'
+    
+    receivers:
+      - name: 'null'
+      
+      - name: 'default'
+        telegram_configs:
+          - send_resolved: true
+            api_url: 'https://api.telegram.org'
+            bot_token_file: '/etc/alertmanager/secrets/telegram/telegram-bot-token'
+            chat_id_file: '/etc/alertmanager/secrets/telegram/telegram-chat-id'
+            parse_mode: 'HTML'
+            message: |
+              🚨 <b>{{`{{ .GroupLabels.alertname }}`}}</b>
+              <b>Severity:</b> {{`{{ .CommonLabels.severity }}`}}
+              
+              {{`{{ range .Alerts }}`}}
+              📍 <b>{{`{{ .Labels.instance | reReplaceAll ":.*" "" }}`}}</b>
+              {{`{{ .Annotations.summary }}`}}
+              {{`{{ if .Annotations.description }}`}}
+              {{`{{ .Annotations.description }}`}}
+              {{`{{ end }}`}}
+              <b>Value:</b> {{`{{ .Value }}`}}
+              {{`{{ end }}`}}
+      
+      - name: 'telegram'
+        telegram_configs:
+          - send_resolved: true
+            api_url: 'https://api.telegram.org'
+            bot_token_file: '/etc/alertmanager/secrets/telegram/telegram-bot-token'
+            chat_id_file: '/etc/alertmanager/secrets/telegram/telegram-chat-id'
+            parse_mode: 'HTML'
+            message: |
+              {{`{{ if eq .Status "firing" }}`}}🔴{{`{{ else }}`}}✅{{`{{ end }}`}} <b>{{`{{ .GroupLabels.alertname }}`}}</b>
+              <b>Status:</b> {{`{{ .Status }}`}}
+              
+              {{`{{ range .Alerts }}`}}
+              ━━━━━━━━━━━━━━━━━━
+              📍 <b>Instance:</b> {{`{{ .Labels.instance | reReplaceAll ":.*" "" }}`}}
+              {{`{{ if .Labels.job }}`}}<b>Job:</b> {{`{{ .Labels.job }}`}}{{`{{ end }}`}}
+              {{`{{ if .Annotations.summary }}`}}<b>Summary:</b> {{`{{ .Annotations.summary }}`}}{{`{{ end }}`}}
+              {{`{{ if .Annotations.description }}`}}
+              <b>Description:</b> {{`{{ .Annotations.description }}`}}{{`{{ end }}`}}
+              {{`{{ end }}`}}
+    
+    inhibit_rules:
+      - source_match:
+          severity: 'critical'
+        target_match:
+          severity: 'warning'
+        equal: ['alertname', 'instance']

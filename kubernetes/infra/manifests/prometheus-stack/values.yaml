@@ -1,0 +1,361 @@
+---
+kube-prometheus-stack:
+  prometheusOperator:
+    admissionWebhooks:
+      enabled: false  # Semplifica gestione con ArgoCD
+    resources:
+      limits:
+        cpu: 200m
+        memory: 200Mi
+      requests:
+        cpu: 100m
+        memory: 100Mi
+
+  prometheus:
+    prometheusSpec:
+      replicas: 2
+      retention: 30d
+      retentionSize: 15GB
+      
+      resources:
+        requests:
+          cpu: 250m
+          memory: 1Gi
+        limits:
+          cpu: 1000m
+          memory: 2Gi
+      
+      storageSpec:
+        volumeClaimTemplate:
+          spec:
+            storageClassName: nfs-storage
+            accessModes: ["ReadWriteOnce"]
+            resources:
+              requests:
+                storage: 20Gi
+      
+      # Selettori per ServiceMonitors e Probes
+      serviceMonitorSelectorNilUsesHelmValues: false
+      podMonitorSelectorNilUsesHelmValues: false
+      ruleSelectorNilUsesHelmValues: false
+      probeSelectorNilUsesHelmValues: false
+      
+      externalLabels:
+        cluster: homelab
+      
+      # Mount del secret per GitLab token se necessario
+      volumes:
+        - name: gitlab-token
+          secret:
+            secretName: gitlab-monitoring-secret
+            optional: true
+      volumeMounts:
+        - name: gitlab-token
+          mountPath: /etc/prometheus/secrets/gitlab
+          readOnly: true
+      
+      # Configurazione per GitLab e Proxmox
+      additionalScrapeConfigs:
+        # GitLab Omnibus metrics
+        - job_name: 'gitlab-omnibus'
+          static_configs:
+            - targets: ['gitlab.local.ildoc.it:9090']  # GitLab Prometheus
+          relabel_configs:
+            - source_labels: [__address__]
+              target_label: instance
+              replacement: gitlab
+        
+        # GitLab application metrics con auth token (opzionale)
+        - job_name: 'gitlab-app'
+          static_configs:
+            - targets: ['gitlab.local.ildoc.it:8080']  # GitLab Exporter
+          metrics_path: /metrics
+          # Se richiede autenticazione, decommenta:
+          # bearer_token_file: /etc/prometheus/secrets/gitlab/token
+          relabel_configs:
+            - source_labels: [__address__]
+              target_label: instance
+              replacement: gitlab
+        
+        # GitLab Sidekiq
+        - job_name: 'gitlab-sidekiq'
+          static_configs:
+            - targets: ['gitlab.local.ildoc.it:8082']
+          relabel_configs:
+            - source_labels: [__address__]
+              target_label: instance
+              replacement: gitlab-sidekiq
+        
+        # GitLab Workhorse
+        - job_name: 'gitlab-workhorse'
+          static_configs:
+            - targets: ['gitlab.local.ildoc.it:9229']
+          relabel_configs:
+            - source_labels: [__address__]
+              target_label: instance
+              replacement: gitlab-workhorse
+
+  grafana:
+    enabled: true
+    replicas: 1
+    
+    # Admin credentials da External Secrets
+    admin:
+      existingSecret: grafana-admin-secret
+      userKey: admin-user
+      passwordKey: admin-password
+    
+    persistence:
+      enabled: true
+      storageClassName: nfs-storage
+      size: 5Gi
+    
+    resources:
+      limits:
+        cpu: 200m
+        memory: 256Mi
+      requests:
+        cpu: 100m
+        memory: 128Mi
+    
+    grafana.ini:
+      server:
+        domain: grafana.local.ildoc.it
+        root_url: https://grafana.local.ildoc.it
+      auth.anonymous:
+        enabled: true
+        org_role: Viewer
+    
+    dashboards:
+      default:
+        # Kubernetes cluster overview
+        kubernetes-cluster:
+          gnetId: 7249
+          revision: 1
+          datasource: Prometheus
+        # Node Exporter per i server Linux
+        node-exporter-full:
+          gnetId: 1860
+          revision: 37
+          datasource: Prometheus
+        # Proxmox VE
+        proxmox:
+          gnetId: 10347
+          revision: 5
+          datasource: Prometheus
+        # GitLab Performance
+        gitlab-performance:
+          gnetId: 10902
+          revision: 1
+          datasource: Prometheus
+        # GitLab Statistics
+        gitlab-stats:
+          gnetId: 10485
+          revision: 2
+          datasource: Prometheus
+        # Traefik
+        traefik:
+          gnetId: 17347
+          revision: 9
+          datasource: Prometheus
+    
+    datasources:
+      datasources.yaml:
+        apiVersion: 1
+        datasources:
+          - name: Prometheus
+            type: prometheus
+            url: http://prometheus-stack-kube-prome-prometheus:9090
+            access: proxy
+            isDefault: true
+
+  alertmanager:
+    alertmanagerSpec:
+      replicas: 1
+      retention: 120h
+      
+      storage:
+        volumeClaimTemplate:
+          spec:
+            storageClassName: nfs-storage
+            resources:
+              requests:
+                storage: 1Gi
+      
+      resources:
+        requests:
+          cpu: 50m
+          memory: 64Mi
+        limits:
+          cpu: 100m
+          memory: 128Mi
+      
+      # Usa ConfigMap per la configurazione invece del configSecret generato dal job
+      configSecret: null  # Disabilitato
+      
+      # Monta il ConfigMap con la configurazione
+      configMaps:
+        - alertmanager-config
+      
+      # Monta il Secret con le credenziali Telegram
+      secrets:
+        - alertmanager-telegram-secret
+      
+      # Configura i volume mounts per accedere ai secret file
+      extraVolumeMounts:
+        - name: telegram-secrets
+          mountPath: /etc/alertmanager/secrets/telegram
+          readOnly: true
+      
+      extraVolumes:
+        - name: telegram-secrets
+          secret:
+            secretName: alertmanager-telegram-secret
+    
+    # La configurazione viene definita in templates/alertmanager-config.yaml
+
+  # Componenti aggiuntivi
+  nodeExporter:
+    enabled: true
+  kubeStateMetrics:
+    enabled: true
+  
+  # Disabilita componenti non accessibili
+  kubeControllerManager:
+    enabled: false
+  kubeEtcd:
+    enabled: false
+  kubeScheduler:
+    enabled: false
+
+# Configurazione per monitoring aggiuntivo
+monitoring:
+  # Configurazione Blackbox Exporter Probes
+  # Monitora la disponibilità HTTP/HTTPS dei servizi
+  probes:
+    enabled: true
+    interval: "60s"
+    module: "http_2xx"
+    environment: "homelab"
+    targets:
+      # Servizi infrastrutturali
+      - "https://grafana.local.ildoc.it"
+      - "https://argocd.local.ildoc.it"
+      - "https://rancher.local.ildoc.it"
+      - "https://gitlab.local.ildoc.it"
+      # Applicazioni
+      - "https://audiobookshelf.local.ildoc.it"
+      - "https://bazarr.local.ildoc.it"
+      - "https://mealie.local.ildoc.it"
+      - "https://n8n.local.ildoc.it"
+      - "https://speedtest.local.ildoc.it"
+      - "https://tools.local.ildoc.it"
+      - "https://uptime.local.ildoc.it"
+
+  # Configurazione ServiceMonitors
+  # Struttura generalizzata per creare ServiceMonitor dinamicamente:
+  #
+  # serviceMonitors:
+  #   <nome-servizio>:
+  #     enabled: true|false
+  #     name: "nome-custom"                    # Opzionale, default: nome-servizio  
+  #     namespace: "namespace-target"          # RICHIESTO: namespace del servizio
+  #     monitoringNamespace: "monitoring"     # Opzionale: namespace del ServiceMonitor
+  #     selector: "label-value"                # Stringa o oggetto con labels
+  #     endpoints:                             # Array di endpoint da monitorare
+  #       - port: "metrics"                    # RICHIESTO
+  #         interval: "30s"                    # Opzionale
+  #         path: "/metrics"                   # Opzionale
+  #         scheme: "https"                    # Opzionale (http/https)
+  #         params:                            # Opzionale: query parameters
+  #           module: ["http_2xx"]
+  #
+  serviceMonitors:
+    traefik:
+      enabled: true
+      namespace: "traefik"
+      selector: "traefik"  # Può essere una stringa o un oggetto con labels
+      endpoints:
+        - port: "metrics"
+          interval: "30s"
+    
+    argocd:
+      enabled: true
+      name: "argocd-metrics"  # Nome personalizzato del ServiceMonitor
+      namespace: "argocd"
+      selector: "argocd-metrics"
+      endpoints:
+        - port: "metrics"
+          interval: "30s"
+    
+    # Esempio di ServiceMonitor più complesso
+    gitlab:
+      enabled: false
+      namespace: "gitlab"
+      selector:
+        app.kubernetes.io/name: "gitlab"
+        app.kubernetes.io/component: "webservice"
+      endpoints:
+        - port: "metrics"
+          interval: "30s"
+          path: "/metrics"
+        - port: "sidekiq-metrics"
+          interval: "30s"
+          path: "/metrics"
+    
+    # Esempio per un servizio con HTTPS
+    kubernetes-api:
+      enabled: false
+      namespace: "default"
+      selector:
+        component: "apiserver"
+        provider: "kubernetes"
+      endpoints:
+        - port: "https"
+          interval: "30s"
+          scheme: "https"
+          params:
+            module: ["http_2xx"]
+
+  # Configurazione PVE Exporter per Proxmox
+  # Le credenziali vengono automaticamente prese da Vault usando External Secrets
+  # 
+  # Per configurare le credenziali in Vault:
+  # vault kv put secret/kubernetes/monitoring/proxmox username="monitoring@pve" password="secure-password"
+  #
+  pveExporter:
+    enabled: false  # Disabilitato di default
+    image: "prompve/prometheus-pve-exporter:3.4.5"
+    replicas: 1
+    verifySsl: false
+    scrapeInterval: "30s"
+    targets:
+      - "192.168.0.10:8006"  # Proxmox node 1
+      - "192.168.0.11:8006"  # Proxmox node 2  
+      - "192.168.0.12:8006"  # Proxmox node 3
+    resources:
+      limits:
+        cpu: "100m"
+        memory: "128Mi"
+      requests:
+        cpu: "50m"
+        memory: "64Mi"
+
+  # Configurazione HTTPRoutes per Gateway API  
+  routes:
+    enabled: true
+    gateway:
+      name: "traefik-gateway"
+      namespace: "traefik"
+    
+    grafana:
+      enabled: true
+      hostname: "grafana.local.ildoc.it"
+    
+    prometheus:
+      enabled: true
+      hostname: "prometheus.local.ildoc.it"
+      
+    alertmanager:
+      enabled: true
+      hostname: "alertmanager.local.ildoc.it"

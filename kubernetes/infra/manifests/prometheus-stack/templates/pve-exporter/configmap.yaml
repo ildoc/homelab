@@ -1,0 +1,18 @@
+{{- if .Values.monitoring.pveExporter.enabled }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pve-exporter-config
+  namespace: monitoring
+data:
+  pve.yml: |
+    default:
+      verify_ssl: {{ .Values.monitoring.pveExporter.verifySsl | default false }}
+      {{- if .Values.monitoring.pveExporter.targets }}
+      targets:
+        {{- range .Values.monitoring.pveExporter.targets }}
+        - {{ . }}
+        {{- end }}
+      {{- end }}
+{{- end }}

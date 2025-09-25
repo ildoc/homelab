@@ -1,0 +1,73 @@
+{{- if .Values.monitoring.routes.enabled }}
+{{- if .Values.monitoring.routes.grafana.enabled }}
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: grafana-route
+  namespace: monitoring
+spec:
+  parentRefs:
+    - name: {{ .Values.monitoring.routes.gateway.name | default "traefik-gateway" }}
+      kind: Gateway
+      namespace: {{ .Values.monitoring.routes.gateway.namespace | default "traefik" }}
+  hostnames:
+    - "{{ .Values.monitoring.routes.grafana.hostname | default "grafana.local.ildoc.it" }}"
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: prometheus-stack-grafana
+          port: 80
+{{- end }}
+
+{{- if .Values.monitoring.routes.prometheus.enabled }}
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: prometheus-route
+  namespace: monitoring
+spec:
+  parentRefs:
+    - name: {{ .Values.monitoring.routes.gateway.name | default "traefik-gateway" }}
+      kind: Gateway
+      namespace: {{ .Values.monitoring.routes.gateway.namespace | default "traefik" }}
+  hostnames:
+    - "{{ .Values.monitoring.routes.prometheus.hostname | default "prometheus.local.ildoc.it" }}"
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: prometheus-stack-kube-prome-prometheus
+          port: 9090
+{{- end }}
+
+{{- if .Values.monitoring.routes.alertmanager.enabled }}
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: alertmanager-route
+  namespace: monitoring
+spec:
+  parentRefs:
+    - name: {{ .Values.monitoring.routes.gateway.name | default "traefik-gateway" }}
+      kind: Gateway
+      namespace: {{ .Values.monitoring.routes.gateway.namespace | default "traefik" }}
+  hostnames:
+    - "{{ .Values.monitoring.routes.alertmanager.hostname | default "alertmanager.local.ildoc.it" }}"
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: prometheus-stack-kube-prome-alertmanager
+          port: 9093
+{{- end }}
+{{- end }}

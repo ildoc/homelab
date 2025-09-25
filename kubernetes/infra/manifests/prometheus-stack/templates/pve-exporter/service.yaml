@@ -1,0 +1,18 @@
+{{- if .Values.monitoring.pveExporter.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pve-exporter
+  namespace: monitoring
+  labels:
+    app: pve-exporter
+spec:
+  type: ClusterIP
+  ports:
+  - port: 9221
+    name: metrics
+    targetPort: 9221
+  selector:
+    app: pve-exporter
+{{- end }}

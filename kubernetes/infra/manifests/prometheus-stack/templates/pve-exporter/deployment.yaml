@@ -1,0 +1,55 @@
+{{- if .Values.monitoring.pveExporter.enabled }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pve-exporter
+  namespace: monitoring
+spec:
+  replicas: {{ .Values.monitoring.pveExporter.replicas | default 1 }}
+  selector:
+    matchLabels:
+      app: pve-exporter
+  template:
+    metadata:
+      labels:
+        app: pve-exporter
+    spec:
+      containers:
+      - name: pve-exporter
+        image: {{ .Values.monitoring.pveExporter.image | default "prompve/prometheus-pve-exporter:3.4.5" }}
+        ports:
+        - containerPort: 9221
+          name: metrics
+        env:
+        - name: PVE_USER
+          valueFrom:
+            secretKeyRef:
+              name: pve-credentials
+              key: username
+        - name: PVE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: pve-credentials
+              key: password
+        - name: PVE_VERIFY_SSL
+          value: "{{ .Values.monitoring.pveExporter.verifySsl | default false }}"
+        args:
+          - "--collector.status"
+          - "--collector.version"
+          - "--collector.node"
+          - "--collector.cluster"
+          - "--collector.resources"
+          - "--collector.config"
+          - "--collector.replication"
+          {{- range .Values.monitoring.pveExporter.targets }}
+          - "{{ . }}"
+          {{- end }}
+        resources:
+          limits:
+            cpu: {{ .Values.monitoring.pveExporter.resources.limits.cpu | default "100m" }}
+            memory: {{ .Values.monitoring.pveExporter.resources.limits.memory | default "128Mi" }}
+          requests:
+            cpu: {{ .Values.monitoring.pveExporter.resources.requests.cpu | default "50m" }}
+            memory: {{ .Values.monitoring.pveExporter.resources.requests.memory | default "64Mi" }}
+{{- end }}
