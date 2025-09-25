@@ -23,11 +23,18 @@ mattermost['enable'] = false
 prometheus_monitoring['enable'] = false 
 # grafana['enable'] = false 
 alertmanager['enable'] = false 
-postgres_exporter['enable'] = false 
-redis_exporter['enable'] = false 
-gitlab_exporter['enable'] = false 
+# postgres_exporter['enable'] = false 
+# redis_exporter['enable'] = false 
+# gitlab_exporter['enable'] = false 
 geo_secondary['enable'] = false 
 # sidekiq['cluster'] = false
+
+
+gitlab_exporter['enable'] = true
+prometheus['enable'] = true
+node_exporter['enable'] = true
+redis_exporter['enable'] = true
+postgres_exporter['enable'] = true
 
 puma['worker_processes'] = 1
 
