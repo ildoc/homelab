@@ -1,20 +1,13 @@
 ---
+# kubernetes/infra/manifests/prometheus-stack/values.yaml
+# Configurazione pulita basata sui default del chart ufficiale
+
 kube-prometheus-stack:
+  ## Configurazione Prometheus Operator
   prometheusOperator:
-    # Namespace configuration
-    namespaces:
-      releaseNamespace: true
-      additional:
-        - monitoring
-    
     admissionWebhooks:
-      enabled: false  # Semplifica gestione con ArgoCD
-      patch:
-        enabled: false
-      certManager:
-        enabled: false
-    tls:
-      enabled: false  # Disabilita TLS per evitare dependenza dal secret
+      enabled: false  # Disabilitato per semplificare con ArgoCD
+    
     resources:
       limits:
         cpu: 200m
@@ -23,6 +16,7 @@ kube-prometheus-stack:
         cpu: 100m
         memory: 100Mi
 
+  ## Configurazione Prometheus
   prometheus:
     prometheusSpec:
       replicas: 2
@@ -46,7 +40,7 @@ kube-prometheus-stack:
               requests:
                 storage: 20Gi
       
-      # Selettori per ServiceMonitors e Probes
+      # Disabilita i selettori basati su Helm per avere controllo completo
       serviceMonitorSelectorNilUsesHelmValues: false
       podMonitorSelectorNilUsesHelmValues: false
       ruleSelectorNilUsesHelmValues: false
@@ -55,41 +49,25 @@ kube-prometheus-stack:
       externalLabels:
         cluster: homelab
       
-      # Mount del secret per GitLab token se necessario
-      volumes:
-        - name: gitlab-token
-          secret:
-            secretName: gitlab-monitoring-secret
-            optional: true
-      volumeMounts:
-        - name: gitlab-token
-          mountPath: /etc/prometheus/secrets/gitlab
-          readOnly: true
-      
-      # Configurazione per GitLab e Proxmox
+      # Scrape configs per GitLab e servizi esterni
       additionalScrapeConfigs:
-        # GitLab Omnibus metrics
         - job_name: 'gitlab-omnibus'
           static_configs:
-            - targets: ['gitlab.local.ildoc.it:9090']  # GitLab Prometheus
+            - targets: ['gitlab.local.ildoc.it:9090']
           relabel_configs:
             - source_labels: [__address__]
               target_label: instance
               replacement: gitlab
         
-        # GitLab application metrics con auth token (opzionale)
-        - job_name: 'gitlab-app'
+        - job_name: 'gitlab-exporter'
           static_configs:
-            - targets: ['gitlab.local.ildoc.it:8080']  # GitLab Exporter
+            - targets: ['gitlab.local.ildoc.it:9168']
           metrics_path: /metrics
-          # Se richiede autenticazione, decommenta:
-          # bearer_token_file: /etc/prometheus/secrets/gitlab/token
           relabel_configs:
             - source_labels: [__address__]
               target_label: instance
               replacement: gitlab
         
-        # GitLab Sidekiq
         - job_name: 'gitlab-sidekiq'
           static_configs:
             - targets: ['gitlab.local.ildoc.it:8082']
@@ -98,7 +76,6 @@ kube-prometheus-stack:
               target_label: instance
               replacement: gitlab-sidekiq
         
-        # GitLab Workhorse
         - job_name: 'gitlab-workhorse'
           static_configs:
             - targets: ['gitlab.local.ildoc.it:9229']
@@ -107,69 +84,25 @@ kube-prometheus-stack:
               target_label: instance
               replacement: gitlab-workhorse
 
+  ## Configurazione Grafana
   grafana:
     enabled: true
-    replicas: 1
     
-    # Admin credentials da External Secrets
+    # Admin credentials from External Secrets
     admin:
       existingSecret: grafana-admin-secret
       userKey: admin-user
       passwordKey: admin-password
     
-    # Configurazione security context per evitare errori chown
-    securityContext:
-      runAsNonRoot: true
-      runAsUser: 472
-      runAsGroup: 472
-      fsGroup: 472
-    
-    # RIABILITA init container chown - è necessario per NFS
-    initChownData:
-      enabled: true
-      image:
-        repository: busybox
-        tag: "1.31.1"
-        pullPolicy: IfNotPresent
-      securityContext:
-        runAsNonRoot: false  # Deve girare come root per fare chown
-        runAsUser: 0
-        capabilities:
-          add:
-            - CHOWN
-            - FOWNER
-      resources:
-        limits:
-          cpu: 100m
-          memory: 128Mi
-        requests:
-          cpu: 10m
-          memory: 16Mi
-    
-    # Configurazione pod security context per NFS
-    podSecurityContext:
-      runAsNonRoot: true
-      runAsUser: 472
-      runAsGroup: 472
-      fsGroup: 472
-      fsGroupChangePolicy: "OnRootMismatch"
-    
-    # Configurazione container security context
-    containerSecurityContext:
-      runAsNonRoot: true
-      runAsUser: 472
-      runAsGroup: 472
-      allowPrivilegeEscalation: false
-      capabilities:
-        drop:
-          - ALL
-      readOnlyRootFilesystem: false
-    
+    # Persistence
     persistence:
       enabled: true
       storageClassName: nfs-storage
       size: 5Gi
+      accessModes:
+        - ReadWriteOnce
     
+    # Resources
     resources:
       limits:
         cpu: 200m
@@ -178,110 +111,77 @@ kube-prometheus-stack:
         cpu: 100m
         memory: 128Mi
     
+    # Grafana configuration
     grafana.ini:
       server:
         domain: grafana.local.ildoc.it
         root_url: https://grafana.local.ildoc.it
+        serve_from_sub_path: false
       auth.anonymous:
         enabled: true
         org_role: Viewer
+      security:
+        allow_embedding: true
     
-    # DASHBOARD CONFIGURATION RE-ENABLED - Con configurazione più robusta
-    dashboards:
-      default:
-        # Kubernetes cluster overview
-        kubernetes-cluster:
-          gnetId: 7249
-          revision: 1
-          datasource: Prometheus
-        # Node Exporter per i server Linux
-        node-exporter-full:
-          gnetId: 1860
-          revision: 37
-          datasource: Prometheus
-        # Proxmox VE
-        proxmox:
-          gnetId: 10347
-          revision: 5
-          datasource: Prometheus
-        # GitLab Performance
-        gitlab-performance:
-          gnetId: 10902
-          revision: 1
-          datasource: Prometheus
-        # GitLab Statistics
-        gitlab-stats:
-          gnetId: 10485
-          revision: 2
-          datasource: Prometheus
-        # Traefik
-        traefik:
-          gnetId: 17347
-          revision: 9
-          datasource: Prometheus
+    # Sidecar for dashboards and datasources
+    sidecar:
+      dashboards:
+        enabled: true
+        label: grafana_dashboard
+        labelValue: "1"
+        searchNamespace: ALL
+        provider:
+          allowUiUpdates: true
+      datasources:
+        enabled: true
+        defaultDatasourceEnabled: true
+        isDefaultDatasource: true
+        uid: prometheus
+        name: Prometheus
+        type: prometheus
+        url: http://prometheus-stack-kube-prome-prometheus:9090
+        access: proxy
     
-    # Configurazione dashboard provider senza init container
+    # Dashboard configuration - usando il metodo standard del chart
     dashboardProviders:
       dashboardproviders.yaml:
         apiVersion: 1
         providers:
-        - name: 'default'
-          orgId: 1
-          folder: ''
-          type: file
-          disableDeletion: false
-          editable: true
-          allowUiUpdates: true
-          options:
-            path: /var/lib/grafana/dashboards/default
+          - name: 'default'
+            orgId: 1
+            folder: ''
+            type: file
+            disableDeletion: false
+            updateIntervalSeconds: 10
+            allowUiUpdates: true
+            options:
+              path: /var/lib/grafana/dashboards/default
     
-    # Disabilita download automatico dashboard per evitare init container
-    downloadDashboardsImage:
-      repository: curlimages/curl
-      tag: 8.9.1
-      sha: ""
-      pullPolicy: IfNotPresent
-    
-    downloadDashboards:
-      enabled: false  # Disabilita per evitare init container con problemi di permessi
-    
-    # Configurazione sidecar per dashboard (evita init containers)
-    sidecar:
-      dashboards:
-        enabled: true
-        defaultFolderName: default
-        searchNamespace: ALL
-        provider:
-          allowUiUpdates: true
-          disableDelete: false
-          foldersFromFilesStructure: false
-      datasources:
-        enabled: false  # Disabilitato completamente
-        defaultDatasourceEnabled: false
-    
-    # Rimuovi configurazione dashboard tradizionale per evitare conflitti  
-    # dashboards: {}  # Commentato, useremo sidecar
-    
-    # Configurazione manuale del datasource unico
-    datasources:
-      datasources.yaml:
-        apiVersion: 1
-        datasources:
-          - name: Prometheus
-            type: prometheus
-            url: http://prometheus-stack-kube-prom-prometheus.monitoring.svc.cluster.local:9090
-            access: proxy
-            isDefault: true
-            uid: prometheus
-            jsonData:
-              httpMethod: POST
-              timeInterval: 30s
-          - name: Alertmanager
-            type: alertmanager
-            url: http://prometheus-stack-kube-prom-alertmanager.monitoring.svc.cluster.local:9093
-            access: proxy
-            uid: alertmanager
+    # Pre-configured dashboards from grafana.com
+    dashboards:
+      default:
+        kubernetes-cluster:
+          gnetId: 7249
+          revision: 1
+          datasource: Prometheus
+        node-exporter:
+          gnetId: 1860
+          revision: 37
+          datasource: Prometheus
+        proxmox:
+          gnetId: 10347
+          revision: 5
+          datasource: Prometheus
+        gitlab-overview:
+          gnetId: 10902
+          revision: 1
+          datasource: Prometheus
+        traefik:
+          gnetId: 17347
+          revision: 9
+          datasource: Prometheus
 
+  ## Configurazione AlertManager
   alertmanager:
     alertmanagerSpec:
       replicas: 1
@@ -291,6 +191,7 @@ kube-prometheus-stack:
         volumeClaimTemplate:
           spec:
             storageClassName: nfs-storage
+            accessModes: ["ReadWriteOnce"]
             resources:
               requests:
                 storage: 1Gi
@@ -303,38 +204,84 @@ kube-prometheus-stack:
           cpu: 100m
           memory: 128Mi
       
-      # Usa ConfigMap per la configurazione invece del configSecret generato dal job
-      configSecret: null  # Disabilitato
-      
-      # Monta il ConfigMap con la configurazione
-      configMaps:
-        - alertmanager-config
-      
-      # Monta il secret per i token Telegram come file nel path atteso
-      volumes:
-        - name: telegram-secrets
-          secret:
-            secretName: alertmanager-telegram-secret
-            items:
-              - key: telegram-bot-token
-                path: telegram-bot-token
-              - key: telegram-chat-id
-                path: telegram-chat-id
-      
-      volumeMounts:
-        - name: telegram-secrets
-          mountPath: /etc/alertmanager/secrets
-          readOnly: true
+      # Mount secrets for telegram credentials
+      secrets:
+        - alertmanager-telegram-secret
     
-    # La configurazione viene definita in templates/alertmanager-config.yaml
+    # Configurazione AlertManager
+    config:
+      global:
+        resolve_timeout: 5m
+      
+      route:
+        group_by: ['alertname', 'cluster', 'service']
+        group_wait: 10s
+        group_interval: 10s
+        repeat_interval: 12h
+        receiver: 'default'
+        routes:
+          - match:
+              severity: critical
+            receiver: 'telegram'
+            repeat_interval: 1h
+          - match:
+              severity: warning
+            receiver: 'telegram'
+            repeat_interval: 4h
+          - match:
+              alertname: Watchdog
+            receiver: 'null'
+      
+      receivers:
+        - name: 'null'
+        
+        - name: 'default'
+          telegram_configs:
+            - bot_token_file: '/etc/alertmanager/secrets/alertmanager-telegram-secret/telegram-bot-token'
+              chat_id_file: '/etc/alertmanager/secrets/alertmanager-telegram-secret/telegram-chat-id'
+              api_url: 'https://api.telegram.org'
+              parse_mode: 'HTML'
+              message: |
+                🚨 <b>{{ .GroupLabels.alertname }}</b>
+                <b>Severity:</b> {{ .CommonLabels.severity }}
+                {{ range .Alerts }}
+                📍 <b>{{ .Labels.instance | reReplaceAll ":.*" "" }}</b>
+                {{ .Annotations.summary }}
+                {{ end }}
+        
+        - name: 'telegram'
+          telegram_configs:
+            - bot_token_file: '/etc/alertmanager/secrets/alertmanager-telegram-secret/telegram-bot-token'
+              chat_id_file: '/etc/alertmanager/secrets/alertmanager-telegram-secret/telegram-chat-id'
+              api_url: 'https://api.telegram.org'
+              parse_mode: 'HTML'
+              send_resolved: true
+              message: |
+                {{ if eq .Status "firing" }}🔴{{ else }}✅{{ end }} <b>{{ .GroupLabels.alertname }}</b>
+                <b>Status:</b> {{ .Status }}
+                {{ range .Alerts }}
+                ━━━━━━━━━━━━━━━━━━
+                📍 <b>Instance:</b> {{ .Labels.instance | reReplaceAll ":.*" "" }}
+                {{ if .Annotations.summary }}<b>Summary:</b> {{ .Annotations.summary }}{{ end }}
+                {{ end }}
+      
+      inhibit_rules:
+        - source_match:
+            severity: 'critical'
+          target_match:
+            severity: 'warning'
+          equal:
+            - 'alertname'
+            - 'instance'
 
-  # Componenti aggiuntivi
+  ## Componenti aggiuntivi
   nodeExporter:
     enabled: true
+  
   kubeStateMetrics:
     enabled: true
   
-  # Disabilita componenti non accessibili
+  ## Disabilita componenti che potrebbero non essere accessibili
   kubeControllerManager:
     enabled: false
   kubeEtcd:
@@ -342,10 +289,26 @@ kube-prometheus-stack:
   kubeScheduler:
     enabled: false
 
-# Configurazione per monitoring aggiuntivo
+## Configurazioni custom per il monitoring aggiuntivo
+## Queste sono utilizzate dai template custom
 monitoring:
-  # Configurazione Blackbox Exporter Probes
-  # Monitora la disponibilità HTTP/HTTPS dei servizi
+  # Configurazione HTTPRoutes
+  routes:
+    enabled: true
+    gateway:
+      name: "traefik-gateway"
+      namespace: "traefik"
+    grafana:
+      enabled: true
+      hostname: "grafana.local.ildoc.it"
+    prometheus:
+      enabled: true
+      hostname: "prometheus.local.ildoc.it"
+    alertmanager:
+      enabled: true
+      hostname: "alertmanager.local.ildoc.it"
+  
+  # Configurazione Probes per Blackbox Exporter
   probes:
     enabled: true
     interval: "60s"
@@ -360,93 +323,42 @@ monitoring:
       # Applicazioni
       - "https://audiobookshelf.local.ildoc.it"
       - "https://bazarr.local.ildoc.it"
-      - "https://sonarr.local.ildoc.it"
-      - "https://radarr.local.ildoc.it"
+      - "https://mealie.local.ildoc.it"
       - "https://n8n.local.ildoc.it"
       - "https://speedtest.local.ildoc.it"
       - "https://tools.local.ildoc.it"
-      - "http://invidious.local.ildoc.it"
-
-  # Configurazione ServiceMonitors
-  # Struttura generalizzata per creare ServiceMonitor dinamicamente:
-  #
-  # serviceMonitors:
-  #   <nome-servizio>:
-  #     enabled: true|false
-  #     name: "nome-custom"                    # Opzionale, default: nome-servizio  
-  #     namespace: "namespace-target"          # RICHIESTO: namespace del servizio
-  #     monitoringNamespace: "monitoring"     # Opzionale: namespace del ServiceMonitor
-  #     selector: "label-value"                # Stringa o oggetto con labels
-  #     endpoints:                             # Array di endpoint da monitorare
-  #       - port: "metrics"                    # RICHIESTO
-  #         interval: "30s"                    # Opzionale
-  #         path: "/metrics"                   # Opzionale
-  #         scheme: "https"                    # Opzionale (http/https)
-  #         params:                            # Opzionale: query parameters
-  #           module: ["http_2xx"]
-  #
+      - "https://uptime.local.ildoc.it"
+      - "https://pdf.local.ildoc.it"
+      - "https://nut.local.ildoc.it"
+  
+  # ServiceMonitors per servizi interni
   serviceMonitors:
     traefik:
       enabled: true
       namespace: "traefik"
-      selector: "traefik"  # Può essere una stringa o un oggetto con labels
+      selector: "traefik"
       endpoints:
         - port: "metrics"
           interval: "30s"
     
     argocd:
       enabled: true
-      name: "argocd-metrics"  # Nome personalizzato del ServiceMonitor
       namespace: "argocd"
       selector: "argocd-metrics"
       endpoints:
         - port: "metrics"
           interval: "30s"
-    
-    # Esempio di ServiceMonitor più complesso
-    gitlab:
-      enabled: false
-      namespace: "gitlab"
-      selector:
-        app.kubernetes.io/name: "gitlab"
-        app.kubernetes.io/component: "webservice"
-      endpoints:
-        - port: "metrics"
-          interval: "30s"
-          path: "/metrics"
-        - port: "sidekiq-metrics"
-          interval: "30s"
-          path: "/metrics"
-    
-    # Esempio per un servizio con HTTPS
-    kubernetes-api:
-      enabled: false
-      namespace: "default"
-      selector:
-        component: "apiserver"
-        provider: "kubernetes"
-      endpoints:
-        - port: "https"
-          interval: "30s"
-          scheme: "https"
-          params:
-            module: ["http_2xx"]
-
-  # Configurazione PVE Exporter per Proxmox
-  # Le credenziali vengono automaticamente prese da Vault usando External Secrets
-  # 
-  # Per configurare le credenziali in Vault:
-  # vault kv put secret/kubernetes/monitoring/proxmox username="monitoring@pve" password="secure-password"
-  #
+  
+  # Proxmox VE Exporter (opzionale)
   pveExporter:
-    enabled: false  # Disabilitato di default
+    enabled: true
     image: "prompve/prometheus-pve-exporter:3.4.5"
     replicas: 1
     verifySsl: false
     scrapeInterval: "30s"
     targets:
       - "192.168.0.10:8006"  # Proxmox node 1
-      - "192.168.0.11:8006"  # Proxmox node 2  
+      - "192.168.0.11:8006"  # Proxmox node 2
       - "192.168.0.12:8006"  # Proxmox node 3
     resources:
       limits:
@@ -455,22 +367,3 @@ monitoring:
       requests:
         cpu: "50m"
         memory: "64Mi"
-
-  # Configurazione HTTPRoutes per Gateway API  
-  routes:
-    enabled: true
-    gateway:
-      name: "traefik-gateway"
-      namespace: "traefik"
-    
-    grafana:
-      enabled: true
-      hostname: "grafana.local.ildoc.it"
-    
-    prometheus:
-      enabled: true
-      hostname: "prometheus.local.ildoc.it"
-      
-    alertmanager:
-      enabled: true
-      hostname: "alertmanager.local.ildoc.it"
