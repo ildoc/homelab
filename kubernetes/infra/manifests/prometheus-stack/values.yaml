@@ -124,9 +124,27 @@ kube-prometheus-stack:
       runAsGroup: 472
       fsGroup: 472
     
-    # Disabilita l'init container che causa problemi di permessi
+    # RIABILITA init container chown - è necessario per NFS
     initChownData:
-      enabled: false
+      enabled: true
+      image:
+        repository: busybox
+        tag: "1.31.1"
+        pullPolicy: IfNotPresent
+      securityContext:
+        runAsNonRoot: false  # Deve girare come root per fare chown
+        runAsUser: 0
+        capabilities:
+          add:
+            - CHOWN
+            - FOWNER
+      resources:
+        limits:
+          cpu: 100m
+          memory: 128Mi
+        requests:
+          cpu: 10m
+          memory: 16Mi
     
     # Configurazione pod security context per NFS
     podSecurityContext:
@@ -168,33 +186,39 @@ kube-prometheus-stack:
         enabled: true
         org_role: Viewer
     
-    # DASHBOARD CONFIGURATION DISABLED - Using sidecar instead to avoid init containers
-    # dashboards:
-    #   default:
-    #     kubernetes-cluster:
-    #       gnetId: 7249
-    #       revision: 1
-    #       datasource: Prometheus
-    #     node-exporter-full:
-    #       gnetId: 1860
-    #       revision: 37
-    #       datasource: Prometheus
-    #     proxmox:
-    #       gnetId: 10347
-    #       revision: 5
-    #       datasource: Prometheus
-    #     gitlab-performance:
-    #       gnetId: 10902
-    #       revision: 1
-    #       datasource: Prometheus
-    #     gitlab-stats:
-    #       gnetId: 10485
-    #       revision: 2
-    #       datasource: Prometheus
-    #     traefik:
-    #       gnetId: 17347
-    #       revision: 9
-    #       datasource: Prometheus
+    # DASHBOARD CONFIGURATION RE-ENABLED - Con configurazione più robusta
+    dashboards:
+      default:
+        # Kubernetes cluster overview
+        kubernetes-cluster:
+          gnetId: 7249
+          revision: 1
+          datasource: Prometheus
+        # Node Exporter per i server Linux
+        node-exporter-full:
+          gnetId: 1860
+          revision: 37
+          datasource: Prometheus
+        # Proxmox VE
+        proxmox:
+          gnetId: 10347
+          revision: 5
+          datasource: Prometheus
+        # GitLab Performance
+        gitlab-performance:
+          gnetId: 10902
+          revision: 1
+          datasource: Prometheus
+        # GitLab Statistics
+        gitlab-stats:
+          gnetId: 10485
+          revision: 2
+          datasource: Prometheus
+        # Traefik
+        traefik:
+          gnetId: 17347
+          revision: 9
+          datasource: Prometheus
     
     # Configurazione dashboard provider senza init container
     dashboardProviders:
