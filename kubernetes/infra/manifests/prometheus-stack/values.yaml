@@ -372,10 +372,9 @@ monitoring:
     scrapeInterval: "30s"
     # Configurazione corretta per pve-exporter
     targets:
-      targets:
-      - "192.168.0.10"
-      - "192.168.0.11"
-      - "192.168.0.12"
+    - "192.168.0.10"
+    - "192.168.0.11"
+    - "192.168.0.12"
     resources:
       limits:
         cpu: "100m"

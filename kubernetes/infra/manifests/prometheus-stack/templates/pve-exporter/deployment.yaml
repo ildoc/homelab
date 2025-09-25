@@ -22,6 +22,7 @@ spec:
         - containerPort: 9221
           name: metrics
         env:
+        # Credenziali dal secret
         - name: PVE_USER
           valueFrom:
             secretKeyRef:
@@ -32,15 +33,15 @@ spec:
             secretKeyRef:
               name: pve-credentials
               key: password
-        # Rimuovi PVE_VERIFY_SSL dall'env, va nel config file
-        volumeMounts:
-        - name: config
-          mountPath: /etc/prometheus-pve-exporter
-          readOnly: true
-        command: ["/usr/local/bin/pve_exporter"]
-        args:
-          - "--config.file=/etc/prometheus-pve-exporter/pve.yml"
-          - "--web.listen-address=:9221"
+        # Configurazione PVE
+        - name: PVE_VERIFY_SSL
+          value: "{{ .Values.monitoring.pveExporter.verifySsl | default false }}"
+        # IMPORTANTE: Per questa versione dell'exporter, devi specificare i nodi individualmente
+        # con variabili d'ambiente PVE_NODE_<nome>
+        {{- range $index, $target := .Values.monitoring.pveExporter.targets }}
+        - name: PVE_NODE_{{ $index }}
+          value: "{{ $target }}"
+        {{- end }}
         resources:
           limits:
             cpu: {{ .Values.monitoring.pveExporter.resources.limits.cpu | default "100m" }}
@@ -48,8 +49,4 @@ spec:
           requests:
             cpu: {{ .Values.monitoring.pveExporter.resources.requests.cpu | default "50m" }}
             memory: {{ .Values.monitoring.pveExporter.resources.requests.memory | default "64Mi" }}
-      volumes:
-      - name: config
-        configMap:
-          name: pve-exporter-config
 {{- end }}
