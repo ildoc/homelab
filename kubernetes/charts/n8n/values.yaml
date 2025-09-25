@@ -20,6 +20,10 @@ n8n:
           secretKeyRef:
             name: n8n-secrets
             key: encryption_key
+      WEBHOOK_URL:
+        value: "https://n8n.local.ildoc.it/"
+      N8N_PROTOCOL:
+        value: "https"
     
     persistence:
       enabled: true
