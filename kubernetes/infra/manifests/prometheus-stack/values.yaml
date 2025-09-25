@@ -115,14 +115,6 @@ kube-prometheus-stack:
         cpu: 100m
         memory: 128Mi
     
-    additionalDataSources:
-      - name: AlertManager
-        type: alertmanager
-        url: http://prometheus-stack-kube-prom-alertmanager:9093
-        access: proxy
-        jsonData:
-          implementation: prometheus
-
     # Grafana configuration
     grafana.ini:
       server:
@@ -169,7 +161,7 @@ kube-prometheus-stack:
             options:
               path: /var/lib/grafana/dashboards/default
     
-    # Pre-configured dashboards from grafana.com
+    # Dashboard preconfigurate
     dashboards:
       default:
         kubernetes-cluster:
@@ -180,9 +172,20 @@ kube-prometheus-stack:
           gnetId: 1860
           revision: 37
           datasource: Prometheus
-        proxmox:
+        # Dashboard Proxmox alternative - prova queste:
+        proxmox-ve-full:
           gnetId: 10347
           revision: 5
+          datasource: Prometheus
+        # Alternativa 1: Dashboard più semplice
+        proxmox-simple:
+          gnetId: 11206
+          revision: 1
+          datasource: Prometheus
+        # Alternativa 2: Dashboard specifica per pve-exporter
+        proxmox-pve-exporter:
+          gnetId: 16098
+          revision: 1
           datasource: Prometheus
         gitlab-overview:
           gnetId: 10902
