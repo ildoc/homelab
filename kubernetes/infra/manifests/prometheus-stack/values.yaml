@@ -1,6 +1,12 @@
 ---
 kube-prometheus-stack:
   prometheusOperator:
+    # Namespace configuration
+    namespaces:
+      releaseNamespace: true
+      additional:
+        - monitoring
+    
     admissionWebhooks:
       enabled: false  # Semplifica gestione con ArgoCD
       patch:
@@ -165,14 +171,31 @@ kube-prometheus-stack:
           revision: 9
           datasource: Prometheus
     
-    # Disabilita datasource automatico per evitare conflitti
+    # Disabilita completamente datasource automatici per evitare conflitti
     sidecar:
       datasources:
-        enabled: true
-        defaultDatasourceEnabled: true  # Usa il datasource automatico del chart
+        enabled: false  # Disabilitato completamente
+        defaultDatasourceEnabled: false
     
-    # Rimuoviamo la configurazione manuale per evitare conflitti
-    # Il chart genererà automaticamente la configurazione corretta
+    # Configurazione manuale del datasource unico
+    datasources:
+      datasources.yaml:
+        apiVersion: 1
+        datasources:
+          - name: Prometheus
+            type: prometheus
+            url: http://prometheus-stack-kube-prom-prometheus.monitoring.svc.cluster.local:9090
+            access: proxy
+            isDefault: true
+            uid: prometheus
+            jsonData:
+              httpMethod: POST
+              timeInterval: 30s
+          - name: Alertmanager
+            type: alertmanager
+            url: http://prometheus-stack-kube-prom-alertmanager.monitoring.svc.cluster.local:9093
+            access: proxy
+            uid: alertmanager
 
   alertmanager:
     alertmanagerSpec:

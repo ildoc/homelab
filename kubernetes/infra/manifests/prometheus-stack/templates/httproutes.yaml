@@ -21,6 +21,7 @@ spec:
       backendRefs:
         - name: prometheus-stack-grafana
           port: 80
+          namespace: default  # Grafana è nel namespace default
 {{- end }}
 
 {{- if .Values.monitoring.routes.prometheus.enabled }}
@@ -43,7 +44,7 @@ spec:
             type: PathPrefix
             value: /
       backendRefs:
-        - name: prometheus-stack-kube-prome-prometheus
+        - name: prometheus-stack-kube-prom-prometheus
           port: 9090
 {{- end }}
 
@@ -67,7 +68,7 @@ spec:
             type: PathPrefix
             value: /
       backendRefs:
-        - name: prometheus-stack-kube-prome-alertmanager
+        - name: prometheus-stack-kube-prom-alertmanager
           port: 9093
 {{- end }}
 {{- end }}
