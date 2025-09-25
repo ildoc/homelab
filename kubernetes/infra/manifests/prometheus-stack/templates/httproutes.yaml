@@ -21,7 +21,6 @@ spec:
       backendRefs:
         - name: prometheus-stack-grafana
           port: 80
-          namespace: default  # Grafana è nel namespace default
 {{- end }}
 
 {{- if .Values.monitoring.routes.prometheus.enabled }}
