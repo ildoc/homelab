@@ -1,8 +1,11 @@
 ---
 # kubernetes/infra/manifests/prometheus-stack/values.yaml
-# Configurazione pulita basata sui default del chart ufficiale
+# Aggiungi questa sezione all'inizio del file values.yaml esistente
 
 kube-prometheus-stack:
+  crds:
+    enabled: false
+  
   ## Configurazione Prometheus Operator
   prometheusOperator:
     admissionWebhooks:

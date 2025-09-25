@@ -1,0 +1,27 @@
+# ---
+# apiVersion: argoproj.io/v1alpha1
+# kind: Application
+# metadata:
+#   name: prometheus-crds
+#   namespace: argocd
+#   finalizers:
+#     - resources-finalizer.argocd.argoproj.io
+#   annotations:
+#     argocd.argoproj.io/sync-wave: "-90"  # Prima di prometheus-stack che è a -85
+# spec:
+#   project: default
+#   source:
+#     repoURL: https://github.com/prometheus-operator/prometheus-operator
+#     targetRevision: v0.77.0  # Versione che corrisponde al chart 77.11.0
+#     path: example/prometheus-operator-crd
+#   destination:
+#     server: https://kubernetes.default.svc
+#     namespace: default  # I CRDs vanno nel namespace default
+#   syncPolicy:
+#     syncOptions:
+#       - CreateNamespace=false
+#       - Replace=true  # Sostituisce invece di fare patch
+#       - ServerSideApply=true  # Usa server-side apply per evitare il problema delle annotation
+#     automated:
+#       prune: false  # Non eliminare automaticamente i CRDs
+#       selfHeal: true
