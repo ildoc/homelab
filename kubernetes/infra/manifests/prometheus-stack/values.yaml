@@ -8,6 +8,10 @@ kube-prometheus-stack:
     admissionWebhooks:
       enabled: false  # Disabilitato per semplificare con ArgoCD
     
+    # Fix per il problema TLS
+    tls:
+      enabled: false  # Disabilita TLS per evitare il problema del secret mancante
+    
     resources:
       limits:
         cpu: 200m
@@ -356,10 +360,17 @@ monitoring:
     replicas: 1
     verifySsl: false
     scrapeInterval: "30s"
+    # Configurazione corretta per pve-exporter
     targets:
-      - "192.168.0.10:8006"  # Proxmox node 1
-      - "192.168.0.11:8006"  # Proxmox node 2
-      - "192.168.0.12:8006"  # Proxmox node 3
+      - name: "proxmox-node1"
+        address: "192.168.0.10"
+        port: 8006
+      - name: "proxmox-node2"
+        address: "192.168.0.11"
+        port: 8006
+      - name: "proxmox-node3"
+        address: "192.168.0.12"
+        port: 8006
     resources:
       limits:
         cpu: "100m"

@@ -1,5 +1,6 @@
 {{- if .Values.monitoring.pveExporter.enabled }}
 ---
+# kubernetes/infra/manifests/prometheus-stack/templates/pve-exporter/deployment.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -34,17 +35,14 @@ spec:
               key: password
         - name: PVE_VERIFY_SSL
           value: "{{ .Values.monitoring.pveExporter.verifySsl | default false }}"
+        # Configurazione corretta per pve-exporter usando file di config
+        volumeMounts:
+        - name: config
+          mountPath: /etc/pve
+        command: ["/usr/local/bin/pve_exporter"]
         args:
-          - "--collector.status"
-          - "--collector.version"
-          - "--collector.node"
-          - "--collector.cluster"
-          - "--collector.resources"
-          - "--collector.config"
-          - "--collector.replication"
-          {{- range .Values.monitoring.pveExporter.targets }}
-          - "{{ . }}"
-          {{- end }}
+          - "--config.file=/etc/pve/pve.yml"
+          - "--web.listen-address=:9221"
         resources:
           limits:
             cpu: {{ .Values.monitoring.pveExporter.resources.limits.cpu | default "100m" }}
@@ -52,4 +50,8 @@ spec:
           requests:
             cpu: {{ .Values.monitoring.pveExporter.resources.requests.cpu | default "50m" }}
             memory: {{ .Values.monitoring.pveExporter.resources.requests.memory | default "64Mi" }}
+      volumes:
+      - name: config
+        configMap:
+          name: pve-exporter-config
 {{- end }}
