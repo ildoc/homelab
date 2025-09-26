@@ -16,7 +16,7 @@ spec:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: peanut-csi
+  name: pvc-peanut
   namespace: apps
 spec:
   accessModes:

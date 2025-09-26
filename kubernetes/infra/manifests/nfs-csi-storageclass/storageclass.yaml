@@ -6,7 +6,7 @@ metadata:
   annotations:
     # Inizialmente NON è default - decommentare dopo i test
     # storageclass.kubernetes.io/is-default-class: "true"
-    description: "NFS CSI StorageClass"
+    description: "NFS CSI StorageClass - Supporta sia RWO che RWX"
 provisioner: nfs.csi.k8s.io
 parameters:
   server: "192.168.0.123"
@@ -22,15 +22,9 @@ reclaimPolicy: Retain  # Mantieni i dati dopo eliminazione PVC
 volumeBindingMode: Immediate
 allowVolumeExpansion: true  # Permetti resize dei volumi
 
-# Mount options ottimizzate per performance
-# Queste opzioni funzionano bene sia per RWO che RWX
+# Mount options compatibili con TrueNAS
 mountOptions:
-  - nfsvers=4.1      # Usa NFSv4.1 per migliori performance
-  - rsize=1048576    # Read buffer size (1MB)
-  - wsize=1048576    # Write buffer size (1MB)
+  - nfsvers=4.1      # NFSv4.1 
   - hard             # Retry indefinitamente in caso di errore
-  - timeo=600        # Timeout in decimi di secondo (60s)
-  - retrans=2        # Numero di retry
-  - noresvport       # Non usare porte riservate (necessario per alcuni NAS)
   - noatime          # Non aggiornare access time (migliori performance)
-  - actimeo=3        # Cache attribute timeout (importante per RWX consistency)
+  # Rimuovi temporaneamente le opzioni problematiche per il debug
