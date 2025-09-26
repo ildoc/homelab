@@ -22,7 +22,7 @@ spec:
 
         storageClass:
           name: nfs-storage
-          defaultClass: true
+          defaultClass: false
           reclaimPolicy: Retain
           pathPattern: "${.PVC.name}"
           accessModes: ReadWriteMany
