@@ -42,48 +42,48 @@
 
 - name: Display update decision
   ansible.builtin.debug:
-     msg: "Files diversi: {{ contents_different }}. Aggiornamento forzato: {{ force_update | default(false) | bool }}. Procedo con l'aggiornamento: {{ should_update }}"
+     msg: "Files different: {{ contents_different }}. Force update: {{ force_update | default(false) | bool }}. Proceeding with update: {{ should_update }}"
 
 - name: Execute Docker operations if update needed
   when: should_update
   block:
-    # Gestione backup limitata
-    - name: Gestisci file di backup
+    # Limited backup management
+    - name: Manage backup files
       when: remote_file.stat.exists and contents_different
       block:
-        - name: Trova file backup esistenti
+        - name: Find existing backup files
           ansible.builtin.find:
             paths: "{{ update_compose_remote_path | dirname }}"
-            patterns: "{{ update_compose_remote_path | basename }}.*.backup"
+            patterns: "{{ update_compose_remote_path | basename }}.*~"
             file_type: file
           register: existing_backups
 
-        - name: Ordina backup per data (più vecchi primi)
+        - name: Sort backups by date (oldest first)
           ansible.builtin.set_fact:
             sorted_backups: "{{ existing_backups.files | sort(attribute='mtime') }}"
 
-        - name: Rimuovi backup in eccesso
+        - name: Remove excess backup files
           ansible.builtin.file:
             path: "{{ item.path }}"
             state: absent
           loop: "{{ sorted_backups[:(sorted_backups | length - max_backups + 1)] }}"
           when: sorted_backups | length >= max_backups
 
-    # Validazione template
-    - name: Valida nuovo template docker-compose
+    # Template validation
+    - name: Validate new docker-compose template
       when: contents_different and validate_compose
       block:
-        - name: Crea file temporaneo per validazione
+        - name: Create temporary file for validation
           ansible.builtin.set_fact:
             temp_compose_file: "{{ update_compose_remote_path }}.tmp.{{ ansible_date_time.epoch }}"
 
-        - name: Applica template in posizione temporanea
+        - name: Apply template to temporary location
           ansible.builtin.template:
             src: "{{ template_file_name }}"
             dest: "{{ temp_compose_file }}"
             mode: '0644'
 
-        - name: Valida sintassi docker-compose
+        - name: Validate docker-compose syntax
           ansible.builtin.command:
             cmd: "docker compose -f {{ temp_compose_file }} config"
             chdir: "{{ update_compose_project_path }}"
@@ -91,7 +91,7 @@
           failed_when: compose_validation.rc != 0
           changed_when: false
 
-        - name: Rimuovi file temporaneo
+        - name: Remove temporary file
           ansible.builtin.file:
             path: "{{ temp_compose_file }}"
             state: absent
@@ -110,7 +110,6 @@
         dest: "{{ update_compose_remote_path }}"
         mode: '0644'
         backup: yes
-        backup_file: "{{ update_compose_remote_path }}.{{ ansible_date_time.epoch }}.backup"
       when: contents_different
 
     - name: Pull Docker images with retry
@@ -127,11 +126,11 @@
         state: present
       register: compose_up_result
 
-    # Pulizia risorse Docker
-    - name: Pulisci risorse Docker inutilizzate
+    # Docker resources cleanup
+    - name: Clean up unused Docker resources
       when: cleanup_resources and compose_up_result is succeeded
       block:
-        - name: Rimuovi immagini Docker inutilizzate
+        - name: Remove unused Docker images
           community.docker.docker_prune:
             images: true
             images_filters:
@@ -139,27 +138,27 @@
           register: prune_images_result
           failed_when: false
 
-        - name: Rimuovi volumi Docker inutilizzati
+        - name: Remove unused Docker volumes
           community.docker.docker_prune:
             volumes: true
           register: prune_volumes_result
           failed_when: false
 
-        - name: Rimuovi reti Docker inutilizzate
+        - name: Remove unused Docker networks
           community.docker.docker_prune:
             networks: true
           register: prune_networks_result
           failed_when: false
 
-        - name: Mostra risultati pulizia
+        - name: Display cleanup results
           ansible.builtin.debug:
             msg: >-
-              Pulizia completata - 
-              Immagini: {{ prune_images_result.images_deleted | default([]) | length }} rimosse, 
-              Volumi: {{ prune_volumes_result.volumes_deleted | default([]) | length }} rimossi, 
-              Reti: {{ prune_networks_result.networks_deleted | default([]) | length }} rimosse
+              Cleanup completed - 
+              Images: {{ prune_images_result.images_deleted | default([]) | length }} removed, 
+              Volumes: {{ prune_volumes_result.volumes_deleted | default([]) | length }} removed, 
+              Networks: {{ prune_networks_result.networks_deleted | default([]) | length }} removed
 
 - name: Report no update needed
   ansible.builtin.debug:
-    msg: "Nessun aggiornamento necessario. I contenuti sono identici e force_update è false."
+    msg: "No update needed. Contents are identical and force_update is false."
   when: not should_update

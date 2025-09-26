@@ -1,0 +1,30 @@
+---
+# Ansible-lint configuration
+profile: production
+
+# Skip specific rules that might be too strict for homelab
+skip_list:
+  - yaml[line-length]  # Already handled by yamllint
+  - name[missing]      # Allow tasks without explicit names in simple playbooks
+  - var-naming[no-role-prefix]  # Allow variables without role prefix in small projects
+
+# Exclude paths
+exclude_paths:
+  - .cache/
+  - .git/
+  - molecule/
+  - .gitlab/
+  - .github/
+  - '*.md'
+
+# Enable offline mode to avoid external calls during CI
+offline: true
+
+# Warnings as errors (but allow_failure handles this)
+strict: false
+
+# Rules to enforce for production quality
+enable_list:
+  - no-changed-when
+  - no-handler
+  - yaml

@@ -5,7 +5,7 @@ include:
   # - local: '.gitlab/ci/opentofu.yml'
 
 stages:
-  - lint
+  - lint_quality # Nuovo stage per job asincroni/paralleli
   - test
   - auth
   - validate
@@ -16,17 +16,42 @@ stages:
   - sync
 
 yaml_lint:
-  stage: lint
+  stage: lint_quality
   image: python:3.13
+  cache:
+    key: "yamllint-cache"
+    paths:
+      - .cache/pip
+  before_script:
+    - pip install --cache-dir .cache/pip --root-user-action=ignore yamllint
   script:
-    - pip install yamllint
-    - yamllint . -c .yamllint
+    - echo "Running yamllint..."
+    - yamllint . -c .yamllint --format parsable
   only:
     changes:
       - "**/*.yml"
       - "**/*.yml.j2"
       - "**/*.yaml"
       - "**/*.yaml.j2"
+      - ".yamllint"
+  allow_failure: true
+
+ansible_lint:
+  stage: lint_quality
+  image: python:3.13
+  cache:
+    key: "ansible-lint-cache"
+    paths:
+      - .cache/pip
+  before_script:
+    - pip install --cache-dir .cache/pip --root-user-action=ignore ansible-lint ansible-core
+  script:
+    - echo "Running ansible-lint..."
+    - cd ansible && ansible-lint . --format pep8
+  only:
+    changes:
+      - "ansible/**/*"
+      - ".ansible-lint*"
   allow_failure: true
 
 sync_to_clean:

@@ -6,8 +6,7 @@ rules:
     level: warning
     max: 120
     allow-non-breakable-words: true
-    ignore: |
-      ^ *args:
+    allow-non-breakable-inline-mappings: true
 
   indentation:
     spaces: 2
@@ -27,4 +26,21 @@ rules:
     min-spaces-inside: 0
     max-spaces-inside: 0
 
-  document-start: enable
+  document-start:
+    level: warning
+
+  truthy:
+    allowed-values: ['true', 'false', 'on', 'off', 'yes', 'no']
+    check-keys: false
+
+  empty-lines:
+    max: 2
+    max-start: 0
+    max-end: 1
+
+ignore: |
+  .git/
+  .gitlab-ci.yml.d/
+  molecule/*/molecule.yml
+  .cache/
+  venv/

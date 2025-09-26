@@ -17,7 +17,6 @@ services:
         check_tables: true
         invidious_companion:
           - private_url: "http://companion:8282"
-        #    public_url: "http://localhost:8282"
         invidious_companion_key: "{{ invidious.companion_key }}"
         hmac_key: "{{ invidious.hmac_key }}"
     healthcheck:
@@ -38,7 +37,7 @@ services:
       SERVER_SECRET_KEY: {{ invidious.companion_key }}
     restart: unless-stopped
     # ports:
-    #   - "127.0.0.1:8282:8282"
+    #   - "127.0.0.1:8282:8282" #
     logging:
       options:
         max-size: "1G"

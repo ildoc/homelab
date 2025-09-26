@@ -103,7 +103,7 @@
         - name: Find existing backup files
           ansible.builtin.find:
             paths: "{{ update_compose_remote_path | dirname }}"
-            patterns: "{{ update_compose_remote_path | basename }}.*.backup"
+            patterns: "{{ update_compose_remote_path | basename }}.*~"
             file_type: file
           register: existing_backups
 
@@ -172,7 +172,6 @@
         dest: "{{ update_compose_remote_path }}"
         mode: '0644'
         backup: yes
-        backup_file: "{{ update_compose_remote_path }}.{{ ansible_date_time.epoch }}.backup"
       when: contents_different and operation_mode == 'copy'
 
     - name: Deploy docker-compose file (template mode)
@@ -181,7 +180,6 @@
         dest: "{{ update_compose_remote_path }}"
         mode: '0644'
         backup: yes
-        backup_file: "{{ update_compose_remote_path }}.{{ ansible_date_time.epoch }}.backup"
       when: contents_different and operation_mode == 'template'
 
     - name: Pull Docker images with retry
