@@ -13,7 +13,7 @@ parameters:
   share: "/mnt/data/nfs_shared/k8s"
   # Pattern per organizzare meglio i volumi
   # Crea struttura: /mnt/data/nfs_shared/k8s/namespace/pvc-name/pv-name
-  subDir: "${pvc.metadata.namespace}/${pv.metadata.uid}"
+  subDir: "${pvc.metadata.namespace}/${pv.metadata.name}"
   
   # Opzionale: mount permissions per nuove directory
   # mountPermissions: "0777"
