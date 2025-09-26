@@ -372,7 +372,7 @@ monitoring:
   # Proxmox VE Exporter (opzionale)
   pveExporter:
     enabled: true
-    image: "prompve/prometheus-pve-exporter:3.4.5"
+    image: "prompve/prometheus-pve-exporter:3.5.5"
     replicas: 1
     verifySsl: false
     scrapeInterval: "30s"
