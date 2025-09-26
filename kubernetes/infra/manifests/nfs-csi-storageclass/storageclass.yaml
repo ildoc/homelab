@@ -5,7 +5,7 @@ metadata:
   name: nfs-csi
   annotations:
     # Inizialmente NON è default - decommentare dopo i test
-    # storageclass.kubernetes.io/is-default-class: "true"
+    storageclass.kubernetes.io/is-default-class: "true"
     description: "NFS CSI StorageClass"
 provisioner: nfs.csi.k8s.io
 parameters:
