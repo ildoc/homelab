@@ -4,13 +4,6 @@
     project_src: .
     state: restarted
 
-- name: Restart runner
-  community.docker.docker_compose_v2:
-    project_src: .
-    services:
-      - runner
-    state: restarted
-
 - name: Restart docker
   ansible.builtin.systemd:
     name: docker

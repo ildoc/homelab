@@ -1,0 +1,250 @@
+---
+# Unified Docker Compose Update Task
+# Supports both static files and templates
+# Variables required:
+#   - update_compose_remote_path: path to remote docker-compose.yml
+#   - update_compose_project_path: project directory path
+# Variables optional:
+#   - update_compose_local_path: path to local file (for copy mode)
+#   - template_file_name: template file name (for template mode)
+#   - force_update: force update even if files are the same (default: false)
+#   - pull_retries: number of pull retries (default: 3)
+#   - pull_delay: delay between pull retries in seconds (default: 10)
+#   - max_backups: maximum number of backup files to keep (default: 3)
+#   - validate_compose: validate docker-compose syntax before deployment (default: true)
+#   - cleanup_resources: cleanup unused Docker resources after deployment (default: true)
+
+- name: Validate required variables
+  ansible.builtin.assert:
+    that:
+      - update_compose_remote_path is defined
+      - update_compose_project_path is defined
+      - (update_compose_local_path is defined) or (template_file_name is defined)
+    fail_msg: "Missing required variables. Need update_compose_remote_path, update_compose_project_path, and either update_compose_local_path or template_file_name"
+
+- name: Determine operation mode
+  ansible.builtin.set_fact:
+    operation_mode: "{{ 'template' if template_file_name is defined else 'copy' }}"
+    pull_retries: "{{ pull_retries | default(3) }}"
+    pull_delay: "{{ pull_delay | default(10) }}"
+    max_backups: "{{ max_backups | default(3) }}"
+    validate_compose: "{{ validate_compose | default(true) }}"
+    cleanup_resources: "{{ cleanup_resources | default(true) }}"
+
+- name: Display operation mode
+  ansible.builtin.debug:
+    msg: "Operating in {{ operation_mode }} mode"
+
+# Check remote file status
+- name: Check remote docker-compose file status
+  ansible.builtin.stat:
+    path: "{{ update_compose_remote_path }}"
+  register: remote_file
+
+# Handle copy mode
+- name: Handle copy mode operations
+  when: operation_mode == 'copy'
+  block:
+    - name: Check local file status (copy mode)
+      ansible.builtin.stat:
+        path: "{{ update_compose_local_path }}"
+      register: local_file
+      delegate_to: localhost
+
+    - name: Validate local file exists (copy mode)
+      ansible.builtin.assert:
+        that: local_file.stat.exists
+        fail_msg: "Local file {{ update_compose_local_path }} does not exist"
+
+    - name: Compare files using checksum (copy mode)
+      ansible.builtin.set_fact:
+        contents_different: "{{ not remote_file.stat.exists or (remote_file.stat.checksum != local_file.stat.checksum) }}"
+
+# Handle template mode
+- name: Handle template mode operations
+  when: operation_mode == 'template'
+  block:
+    - name: Read remote file content (template mode)
+      ansible.builtin.slurp:
+        src: "{{ update_compose_remote_path }}"
+      register: remote_file_content
+      when: remote_file.stat.exists
+
+    - name: Render template content (template mode)
+      ansible.builtin.set_fact:
+        template_file_rendered: "{{ lookup('template', template_file_name) }}"
+
+    - name: Compare template content (template mode)
+      ansible.builtin.set_fact:
+        contents_different: >-
+          {{ not remote_file.stat.exists or 
+             ((remote_file_content.content | b64decode).strip() != template_file_rendered.strip()) }}
+
+# Common logic for both modes
+- name: Determine if update is needed
+  ansible.builtin.set_fact:
+    should_update: "{{ force_update | default(false) | bool or contents_different }}"
+
+- name: Display update decision
+  ansible.builtin.debug:
+    msg: >-
+      Files different: {{ contents_different }}. 
+      Force update: {{ force_update | default(false) | bool }}. 
+      Will update: {{ should_update }}
+
+# Execute Docker operations if update is needed
+- name: Execute Docker operations
+  when: should_update
+  block:
+    # Backup management
+    - name: Manage backup files
+      when: remote_file.stat.exists and contents_different
+      block:
+        - name: Find existing backup files
+          ansible.builtin.find:
+            paths: "{{ update_compose_remote_path | dirname }}"
+            patterns: "{{ update_compose_remote_path | basename }}.*.backup"
+            file_type: file
+          register: existing_backups
+
+        - name: Sort backups by modification time (oldest first)
+          ansible.builtin.set_fact:
+            sorted_backups: "{{ existing_backups.files | sort(attribute='mtime') }}"
+
+        - name: Remove excess backup files
+          ansible.builtin.file:
+            path: "{{ item.path }}"
+            state: absent
+          loop: "{{ sorted_backups[:(sorted_backups | length - max_backups + 1)] }}"
+          when: sorted_backups | length >= max_backups
+
+    # Validation step
+    - name: Create temporary docker-compose file for validation
+      when: contents_different and validate_compose
+      block:
+        - name: Generate temporary filename
+          ansible.builtin.set_fact:
+            temp_compose_file: "{{ update_compose_remote_path }}.tmp.{{ ansible_date_time.epoch }}"
+
+        - name: Copy file to temporary location (copy mode)
+          ansible.builtin.copy:
+            src: "{{ update_compose_local_path }}"
+            dest: "{{ temp_compose_file }}"
+            mode: '0644'
+          when: operation_mode == 'copy'
+
+        - name: Deploy template to temporary location (template mode)
+          ansible.builtin.template:
+            src: "{{ template_file_name }}"
+            dest: "{{ temp_compose_file }}"
+            mode: '0644'
+          when: operation_mode == 'template'
+
+        - name: Validate docker-compose syntax
+          ansible.builtin.command:
+            cmd: "docker compose -f {{ temp_compose_file }} config"
+            chdir: "{{ update_compose_project_path }}"
+          register: compose_validation
+          failed_when: compose_validation.rc != 0
+          changed_when: false
+
+        - name: Remove temporary file
+          ansible.builtin.file:
+            path: "{{ temp_compose_file }}"
+            state: absent
+          when: temp_compose_file is defined
+    - name: Stop existing containers
+      community.docker.docker_compose_v2:
+        project_src: "{{ update_compose_project_path }}"
+        state: absent
+      when: remote_file.stat.exists
+      register: compose_down_result
+      failed_when: false  # Don't fail if containers are already stopped
+
+    - name: Display stop result
+      ansible.builtin.debug:
+        msg: "Docker compose down result: {{ compose_down_result.rc | default('N/A') }}"
+      when: remote_file.stat.exists
+
+    - name: Copy docker-compose file (copy mode)
+      ansible.builtin.copy:
+        src: "{{ update_compose_local_path }}"
+        dest: "{{ update_compose_remote_path }}"
+        mode: '0644'
+        backup: yes
+        backup_file: "{{ update_compose_remote_path }}.{{ ansible_date_time.epoch }}.backup"
+      when: contents_different and operation_mode == 'copy'
+
+    - name: Deploy docker-compose file (template mode)
+      ansible.builtin.template:
+        src: "{{ template_file_name }}"
+        dest: "{{ update_compose_remote_path }}"
+        mode: '0644'
+        backup: yes
+        backup_file: "{{ update_compose_remote_path }}.{{ ansible_date_time.epoch }}.backup"
+      when: contents_different and operation_mode == 'template'
+
+    - name: Pull Docker images with retry
+      community.docker.docker_compose_v2_pull:
+        project_src: "{{ update_compose_project_path }}"
+      register: pull_result
+      retries: "{{ pull_retries }}"
+      delay: "{{ pull_delay }}"
+      until: not pull_result.failed
+      failed_when: false
+
+    - name: Check pull result
+      ansible.builtin.fail:
+        msg: "Failed to pull Docker images after {{ pull_retries }} attempts"
+      when: pull_result.failed
+
+    - name: Start containers
+      community.docker.docker_compose_v2:
+        project_src: "{{ update_compose_project_path }}"
+        state: present
+      register: compose_up_result
+
+    # Cleanup resources after successful deployment
+    - name: Cleanup unused Docker resources
+      when: cleanup_resources and compose_up_result is succeeded
+      block:
+        - name: Remove unused Docker images
+          community.docker.docker_prune:
+            images: true
+            images_filters:
+              dangling: false
+          register: prune_images_result
+          failed_when: false
+
+        - name: Remove unused Docker volumes
+          community.docker.docker_prune:
+            volumes: true
+          register: prune_volumes_result
+          failed_when: false
+
+        - name: Remove unused Docker networks
+          community.docker.docker_prune:
+            networks: true
+          register: prune_networks_result
+          failed_when: false
+
+        - name: Display cleanup results
+          ansible.builtin.debug:
+            msg: >-
+              Cleanup completed - 
+              Images: {{ prune_images_result.images_deleted | default([]) | length }} removed, 
+              Volumes: {{ prune_volumes_result.volumes_deleted | default([]) | length }} removed, 
+              Networks: {{ prune_networks_result.networks_deleted | default([]) | length }} removed
+
+    - name: Display final status
+      ansible.builtin.debug:
+        msg: >-
+          Docker Compose update completed successfully. 
+          Mode: {{ operation_mode }}. 
+          Updated: {{ should_update }}
+
+# Report when no update is needed
+- name: Report no update needed
+  ansible.builtin.debug:
+    msg: "No update needed. Files are identical and force_update is false."
+  when: not should_update

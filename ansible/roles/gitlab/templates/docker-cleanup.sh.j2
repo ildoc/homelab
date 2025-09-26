@@ -20,7 +20,7 @@ get_disk_usage() {
 
 # Funzione per calcolare lo spazio usato da Docker
 get_docker_usage() {
-    docker system df --format "table {{.Type}}\t{{.Size}}\t{{.Reclaimable}}" | tail -n +2
+    docker system df --format "table {{ '{{' }}.Type{{ '}}' }}\t{{ '{{' }}.Size{{ '}}' }}\t{{ '{{' }}.Reclaimable{{ '}}' }}" | tail -n +2
 }
 
 log_message "========== Inizio pulizia Docker =========="
@@ -55,19 +55,14 @@ docker network prune -f 2>&1 | tee -a "$LOG_FILE"
 log_message "Rimozione build cache..."
 docker builder prune -f --filter "until=48h" 2>&1 | tee -a "$LOG_FILE" || true
 
-# 7. Pulizia specifica per GitLab Runner
-log_message "Pulizia cache GitLab Runner..."
-# Rimuovi immagini con pattern specifici del runner
-docker images | grep -E "runner-.*project-.*concurrent-" | awk '{print $3}' | xargs -r docker rmi -f 2>/dev/null || true
-
-# 8. Pulizia layer intermedi
+# 7. Pulizia layer intermedi
 log_message "Pulizia layer intermedi..."
 docker image prune -a -f --filter "dangling=true" 2>&1 | tee -a "$LOG_FILE"
 
-# 9. Se lo spazio su disco è ancora sopra DISK_THRESHOLD%, pulizia più aggressiva
+# 8. Se lo spazio su disco è ancora sopra DISK_THRESHOLD%, pulizia più aggressiva
 DISK_USAGE=$(get_disk_usage)
-if [ "$DISK_USAGE" -gt "$DISK_THRESHOLD" ]; then
-    log_message "ATTENZIONE: Spazio disco ancora sopra ${DISK_THRESHOLD}% ($DISK_USAGE%). Pulizia aggressiva..."
+if [ "$DISK_USAGE" -gt "{{ gitlab.cleanup.disk_threshold }}" ]; then
+    log_message "ATTENZIONE: Spazio disco ancora sopra {{ gitlab.cleanup.disk_threshold }}% ($DISK_USAGE%). Pulizia aggressiva..."
     
     # Rimuovi TUTTE le immagini non in uso
     docker image prune -a -f 2>&1 | tee -a "$LOG_FILE"

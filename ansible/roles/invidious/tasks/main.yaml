@@ -9,8 +9,13 @@
     project_path: /root
 
 - name: Include update docker-compose
-  ansible.builtin.include_tasks: "{{ tasks_dir }}/docker/update-compose-template.yaml"
+  ansible.builtin.include_tasks: "{{ tasks_dir }}/docker/update-compose-unified.yaml"
   vars:
     update_compose_remote_path: "{{ remote_path }}"
     template_file_name: "{{ local_path }}"
     update_compose_project_path: "{{ project_path }}"
+    max_backups: 5
+    validate_compose: true
+    cleanup_resources: true
+    pull_retries: 3
+    pull_delay: 15

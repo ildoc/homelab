@@ -21,39 +21,6 @@
     state: directory
     mode: '0755'
 
-# Controlla se il config del runner esiste e se è diverso
-- name: Check if runner config exists
-  ansible.builtin.stat:
-    path: ~/runner/config.toml
-  register: runner_config_stat
-
-- name: Read existing runner config if exists
-  ansible.builtin.slurp:
-    src: ~/runner/config.toml
-  register: existing_runner_config
-  when: runner_config_stat.stat.exists
-
-- name: Generate runner config from template
-  ansible.builtin.set_fact:
-    runner_config_content: "{{ lookup('template', 'runner-config.toml.j2') }}"
-
-- name: Check if runner config needs update
-  ansible.builtin.set_fact:
-    runner_config_needs_update: >-
-      {{
-        not runner_config_stat.stat.exists or
-        (existing_runner_config.content | b64decode) != runner_config_content
-      }}
-
-- name: Configure runner with cleanup settings
-  ansible.builtin.template:
-    src: runner-config.toml.j2
-    dest: ~/runner/config.toml
-    mode: '0600'
-    backup: true
-  when: runner_config_needs_update
-  notify: Restart runner
-
 # Cron jobs - già idempotenti per natura
 - name: Schedule docker cleanup via cron (every N hours)
   ansible.builtin.cron:
@@ -166,7 +133,6 @@
   ansible.builtin.debug:
     msg:
       - "Cleanup script updated: {{ cleanup_script_result.changed }}"
-      - "Runner config updated: {{ runner_config_needs_update }}"
       - "Daemon.json updated: {{ daemon_json_needs_update }}"
       - "Cron jobs updated: {{ cleanup_cron.changed or aggressive_cron.changed or monitor_cron.changed }}"
       - "Logrotate updated: {{ logrotate_needs_update }}"
