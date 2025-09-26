@@ -16,7 +16,7 @@ services:
           port: 5432
         check_tables: true
         invidious_companion:
-          - private_url: "http://companion:8282"
+        - private_url: "http://companion:8282/companion"
         invidious_companion_key: "{{ invidious.companion_key }}"
         hmac_key: "{{ invidious.hmac_key }}"
     healthcheck:
@@ -36,8 +36,6 @@ services:
     environment:
       SERVER_SECRET_KEY: {{ invidious.companion_key }}
     restart: unless-stopped
-    # ports:
-    #   - "127.0.0.1:8282:8282" #
     logging:
       options:
         max-size: "1G"
@@ -55,7 +53,7 @@ services:
     image: postgres:17
     restart: unless-stopped
     volumes:
-      - postgresdatacompanion:/var/lib/postgresql/data
+      - postgresdata:/var/lib/postgresql/data
       - ./config/sql:/config/sql
       - ./docker/init-invidious-db.sh:/docker-entrypoint-initdb.d/init-invidious-db.sh
     environment:
@@ -66,5 +64,5 @@ services:
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
 
 volumes:
-  postgresdatacompanion:
+  postgresdata:
   companioncache:
