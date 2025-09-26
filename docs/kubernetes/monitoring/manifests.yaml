@@ -518,7 +518,7 @@ spec:
     spec:
       containers:
         - name: blackbox-exporter
-          image: quay.io/prometheus/blackbox-exporter:v0.25.0
+          image: quay.io/prometheus/blackbox-exporter:v0.27.0
           args:
             - "--config.file=/config/blackbox.yml"
           ports:
