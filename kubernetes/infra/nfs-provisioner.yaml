@@ -27,6 +27,14 @@ spec:
           pathPattern: "${.PVC.name}"
           accessModes: ReadWriteMany
 
+          podSecurityContext:
+            fsGroup: 65534  # nogroup GID
+            supplementalGroups: [65534]
+            
+          securityContext:
+            runAsUser: 65534  # nobody UID
+            runAsGroup: 65534  # nogroup GID
+
   destination:
     server: https://kubernetes.default.svc
     namespace: default
