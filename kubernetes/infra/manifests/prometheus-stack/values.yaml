@@ -41,7 +41,7 @@ kube-prometheus-stack:
       storageSpec:
         volumeClaimTemplate:
           spec:
-            storageClassName: nfs-storage
+            storageClassName: nfs-csi
             accessModes: ["ReadWriteOnce"]
             resources:
               requests:
@@ -104,7 +104,7 @@ kube-prometheus-stack:
     # Persistence
     persistence:
       enabled: true
-      storageClassName: nfs-storage
+      storageClassName: nfs-csi
       size: 5Gi
       accessModes:
         - ReadWriteOnce
@@ -208,7 +208,7 @@ kube-prometheus-stack:
       storage:
         volumeClaimTemplate:
           spec:
-            storageClassName: nfs-storage
+            storageClassName: nfs-csi
             accessModes: ["ReadWriteOnce"]
             resources:
               requests:
