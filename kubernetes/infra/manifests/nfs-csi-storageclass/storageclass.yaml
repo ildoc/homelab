@@ -6,14 +6,14 @@ metadata:
   annotations:
     # Inizialmente NON è default - decommentare dopo i test
     # storageclass.kubernetes.io/is-default-class: "true"
-    description: "NFS CSI StorageClass - Supporta sia RWO che RWX"
+    description: "NFS CSI StorageClass"
 provisioner: nfs.csi.k8s.io
 parameters:
   server: "192.168.0.123"
   share: "/mnt/data/nfs_shared/k8s"
   # Pattern per organizzare meglio i volumi
   # Crea struttura: /mnt/data/nfs_shared/k8s/namespace/pvc-name/pv-name
-  subDir: "${pvc.metadata.namespace}/${pvc.metadata.name}/${pv.metadata.name}"
+  subDir: "${pvc.metadata.namespace}/${pv.metadata.uid}"
   
   # Opzionale: mount permissions per nuove directory
   # mountPermissions: "0777"
