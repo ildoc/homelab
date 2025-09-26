@@ -1,0 +1,36 @@
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: nfs-csi
+  annotations:
+    # Inizialmente NON è default - decommentare dopo i test
+    # storageclass.kubernetes.io/is-default-class: "true"
+    description: "NFS CSI StorageClass"
+provisioner: nfs.csi.k8s.io
+parameters:
+  server: "192.168.0.123"
+  share: "/mnt/data/nfs_shared/k8s"
+  # Pattern per organizzare meglio i volumi
+  # Crea struttura: /mnt/data/nfs_shared/k8s/namespace/pvc-name/pv-name
+  subDir: "${pvc.metadata.namespace}/${pvc.metadata.name}/${pv.metadata.name}"
+  
+  # Opzionale: mount permissions per nuove directory
+  # mountPermissions: "0777"
+  
+reclaimPolicy: Retain  # Mantieni i dati dopo eliminazione PVC
+volumeBindingMode: Immediate
+allowVolumeExpansion: true  # Permetti resize dei volumi
+
+# Mount options ottimizzate per performance
+# Queste opzioni funzionano bene sia per RWO che RWX
+mountOptions:
+  - nfsvers=4.1      # Usa NFSv4.1 per migliori performance
+  - rsize=1048576    # Read buffer size (1MB)
+  - wsize=1048576    # Write buffer size (1MB)
+  - hard             # Retry indefinitamente in caso di errore
+  - timeo=600        # Timeout in decimi di secondo (60s)
+  - retrans=2        # Numero di retry
+  - noresvport       # Non usare porte riservate (necessario per alcuni NAS)
+  - noatime          # Non aggiornare access time (migliori performance)
+  - actimeo=3        # Cache attribute timeout (importante per RWX consistency)
