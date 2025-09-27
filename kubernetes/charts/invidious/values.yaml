@@ -1,0 +1,156 @@
+invidious:
+  # Configurazione immagine allineata con docker-compose
+  image:
+    repository: quay.io/invidious/invidious
+    tag: "2025.09.24-42d34cd"
+    pullPolicy: IfNotPresent
+  
+  # Numero di repliche (1 per evitare deadlock del database)
+  replicaCount: 1
+  
+  # Configurazione del servizio
+  service:
+    type: ClusterIP
+    port: 3000
+  
+  # Disabilita ingress tradizionale
+  ingress:
+    enabled: false
+  
+  # Configurazione Gateway API integrata nel chart
+  gateway:
+    enabled: true
+    gatewayName: "traefik-gateway"
+    gatewayNamespace: "traefik"
+    hostnames:
+      - "invidious2.local.ildoc.it"
+    rules:
+      - matches:
+          - path:
+              type: PathPrefix
+              value: "/"
+  
+  # Risorse per il container principale
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+    requests:
+      cpu: 500m
+      memory: 512Mi
+  
+  # Annotazioni per i pod (logging come docker-compose)
+  podAnnotations:
+    logging.options.max-size: "1G"
+    logging.options.max-file: "4"
+  
+  # Security context per il pod
+  podSecurityContext:
+    runAsUser: 1000
+    runAsGroup: 1000
+    fsGroup: 1000
+  
+  # Security context per il container
+  securityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+  
+  # Database PostgreSQL
+  postgresql:
+    enabled: true
+    image:
+      tag: 17
+    auth:
+      username: kemal
+      database: invidious
+      # Password e username verranno gestiti tramite External Secrets
+      existingSecret: "invidious-secrets"
+      secretKeys:
+        userPasswordKey: "postgresql-password"
+        usernameKey: "postgresql-username"
+    primary:
+      persistence:
+        enabled: true
+        size: 10Gi
+        storageClass: nfs-storage
+  
+  # Invidious Companion
+  companion:
+    enabled: true
+    image:
+      repository: quay.io/invidious/invidious-companion
+      tag: "master-a866b71"
+      pullPolicy: IfNotPresent
+    
+    service:
+      port: 8282
+    
+    resources:
+      limits:
+        cpu: 200m
+        memory: 256Mi
+      requests:
+        cpu: 100m
+        memory: 128Mi
+    
+    securityContext:
+      readOnlyRootFilesystem: true
+      allowPrivilegeEscalation: false
+      runAsNonRoot: true
+      capabilities:
+        drop:
+          - ALL
+    
+    podSecurityContext:
+      runAsNonRoot: true
+      runAsUser: 1000
+      runAsGroup: 1000
+      fsGroup: 1000
+      seccompProfile:
+        type: RuntimeDefault
+    
+    persistence:
+      enabled: true
+      size: 1Gi
+      accessMode: ReadWriteOnce
+      storageClass: nfs-storage
+  
+  # Configurazione Invidious
+  config:
+    db:
+      user: kemal
+      # Password verrà presa dal secret
+      password: ""
+      host: ""  # Verrà auto-popolato dal chart
+      port: 5432
+      dbname: invidious
+    
+    check_tables: true
+    port: 3000
+    domain: "invidious2.local.ildoc.it"
+    https_only: true
+    channel_threads: 1
+    full_refresh: false
+    feed_threads: 1
+    
+    # Companion integration
+    invidious_companion:
+      - private_url: ""  # Verrà auto-popolato dal chart
+    
+    # Queste chiavi verranno gestite tramite External Secrets
+    invidious_companion_key: ""
+    hmac_key: ""
+  
+  # Riferimento al secret esterno per le chiavi sensibili
+  existingSecret: "invidious-secrets"
+  
+  # Health check configuration
+  healthcheck:
+    enabled: true
+    command: ["CMD-SHELL", "wget -nv --tries=1 --spider http://127.0.0.1:3000/api/v1/trending || exit 1"]
+    initialDelaySeconds: 30
+    periodSeconds: 30
+    timeoutSeconds: 5
+    failureThreshold: 2

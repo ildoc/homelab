@@ -1,0 +1,8 @@
+---
+apiVersion: v2
+name: invidious
+version: 1.0.0
+dependencies:
+  - name: invidious
+    version: "3.0.0"
+    repository: https://ildoc.github.io/invidious-helm-chart
