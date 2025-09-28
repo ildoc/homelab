@@ -79,7 +79,7 @@ invidious:
     persistence:
       enabled: true
       size: 10Gi
-      storageClass: nfs-storage
+      storageClass: nfs-csi
     
     # Se vuoi configurazioni specifiche per il primary, usa questa struttura:
     # primary:
@@ -127,7 +127,7 @@ invidious:
       enabled: true
       size: 1Gi
       accessMode: ReadWriteOnce
-      storageClass: nfs-storage
+      storageClass: nfs-csi
 
   # Configurazione Invidious
   config:
