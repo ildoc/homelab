@@ -70,10 +70,9 @@ invidious:
       # Le chiavi nel secret che PostgreSQL cercherà
       secretKeys:
         # Queste sono le chiavi CORRETTE per il chart Bitnami
-        adminPasswordKey: "postgres-password"      # Per l'utente 'postgres'
-        userPasswordKey: "password"                 # Per l'utente 'kemal'
-        replicationPasswordKey: "replication-password"  # Per la replica
-        # NON aggiungere usernameKey - non esiste nel chart Bitnami
+        adminPasswordKey: "postgresql-password"      
+        userPasswordKey: "postgresql-password"       
+        replicationPasswordKey: "postgresql-password"
     
     # Configurazione persistence (struttura corretta per Bitnami chart v16.x)
     persistence:
