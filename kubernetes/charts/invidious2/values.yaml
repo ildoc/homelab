@@ -132,8 +132,6 @@ companion:
 config:
   db:
     user: kemal
-    # Password verrà presa dal secret
-    password: ""
     host: ""  # Verrà auto-popolato dal chart
     port: 5432
     dbname: invidious
@@ -149,10 +147,6 @@ config:
   # Companion integration
   invidious_companion:
     - private_url: ""  # Verrà auto-popolato dal chart
-  
-  # Queste chiavi verranno gestite tramite External Secrets
-  invidious_companion_key: ""
-  hmac_key: ""
 
 # IMPORTANTE: Riferimento al secret esterno per le chiavi sensibili
 existingSecret: "invidious-secrets"

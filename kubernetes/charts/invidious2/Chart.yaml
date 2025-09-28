@@ -1,6 +1,6 @@
 ---
 apiVersion: v2
-name: invidious
+name: invidious2
 version: 1.0.0
 dependencies:
   - name: invidious

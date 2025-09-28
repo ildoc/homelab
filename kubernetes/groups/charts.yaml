@@ -13,7 +13,7 @@ spec:
       revision: HEAD
       directories:
       - path: kubernetes/charts/*
-      - path: kubernetes/applications/archived
+      - path: kubernetes/charts/archived
         exclude: true
   template:
     metadata:
