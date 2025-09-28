@@ -68,6 +68,7 @@ invidious:
       # Password e username verranno gestiti tramite External Secrets
       existingSecret: "invidious-secrets"
       secretKeys:
+        adminPasswordKey: "postgresql-password"
         userPasswordKey: "postgresql-password"
         usernameKey: "postgresql-username"
     primary:
