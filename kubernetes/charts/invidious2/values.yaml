@@ -65,6 +65,7 @@ invidious:
     auth:
       username: kemal
       database: invidious
+      password: kemal 
       # IMPORTANTE: Il secret DEVE essere specificato qui
       existingSecret: "invidious-secrets"
       # Le chiavi nel secret che PostgreSQL cercherà
