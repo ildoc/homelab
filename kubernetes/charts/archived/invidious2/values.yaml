@@ -63,18 +63,37 @@ invidious:
       # Usa un tag completo, non solo "17"
       tag: "17.6.0"
     auth:
+      # Username DEVE corrispondere a quello in Vault
       username: kemal
       database: invidious
-      # IMPORTANTE: Il secret DEVE essere specificato qui
+      # Riferimento al secret esistente
       existingSecret: "invidious-secrets"
-      # Le chiavi nel secret che PostgreSQL cercherà
+      # Mapping delle chiavi nel secret
       secretKeys:
-        # Queste sono le chiavi CORRETTE per il chart Bitnami
-        adminPasswordKey: "postgresql-password"      
-        userPasswordKey: "postgresql-password"       
-        replicationPasswordKey: "postgresql-password"
+        # IMPORTANTE: PostgreSQL Bitnami si aspetta questa struttura
+        adminPasswordKey: "postgresql-postgres-password"  # Password per utente 'postgres'
+        userPasswordKey: "postgresql-password"             # Password per utente 'kemal'
     
-    # Configurazione persistence (struttura corretta per Bitnami chart v16.x)
+    primary:
+      persistence:
+        enabled: true
+        size: 10Gi
+        storageClass: nfs-csi
+      
+      # Aggiungi init container per aspettare il secret
+      initContainers:
+        - name: wait-for-secret
+          image: bitnami/kubectl:latest
+          command:
+            - sh
+            - -c
+            - |
+              until kubectl get secret invidious-secrets -n apps; do
+                echo "Waiting for secret invidious-secrets..."
+                sleep 5
+              done
+              echo "Secret found!"
+
     persistence:
       enabled: true
       size: 10Gi
@@ -132,6 +151,7 @@ invidious:
   config:
     db:
       user: kemal
+      password: ""  # Verrà preso da existingSecret
       host: ""  # Verrà auto-popolato dal chart
       port: 5432
       dbname: invidious
@@ -147,6 +167,10 @@ invidious:
     # Companion integration
     invidious_companion:
       - private_url: ""  # Verrà auto-popolato dal chart
+        
+    # Questi verranno presi da existingSecret
+    invidious_companion_key: ""
+    hmac_key: ""
 
   # IMPORTANTE: Riferimento al secret esterno per le chiavi sensibili
   existingSecret: "invidious-secrets"
