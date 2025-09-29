@@ -4,19 +4,15 @@ invidious:
     tag: "2025.09.24-42d34cd"
     pullPolicy: IfNotPresent
 
-  # Numero di repliche (1 per evitare deadlock del database)
   replicaCount: 1
 
-  # Configurazione del servizio
   service:
     type: ClusterIP
     port: 3000
 
-  # Disabilita ingress tradizionale
   ingress:
     enabled: false
 
-  # Configurazione Gateway API integrata nel chart
   gateway:
     enabled: true
     gatewayName: "traefik-gateway"
@@ -29,7 +25,6 @@ invidious:
               type: PathPrefix
               value: "/"
 
-  # Risorse per il container principale
   resources:
     limits:
       cpu: 2000m
@@ -38,75 +33,59 @@ invidious:
       cpu: 500m
       memory: 512Mi
 
-  # Annotazioni per i pod (logging come docker-compose)
   podAnnotations:
     logging.options.max-size: "1G"
     logging.options.max-file: "4"
 
-  # Security context per il pod
   podSecurityContext:
     runAsUser: 1000
     runAsGroup: 1000
     fsGroup: 1000
 
-  # Security context per il container
   securityContext:
     allowPrivilegeEscalation: false
     capabilities:
       drop:
         - ALL
 
-  # Database PostgreSQL - CONFIGURAZIONE CORRETTA
+  # PostgreSQL Configuration - CORRETTA
   postgresql:
     enabled: true
     image:
-      # Usa un tag completo, non solo "17"
       tag: "17.6.0"
     auth:
-      # Username DEVE corrispondere a quello in Vault
       username: kemal
       database: invidious
-      # Riferimento al secret esistente
+      # IMPORTANTE: Specificare il secret qui direttamente
       existingSecret: "invidious-secrets"
-      # Mapping delle chiavi nel secret
       secretKeys:
-        # IMPORTANTE: PostgreSQL Bitnami si aspetta questa struttura
-        adminPasswordKey: "postgresql-postgres-password"  # Password per utente 'postgres'
-        userPasswordKey: "postgresql-password"             # Password per utente 'kemal'
+        adminPasswordKey: "postgresql-postgres-password"
+        userPasswordKey: "postgresql-password"
     
+    # Configurazione primary (struttura corretta per Bitnami v16.x)
     primary:
       persistence:
         enabled: true
         size: 10Gi
         storageClass: nfs-csi
       
-      # Aggiungi init container per aspettare il secret
-      initContainers:
-        - name: wait-for-secret
-          image: bitnami/kubectl:latest
-          command:
-            - sh
-            - -c
-            - |
-              until kubectl get secret invidious-secrets -n apps; do
-                echo "Waiting for secret invidious-secrets..."
-                sleep 5
-              done
-              echo "Secret found!"
+      # Risorse per PostgreSQL
+      resources:
+        limits:
+          cpu: 1000m
+          memory: 1Gi
+        requests:
+          cpu: 250m
+          memory: 256Mi
+      
+      # Configurazione PostgreSQL ottimizzata
+      extendedConfiguration: |
+        shared_buffers = 128MB
+        effective_cache_size = 256MB
+        max_connections = 50
+        work_mem = 4MB
 
-    persistence:
-      enabled: true
-      size: 10Gi
-      storageClass: nfs-csi
-    
-    # Se vuoi configurazioni specifiche per il primary, usa questa struttura:
-    # primary:
-    #   resources:
-    #     limits:
-    #       cpu: 1000m
-    #       memory: 1Gi
-
-  # Invidious Companion
+  # Companion configuration
   companion:
     enabled: true
     image:
@@ -152,7 +131,7 @@ invidious:
     db:
       user: kemal
       password: ""  # Verrà preso da existingSecret
-      host: ""  # Verrà auto-popolato dal chart
+      host: ""      # Auto-popolato
       port: 5432
       dbname: invidious
     
@@ -164,18 +143,16 @@ invidious:
     full_refresh: false
     feed_threads: 1
     
-    # Companion integration
     invidious_companion:
-      - private_url: ""  # Verrà auto-popolato dal chart
-        
+      - private_url: ""  # Auto-popolato
+    
     # Questi verranno presi da existingSecret
     invidious_companion_key: ""
     hmac_key: ""
 
-  # IMPORTANTE: Riferimento al secret esterno per le chiavi sensibili
+  # Riferimento al secret creato dall'ExternalSecret
   existingSecret: "invidious-secrets"
 
-  # Health check configuration
   healthcheck:
     enabled: true
     command: ["CMD-SHELL", "wget -nv --tries=1 --spider http://127.0.0.1:3000/api/v1/trending || exit 1"]
