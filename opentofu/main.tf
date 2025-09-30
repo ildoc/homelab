@@ -20,4 +20,5 @@ provider "pihole" {
 variable "pihole_url" {
   description = "URL del server Pi-hole"
   type        = string
+  default     = "http://192.168.0.145"
 }

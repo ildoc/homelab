@@ -1,0 +1,338 @@
+
+OpenTofu used the selected providers to generate the following execution
+plan. Resource actions are indicated with the following symbols:
+  [32m+[0m create[0m
+
+OpenTofu will perform the following actions:
+
+[1m  # pihole_dns_record.all["argocd.local.ildoc.it"][0m will be created
+[0m  [32m+[0m[0m resource "pihole_dns_record" "all" {
+      [32m+[0m[0m domain = "argocd.local.ildoc.it"
+      [32m+[0m[0m id     = (known after apply)
+      [32m+[0m[0m ip     = "192.168.0.80"
+    }
+
+[1m  # pihole_dns_record.all["argocd2.local.ildoc.it"][0m will be created
+[0m  [32m+[0m[0m resource "pihole_dns_record" "all" {
+      [32m+[0m[0m domain = "argocd2.local.ildoc.it"
+      [32m+[0m[0m id     = (known after apply)
+      [32m+[0m[0m ip     = "192.168.0.100"
+    }
+
+[1m  # pihole_dns_record.all["audiobookshelf.local.ildoc.it"][0m will be created
+[0m  [32m+[0m[0m resource "pihole_dns_record" "all" {
+      [32m+[0m[0m domain = "audiobookshelf.local.ildoc.it"
+      [32m+[0m[0m id     = (known after apply)
+      [32m+[0m[0m ip     = "192.168.0.80"
+    }
+
+[1m  # pihole_dns_record.all["bazarr.local.ildoc.it"][0m will be created
+[0m  [32m+[0m[0m resource "pihole_dns_record" "all" {
+      [32m+[0m[0m domain = "bazarr.local.ildoc.it"
+      [32m+[0m[0m id     = (known after apply)
+      [32m+[0m[0m ip     = "192.168.0.80"
+    }
+
+[1m  # pihole_dns_record.all["bookbounty.local.ildoc.it"][0m will be created
+[0m  [32m+[0m[0m resource "pihole_dns_record" "all" {
+      [32m+[0m[0m domain = "bookbounty.local.ildoc.it"
+      [32m+[0m[0m id     = (known after apply)
+      [32m+[0m[0m ip     = "192.168.0.80"
+    }
+
+[1m  # pihole_dns_record.all["change.local.ildoc.it"][0m will be created
+[0m  [32m+[0m[0m resource "pihole_dns_record" "all" {
+      [32m+[0m[0m domain = "change.local.ildoc.it"
+      [32m+[0m[0m id     = (known after apply)
+      [32m+[0m[0m ip     = "192.168.0.80"
+    }
+
+[1m  # pihole_dns_record.all["db"][0m will be created
+[0m  [32m+[0m[0m resource "pihole_dns_record" "all" {
+      [32m+[0m[0m domain = "db"
+      [32m+[0m[0m id     = (known after apply)
+      [32m+[0m[0m ip     = "192.168.0.30"
+    }
+
+[1m  # pihole_dns_record.all["flaresolverr.local.ildoc.it"][0m will be created
+[0m  [32m+[0m[0m resource "pihole_dns_record" "all" {
+      [32m+[0m[0m domain = "flaresolverr.local.ildoc.it"
+      [32m+[0m[0m id     = (known after apply)
+      [32m+[0m[0m ip     = "192.168.0.80"
+    }
+
+[1m  # pihole_dns_record.all["gitlab.local.ildoc.it"][0m will be created
+[0m  [32m+[0m[0m resource "pihole_dns_record" "all" {
+      [32m+[0m[0m domain = "gitlab.local.ildoc.it"
+      [32m+[0m[0m id     = (known after apply)
+      [32m+[0m[0m ip     = "192.168.0.25"
+    }
+
+[1m  # pihole_dns_record.all["homeassistant"][0m will be created
+[0m  [32m+[0m[0m resource "pihole_dns_record" "all" {
+      [32m+[0m[0m domain = "homeassistant"
+      [32m+[0m[0m id     = (known after apply)
+      [32m+[0m[0m ip     = "192.168.0.133"
+    }
+
+[1m  # pihole_dns_record.all["homepage.local.ildoc.it"][0m will be created
+[0m  [32m+[0m[0m resource "pihole_dns_record" "all" {
+      [32m+[0m[0m domain = "homepage.local.ildoc.it"
+      [32m+[0m[0m id     = (known after apply)
+      [32m+[0m[0m ip     = "192.168.0.80"
+    }
+
+[1m  # pihole_dns_record.all["invidious"][0m will be created
+[0m  [32m+[0m[0m resource "pihole_dns_record" "all" {
+      [32m+[0m[0m domain = "invidious"
+      [32m+[0m[0m id     = (known after apply)
+      [32m+[0m[0m ip     = "192.168.0.111"
+    }
+
+[1m  # pihole_dns_record.all["invidious.local.ildoc.it"][0m will be created
+[0m  [32m+[0m[0m resource "pihole_dns_record" "all" {
+      [32m+[0m[0m domain = "invidious.local.ildoc.it"
+      [32m+[0m[0m id     = (known after apply)
+      [32m+[0m[0m ip     = "192.168.0.80"
+    }
+
+[1m  # pihole_dns_record.all["jackett.local.ildoc.it"][0m will be created
+[0m  [32m+[0m[0m resource "pihole_dns_record" "all" {
+      [32m+[0m[0m domain = "jackett.local.ildoc.it"
+      [32m+[0m[0m id     = (known after apply)
+      [32m+[0m[0m ip     = "192.168.0.80"
+    }
+
+[1m  # pihole_dns_record.all["kestra.local.ildoc.it"][0m will be created
+[0m  [32m+[0m[0m resource "pihole_dns_record" "all" {
+      [32m+[0m[0m domain = "kestra.local.ildoc.it"
+      [32m+[0m[0m id     = (known after apply)
+      [32m+[0m[0m ip     = "192.168.0.80"
+    }
+
+[1m  # pihole_dns_record.all["kitchenowl.local.ildoc.it"][0m will be created
+[0m  [32m+[0m[0m resource "pihole_dns_record" "all" {
+      [32m+[0m[0m domain = "kitchenowl.local.ildoc.it"
+      [32m+[0m[0m id     = (known after apply)
+      [32m+[0m[0m ip     = "192.168.0.80"
+    }
+
+[1m  # pihole_dns_record.all["longhorn.local.ildoc.it"][0m will be created
+[0m  [32m+[0m[0m resource "pihole_dns_record" "all" {
+      [32m+[0m[0m domain = "longhorn.local.ildoc.it"
+      [32m+[0m[0m id     = (known after apply)
+      [32m+[0m[0m ip     = "192.168.0.80"
+    }
+
+[1m  # pihole_dns_record.all["mealie.local.ildoc.it"][0m will be created
+[0m  [32m+[0m[0m resource "pihole_dns_record" "all" {
+      [32m+[0m[0m domain = "mealie.local.ildoc.it"
+      [32m+[0m[0m id     = (known after apply)
+      [32m+[0m[0m ip     = "192.168.0.80"
+    }
+
+[1m  # pihole_dns_record.all["nut.local.ildoc.it"][0m will be created
+[0m  [32m+[0m[0m resource "pihole_dns_record" "all" {
+      [32m+[0m[0m domain = "nut.local.ildoc.it"
+      [32m+[0m[0m id     = (known after apply)
+      [32m+[0m[0m ip     = "192.168.0.80"
+    }
+
+[1m  # pihole_dns_record.all["paperless.local.ildoc.it"][0m will be created
+[0m  [32m+[0m[0m resource "pihole_dns_record" "all" {
+      [32m+[0m[0m domain = "paperless.local.ildoc.it"
+      [32m+[0m[0m id     = (known after apply)
+      [32m+[0m[0m ip     = "192.168.0.80"
+    }
+
+[1m  # pihole_dns_record.all["pdf.local.ildoc.it"][0m will be created
+[0m  [32m+[0m[0m resource "pihole_dns_record" "all" {
+      [32m+[0m[0m domain = "pdf.local.ildoc.it"
+      [32m+[0m[0m id     = (known after apply)
+      [32m+[0m[0m ip     = "192.168.0.80"
+    }
+
+[1m  # pihole_dns_record.all["pihole"][0m will be created
+[0m  [32m+[0m[0m resource "pihole_dns_record" "all" {
+      [32m+[0m[0m domain = "pihole"
+      [32m+[0m[0m id     = (known after apply)
+      [32m+[0m[0m ip     = "192.168.0.145"
+    }
+
+[1m  # pihole_dns_record.all["pihole2"][0m will be created
+[0m  [32m+[0m[0m resource "pihole_dns_record" "all" {
+      [32m+[0m[0m domain = "pihole2"
+      [32m+[0m[0m id     = (known after apply)
+      [32m+[0m[0m ip     = "192.168.0.167"
+    }
+
+[1m  # pihole_dns_record.all["prowlarr.local.ildoc.it"][0m will be created
+[0m  [32m+[0m[0m resource "pihole_dns_record" "all" {
+      [32m+[0m[0m domain = "prowlarr.local.ildoc.it"
+      [32m+[0m[0m id     = (known after apply)
+      [32m+[0m[0m ip     = "192.168.0.80"
+    }
+
+[1m  # pihole_dns_record.all["pve01"][0m will be created
+[0m  [32m+[0m[0m resource "pihole_dns_record" "all" {
+      [32m+[0m[0m domain = "pve01"
+      [32m+[0m[0m id     = (known after apply)
+      [32m+[0m[0m ip     = "192.168.0.10"
+    }
+
+[1m  # pihole_dns_record.all["pve02"][0m will be created
+[0m  [32m+[0m[0m resource "pihole_dns_record" "all" {
+      [32m+[0m[0m domain = "pve02"
+      [32m+[0m[0m id     = (known after apply)
+      [32m+[0m[0m ip     = "192.168.0.11"
+    }
+
+[1m  # pihole_dns_record.all["pve03"][0m will be created
+[0m  [32m+[0m[0m resource "pihole_dns_record" "all" {
+      [32m+[0m[0m domain = "pve03"
+      [32m+[0m[0m id     = (known after apply)
+      [32m+[0m[0m ip     = "192.168.0.12"
+    }
+
+[1m  # pihole_dns_record.all["radarr.local.ildoc.it"][0m will be created
+[0m  [32m+[0m[0m resource "pihole_dns_record" "all" {
+      [32m+[0m[0m domain = "radarr.local.ildoc.it"
+      [32m+[0m[0m id     = (known after apply)
+      [32m+[0m[0m ip     = "192.168.0.80"
+    }
+
+[1m  # pihole_dns_record.all["rancher.local.ildoc.it"][0m will be created
+[0m  [32m+[0m[0m resource "pihole_dns_record" "all" {
+      [32m+[0m[0m domain = "rancher.local.ildoc.it"
+      [32m+[0m[0m id     = (known after apply)
+      [32m+[0m[0m ip     = "192.168.0.80"
+    }
+
+[1m  # pihole_dns_record.all["rancher2.local.ildoc.it"][0m will be created
+[0m  [32m+[0m[0m resource "pihole_dns_record" "all" {
+      [32m+[0m[0m domain = "rancher2.local.ildoc.it"
+      [32m+[0m[0m id     = (known after apply)
+      [32m+[0m[0m ip     = "192.168.0.100"
+    }
+
+[1m  # pihole_dns_record.all["readarr.local.ildoc.it"][0m will be created
+[0m  [32m+[0m[0m resource "pihole_dns_record" "all" {
+      [32m+[0m[0m domain = "readarr.local.ildoc.it"
+      [32m+[0m[0m id     = (known after apply)
+      [32m+[0m[0m ip     = "192.168.0.80"
+    }
+
+[1m  # pihole_dns_record.all["redis"][0m will be created
+[0m  [32m+[0m[0m resource "pihole_dns_record" "all" {
+      [32m+[0m[0m domain = "redis"
+      [32m+[0m[0m id     = (known after apply)
+      [32m+[0m[0m ip     = "192.168.0.40"
+    }
+
+[1m  # pihole_dns_record.all["registry.gitlab.local.ildoc.it"][0m will be created
+[0m  [32m+[0m[0m resource "pihole_dns_record" "all" {
+      [32m+[0m[0m domain = "registry.gitlab.local.ildoc.it"
+      [32m+[0m[0m id     = (known after apply)
+      [32m+[0m[0m ip     = "192.168.0.25"
+    }
+
+[1m  # pihole_dns_record.all["romm.local.ildoc.it"][0m will be created
+[0m  [32m+[0m[0m resource "pihole_dns_record" "all" {
+      [32m+[0m[0m domain = "romm.local.ildoc.it"
+      [32m+[0m[0m id     = (known after apply)
+      [32m+[0m[0m ip     = "192.168.0.80"
+    }
+
+[1m  # pihole_dns_record.all["sonarr.local.ildoc.it"][0m will be created
+[0m  [32m+[0m[0m resource "pihole_dns_record" "all" {
+      [32m+[0m[0m domain = "sonarr.local.ildoc.it"
+      [32m+[0m[0m id     = (known after apply)
+      [32m+[0m[0m ip     = "192.168.0.80"
+    }
+
+[1m  # pihole_dns_record.all["speedtest.local.ildoc.it"][0m will be created
+[0m  [32m+[0m[0m resource "pihole_dns_record" "all" {
+      [32m+[0m[0m domain = "speedtest.local.ildoc.it"
+      [32m+[0m[0m id     = (known after apply)
+      [32m+[0m[0m ip     = "192.168.0.80"
+    }
+
+[1m  # pihole_dns_record.all["tools.local.ildoc.it"][0m will be created
+[0m  [32m+[0m[0m resource "pihole_dns_record" "all" {
+      [32m+[0m[0m domain = "tools.local.ildoc.it"
+      [32m+[0m[0m id     = (known after apply)
+      [32m+[0m[0m ip     = "192.168.0.80"
+    }
+
+[1m  # pihole_dns_record.all["traefik.local.ildoc.it"][0m will be created
+[0m  [32m+[0m[0m resource "pihole_dns_record" "all" {
+      [32m+[0m[0m domain = "traefik.local.ildoc.it"
+      [32m+[0m[0m id     = (known after apply)
+      [32m+[0m[0m ip     = "192.168.0.80"
+    }
+
+[1m  # pihole_dns_record.all["traefik2.local.ildoc.it"][0m will be created
+[0m  [32m+[0m[0m resource "pihole_dns_record" "all" {
+      [32m+[0m[0m domain = "traefik2.local.ildoc.it"
+      [32m+[0m[0m id     = (known after apply)
+      [32m+[0m[0m ip     = "192.168.0.100"
+    }
+
+[1m  # pihole_dns_record.all["truenas"][0m will be created
+[0m  [32m+[0m[0m resource "pihole_dns_record" "all" {
+      [32m+[0m[0m domain = "truenas"
+      [32m+[0m[0m id     = (known after apply)
+      [32m+[0m[0m ip     = "192.168.0.123"
+    }
+
+[1m  # pihole_dns_record.all["truenas.local.ildoc.it"][0m will be created
+[0m  [32m+[0m[0m resource "pihole_dns_record" "all" {
+      [32m+[0m[0m domain = "truenas.local.ildoc.it"
+      [32m+[0m[0m id     = (known after apply)
+      [32m+[0m[0m ip     = "192.168.0.80"
+    }
+
+[1m  # pihole_dns_record.all["ubuntu"][0m will be created
+[0m  [32m+[0m[0m resource "pihole_dns_record" "all" {
+      [32m+[0m[0m domain = "ubuntu"
+      [32m+[0m[0m id     = (known after apply)
+      [32m+[0m[0m ip     = "192.168.0.183"
+    }
+
+[1m  # pihole_dns_record.all["uptime.local.ildoc.it"][0m will be created
+[0m  [32m+[0m[0m resource "pihole_dns_record" "all" {
+      [32m+[0m[0m domain = "uptime.local.ildoc.it"
+      [32m+[0m[0m id     = (known after apply)
+      [32m+[0m[0m ip     = "192.168.0.80"
+    }
+
+[1m  # pihole_dns_record.all["vault"][0m will be created
+[0m  [32m+[0m[0m resource "pihole_dns_record" "all" {
+      [32m+[0m[0m domain = "vault"
+      [32m+[0m[0m id     = (known after apply)
+      [32m+[0m[0m ip     = "192.168.0.50"
+    }
+
+[1m  # pihole_dns_record.all["web"][0m will be created
+[0m  [32m+[0m[0m resource "pihole_dns_record" "all" {
+      [32m+[0m[0m domain = "web"
+      [32m+[0m[0m id     = (known after apply)
+      [32m+[0m[0m ip     = "192.168.0.124"
+    }
+
+[1m  # pihole_dns_record.all["wg.local.ildoc.it"][0m will be created
+[0m  [32m+[0m[0m resource "pihole_dns_record" "all" {
+      [32m+[0m[0m domain = "wg.local.ildoc.it"
+      [32m+[0m[0m id     = (known after apply)
+      [32m+[0m[0m ip     = "192.168.0.80"
+    }
+
+[1m  # pihole_dns_record.all["zipline.local.ildoc.it"][0m will be created
+[0m  [32m+[0m[0m resource "pihole_dns_record" "all" {
+      [32m+[0m[0m domain = "zipline.local.ildoc.it"
+      [32m+[0m[0m id     = (known after apply)
+      [32m+[0m[0m ip     = "192.168.0.80"
+    }
+
+[1mPlan:[0m 47 to add, 0 to change, 0 to destroy.
+[0m
