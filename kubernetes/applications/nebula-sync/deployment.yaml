@@ -1,0 +1,45 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nebula-sync
+  namespace: apps
+spec:
+  selector:
+    matchLabels:
+      app: nebula-sync
+  strategy:
+    type: Recreate
+  replicas: 1
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      labels:
+        app: nebula-sync
+    spec:
+      containers:
+        - name: nebula-sync
+          image: ghcr.io/lovelaze/nebula-sync:v0.11.1
+          env:
+            - name: PRIMARY
+              valueFrom:
+                secretKeyRef:
+                  name: nebula-sync-secrets
+                  key: primary
+            - name: REPLICAS
+              valueFrom:
+                secretKeyRef:
+                  name: nebula-sync-secrets
+                  key: replicas
+            - name: FULL_SYNC
+              value: "true"
+            - name: RUN_GRAVITY
+              value: "true"
+            - name: CRON
+              value: "0 * * * *"
+            - name: TZ
+              value: "Europe/Rome"
+          resources:
+            limits:
+              cpu: 50m
+              memory: 500Mi

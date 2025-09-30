@@ -29,6 +29,7 @@ kube-prometheus-stack:
       replicas: 2
       retention: 30d
       retentionSize: 15GB
+      enableOTLPReceiver: false
       
       resources:
         requests:
@@ -197,6 +198,10 @@ kube-prometheus-stack:
         traefik:
           gnetId: 17347
           revision: 9
+          datasource: Prometheus
+        blackbox-exporter:
+          gnetId: 7587
+          revision: 3
           datasource: Prometheus
 
   ## Configurazione AlertManager
