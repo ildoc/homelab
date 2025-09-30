@@ -1,32 +1,24 @@
 ---
 stages:
-  - auth
   - validate
   - plan
   - apply
-  - cleanup
 
 # Variabili globali per tutti i job
 variables:
   # Variabili per OpenTofu
   VAULT_ADDR: "http://vault:8200"
 
-  # Variabili Terraform specifiche
-  TF_VAR_default_node: "pve01"
-  TF_VAR_default_datastore: "vm"
-  TF_VAR_network_bridge: "vmbr0"
-  TF_VAR_proxmox_endpoint: "${PROXMOX_ENDPOINT}/api2/json"
-
   # Altre variabili globali
   GIT_STRATEGY: fetch
 
   TOFU_VERSION: "1.6.0"
-  TF_STATE_NAME: "proxmox-infra"
+  TF_STATE_NAME: "pihole-dns"
   TOFU_DIR: "opentofu"  # Directory che contiene i file OpenTofu
 
 # Cache dei moduli OpenTofu
 cache:
-  key: ${CI_COMMIT_REF_SLUG}-opentofu
+  key: ${CI_COMMIT_REF_SLUG}-pihole-opentofu
   paths:
     - ${TOFU_DIR}/.terraform
 
@@ -35,125 +27,7 @@ cache:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
       changes:
         - opentofu/**/*
-
-# Autenticazione Proxmox (eseguita una sola volta per pipeline)
-auth-proxmox:
-  stage: auth
-  image: alpine:3.21
-  extends:
-    - .rules_opentofu
-  script:
-    # Installazione dipendenze
-    - apk add --no-cache curl jq bash ca-certificates
-    
-    # Script di autenticazione Proxmox integrato
-    - |
-      #!/bin/bash
-      set -e  # Termina in caso di errori
-      
-      # Questo script ottiene un token di autenticazione Proxmox utilizzando credenziali recuperate da Vault
-      
-      # Verifica variabili d'ambiente necessarie
-      if [ -z "$VAULT_ADDR" ] || [ -z "$VAULT_ROLE_ID" ] || [ -z "$VAULT_SECRET_ID" ]; then
-          echo "Errore: variabili d'ambiente VAULT_ADDR, VAULT_ROLE_ID e VAULT_SECRET_ID richieste"
-          exit 1
-      fi
-      
-      if [ -z "$PROXMOX_ENDPOINT" ]; then
-          echo "Errore: variabile d'ambiente PROXMOX_ENDPOINT richiesta"
-          exit 1
-      fi
-
-      echo "VAULT_ADDR: $VAULT_ADDR"
-      echo "PROXMOX_ENDPOINT: $PROXMOX_ENDPOINT"
-      
-      # 1. Ottieni token Vault tramite AppRole
-      echo "Ottenimento token Vault tramite AppRole..."
-      VAULT_TOKEN_RESPONSE=$(curl -s -X POST -d "{\"role_id\":\"${VAULT_ROLE_ID}\",\"secret_id\":\"${VAULT_SECRET_ID}\"}" ${VAULT_ADDR}/v1/auth/approle/login)
-      VAULT_TOKEN=$(echo $VAULT_TOKEN_RESPONSE | jq -r '.auth.client_token')
-      
-      if [ -z "$VAULT_TOKEN" ] || [ "$VAULT_TOKEN" = "null" ]; then
-          echo "Errore: impossibile ottenere token Vault"
-          echo "Risposta: $VAULT_TOKEN_RESPONSE"
-          exit 1
-      fi
-      
-      echo "Token Vault ottenuto!"
-      
-      # 2. Recupera credenziali Proxmox da Vault
-      echo "Recupero credenziali Proxmox da Vault..."
-      PROXMOX_CREDS_RESPONSE=$(curl -s -H "X-Vault-Token: ${VAULT_TOKEN}" ${VAULT_ADDR}/v1/terraform/data/proxmox/api_credentials)
-      echo "Risposta da Vault: $(echo $PROXMOX_CREDS_RESPONSE | jq -r '.data')"
-      
-      PROXMOX_USERNAME=$(echo $PROXMOX_CREDS_RESPONSE | jq -r '.data.data.username')
-      PROXMOX_PASSWORD=$(echo $PROXMOX_CREDS_RESPONSE | jq -r '.data.data.password')
-      
-      if [ -z "$PROXMOX_USERNAME" ] || [ -z "$PROXMOX_PASSWORD" ] || [ "$PROXMOX_USERNAME" = "null" ] || [ "$PROXMOX_PASSWORD" = "null" ]; then
-          echo "Errore: impossibile recuperare credenziali Proxmox da Vault"
-          echo "Verifica che i campi 'username' e 'password' esistano nel segreto"
-          echo "Risposta completa: $PROXMOX_CREDS_RESPONSE"
-          exit 1
-      fi
-      
-      echo "Credenziali Proxmox recuperate!"
-      echo "Username: $PROXMOX_USERNAME"
-      echo "Password: ***********" # Non mostrare la password
-      
-      # 3. Ottieni ticket di autenticazione Proxmox
-      echo "Ottenimento ticket di autenticazione Proxmox..."
-      PROXMOX_TICKET_ENDPOINT="${PROXMOX_ENDPOINT}/api2/json/access/ticket"
-      echo "Endpoint Proxmox: $PROXMOX_TICKET_ENDPOINT"
-      
-      # Usiamo -v per il debug, ma nascondiamo la password nei log
-      echo "Invio richiesta di autenticazione a Proxmox..."
-      PROXMOX_AUTH_RESPONSE=$(curl -s -k -v --data-urlencode "username=${PROXMOX_USERNAME}" --data-urlencode "password=${PROXMOX_PASSWORD}" "${PROXMOX_TICKET_ENDPOINT}" 2>&1 | tee /tmp/proxmox_auth.log | grep -v "password=")
-      
-      # Salva il log per debug, rimuovendo la password
-      cat /tmp/proxmox_auth.log | grep -v "password=" > /tmp/proxmox_auth_clean.log
-      echo "Log della richiesta salvato in /tmp/proxmox_auth_clean.log"
-      
-      # Richiedi nuovamente senza verbose per ottenere solo il JSON
-      PROXMOX_AUTH_RESPONSE=$(curl -s -k --data-urlencode "username=${PROXMOX_USERNAME}" --data-urlencode "password=${PROXMOX_PASSWORD}" "${PROXMOX_TICKET_ENDPOINT}")
-      echo "Risposta da Proxmox: $PROXMOX_AUTH_RESPONSE"
-      
-      PROXMOX_AUTH_TICKET=$(echo "$PROXMOX_AUTH_RESPONSE" | jq -r '.data.ticket')
-      PROXMOX_CSRF_TOKEN=$(echo "$PROXMOX_AUTH_RESPONSE" | jq -r '.data.CSRFPreventionToken')
-      
-      if [ -z "$PROXMOX_AUTH_TICKET" ] || [ "$PROXMOX_AUTH_TICKET" = "null" ]; then
-          echo "Errore: impossibile ottenere ticket di autenticazione Proxmox"
-          echo "Risposta: $PROXMOX_AUTH_RESPONSE"
-          echo "Log della richiesta:"
-          cat /tmp/proxmox_auth_clean.log
-          exit 1
-      fi
-      
-      echo "Ticket ottenuto: ${PROXMOX_AUTH_TICKET:0:10}..." # Mostra solo parte del ticket per sicurezza
-      echo "Token CSRF ottenuto: ${PROXMOX_CSRF_TOKEN:0:10}..." # Mostra solo parte del token per sicurezza
-      
-      # 4. Salva credenziali in variabili d'ambiente per Terraform
-      echo "Salvataggio credenziali per Terraform..."
-      
-      # Crea file per output CI
-      # Nota: Per Terraform/OpenTofu, le variabili devono avere il prefisso TF_VAR_
-      echo "TF_VAR_proxmox_auth_ticket=${PROXMOX_AUTH_TICKET}" > proxmox_auth.env
-      echo "TF_VAR_proxmox_csrf_prevention_token=${PROXMOX_CSRF_TOKEN}" >> proxmox_auth.env
-      
-      # Verifica che il file sia stato creato correttamente
-      if [ -f "proxmox_auth.env" ]; then
-          echo "File proxmox_auth.env creato con successo in $(pwd)"
-          ls -la proxmox_auth.env
-          cat proxmox_auth.env | grep -v "TF_VAR_proxmox_auth_ticket"  # Non mostrare il ticket completo
-      else
-          echo "ERRORE: Impossibile creare file proxmox_auth.env"
-          exit 1
-      fi
-      
-      echo "Ticket di autenticazione Proxmox ottenuto e salvato con successo!"
-      echo "Il ticket è valido per un periodo limitato (tipicamente 2 ore)"
-  artifacts:
-    reports:
-      dotenv: proxmox_auth.env
-    expire_in: 1 hour
+        - "!opentofu/archived/**/*"
 
 # Configurazione di base per i job OpenTofu
 .tofu_base:
@@ -162,7 +36,7 @@ auth-proxmox:
     - .rules_opentofu
   before_script: |
     # Installazione OpenTofu e dipendenze
-    apk add --no-cache curl unzip jq git bash ca-certificates iputils bind-tools openssh-client
+    apk add --no-cache curl unzip jq git bash ca-certificates
     curl -SL "https://github.com/opentofu/opentofu/releases/download/v${TOFU_VERSION}/tofu_${TOFU_VERSION}_linux_amd64.zip" -o /tmp/tofu.zip
     unzip /tmp/tofu.zip -d /usr/local/bin/
     rm /tmp/tofu.zip
@@ -171,7 +45,7 @@ auth-proxmox:
     echo "Entrando nella directory OpenTofu: ${TOFU_DIR}"
     cd "${TOFU_DIR}"
 
-    # Configurazione backend GitLab con Project Access Token invece di CI_JOB_TOKEN
+    # Configurazione backend GitLab
     cat > backend.tf << EOF
     terraform {
       backend "http" {
@@ -187,9 +61,11 @@ auth-proxmox:
     }
     EOF
 
-    export TF_VAR_vault_approle_enabled=true
+    # Configurazione variabili Vault per OpenTofu
+    export TF_VAR_vault_addr=${VAULT_ADDR}
     export TF_VAR_vault_approle_role_id=${VAULT_ROLE_ID}
     export TF_VAR_vault_approle_secret_id=${VAULT_SECRET_ID}
+    export TF_VAR_vault_retry=2
 
     echo "Inizializzazione OpenTofu..."
     tofu init -reconfigure
@@ -199,86 +75,61 @@ tofu-validate:
   extends: .tofu_base
   stage: validate
   script: |
-    echo "Validazione configurazione..."
+    echo "=== Validazione configurazione Pi-hole ==="
     tofu validate
+    echo "✅ Configurazione valida!"
 
 # Piano modifiche
 tofu-plan:
   extends: .tofu_base
   stage: plan
   script: |
-    echo "Creazione piano..."
+    echo "=== Creazione piano per Pi-hole DNS ==="
     
-    echo "Autenticazione Proxmox tramite variabili dotenv..."
-    echo "TF_VAR_proxmox_auth_ticket: ${TF_VAR_proxmox_auth_ticket:0:10}..."
-    echo "TF_VAR_proxmox_csrf_prevention_token: ${TF_VAR_proxmox_csrf_prevention_token:0:10}..."
-
-    
-    # Verifica se le variabili di autenticazione sono impostate
-    echo "Verifica variabili di autenticazione Proxmox..."
-    if [ -n "$TF_VAR_proxmox_auth_ticket" ] && [ -n "$TF_VAR_proxmox_csrf_prevention_token" ]; then
-      echo "Ticket di autenticazione Proxmox: ${TF_VAR_proxmox_auth_ticket:0:10}... (abbreviato)"
-      echo "Token CSRF: ${TF_VAR_proxmox_csrf_prevention_token:0:10}... (abbreviato)"
+    # Verifica connessione a Vault
+    echo "Verifica connessione a Vault..."
+    if [ -n "$TF_VAR_vault_addr" ]; then
+      echo "Vault address: $TF_VAR_vault_addr"
+      echo "Vault role ID: ${TF_VAR_vault_approle_role_id:0:10}... (abbreviato)"
     else
-      echo "ATTENZIONE: Variabili ticket non disponibili!"
-      echo "Lista di tutte le variabili TF_VAR_*:"
-      env | grep TF_VAR_ || echo "Nessuna variabile TF_VAR trovata"
+      echo "ERRORE: Variabili Vault non configurate!"
+      exit 1
     fi
     
-    # Disabilita il log dettagliato per mostrare meglio i cambiamenti
-    export TF_LOG=""
-
     # Creazione del piano
+    echo "Generazione piano..."
     tofu plan -out=plan.tfplan
 
-    echo "Visualizzazione piano..."
-    tofu show plan.tfplan > plan_human.txt || echo "Errore nella visualizzazione del piano"
-    tofu show -json plan.tfplan > plan.json || echo "Errore nella conversione JSON del piano"
+    # Visualizzazione del piano
+    echo "=== PIANO DELLE MODIFICHE ==="
+    tofu show plan.tfplan > plan_human.txt
+    tofu show -json plan.tfplan > plan.json
 
-    # Crea un riassunto del piano più visibile
-    echo "=== RIASSUNTO DEL PIANO ===" > plan_summary.txt
+    # Riassunto delle modifiche
+    echo "=== RIASSUNTO MODIFICHE ==="
     if [ -s plan.json ]; then
-      jq -r '.resource_changes[] | "\(.address) will be \(.change.actions[0])"' plan.json >> plan_summary.txt 2>/dev/null || echo "Nessuna modifica rilevata" >> plan_summary.txt
+      CHANGES=$(jq -r '.resource_changes[]? | "\(.address): \(.change.actions | join(","))"' plan.json 2>/dev/null || echo "Nessuna modifica")
+      echo "$CHANGES"
+      
+      # Conta le risorse
+      RESOURCES_COUNT=$(jq '.resource_changes | length' plan.json 2>/dev/null || echo "0")
+      echo "Totale risorse da modificare: $RESOURCES_COUNT"
     else
-      echo "File piano JSON vuoto o invalido" >> plan_summary.txt
+      echo "Nessuna modifica rilevata"
     fi
 
-    echo "Piano dettagliato:"
+    # Mostra il piano completo
+    echo "=== PIANO DETTAGLIATO ==="
     cat plan_human.txt
-
-    echo "Riassunto del piano:"
-    cat plan_summary.txt
-
-    # Verifica se ci sono risorse da modificare
-    if [ -s plan.json ]; then
-      RESOURCES_COUNT=$(jq '.resource_changes | length' plan.json 2>/dev/null)
-      if [ "$RESOURCES_COUNT" = "0" ] || [ "$RESOURCES_COUNT" = "null" ] || [ -z "$RESOURCES_COUNT" ]; then
-        echo "ATTENZIONE: Nessuna risorsa da modificare nel piano!"
-
-        # Esamina il file main.tf per verificare la configurazione
-        echo "Contenuto di main.tf:"
-        cat main.tf || echo "File main.tf non trovato"
-
-        # Verifica le variabili impostate
-        echo "Variabili TF_VAR impostate:"
-        env | grep TF_VAR || echo "Nessuna variabile TF_VAR trovata"
-      else
-        echo "Piano contiene $RESOURCES_COUNT risorse da modificare"
-      fi
-    else
-      echo "ATTENZIONE: File piano JSON vuoto o non valido!"
-    fi
   artifacts:
     paths:
       - ${TOFU_DIR}/plan.tfplan
       - ${TOFU_DIR}/plan.json
-      - ${TOFU_DIR}/plan_summary.txt
       - ${TOFU_DIR}/plan_human.txt
     expire_in: 1 week
     reports:
       terraform: ${TOFU_DIR}/plan.json
   dependencies:
-    - auth-proxmox
     - tofu-validate
 
 # Applicazione modifiche
@@ -286,64 +137,47 @@ tofu-apply:
   extends: .tofu_base
   stage: apply
   script: |
-    # Verifica che il file del piano esista
+    echo "=== Applicazione modifiche Pi-hole DNS ==="
+    
+    # Verifica che il piano esista
     if [ ! -f plan.tfplan ]; then
-      echo "File del piano non trovato! Esegui prima il job plan."
+      echo "ERRORE: File del piano non trovato!"
       exit 1
     fi
 
-    # Verifica se ci sono risorse nel piano
+    # Verifica se ci sono modifiche da applicare
     if [ -s plan.json ]; then
-      RESOURCES_COUNT=$(jq '.resource_changes | length' plan.json 2>/dev/null)
-      if [ "$RESOURCES_COUNT" = "0" ] || [ "$RESOURCES_COUNT" = "null" ] || [ -z "$RESOURCES_COUNT" ]; then
-        echo "ATTENZIONE: Nessuna risorsa da applicare nel piano!"
-        echo "Contenuto del piano:"
+      RESOURCES_COUNT=$(jq '.resource_changes | length' plan.json 2>/dev/null || echo "0")
+      if [ "$RESOURCES_COUNT" = "0" ]; then
+        echo "ℹ️  Nessuna modifica da applicare"
         tofu show plan.tfplan
-        echo "Debug delle variabili:"
-        env | grep TF_VAR
-
-        # Continue anyway for debugging
-        echo "Continuando comunque per debug..."
+        exit 0
       else
-        echo "Piano contiene $RESOURCES_COUNT risorse da applicare"
+        echo "📝 Applicando $RESOURCES_COUNT modifiche..."
       fi
-    else
-      echo "ATTENZIONE: File piano JSON vuoto o non valido!"
-      echo "Continuando comunque per debug..."
     fi
 
-    echo "Applicazione del piano esistente..."
-    # Utilizziamo l'autenticazione ticket ottenuta nella fase 'auth'
-    tofu apply -auto-approve -lock=false plan.tfplan
+    # Applicazione del piano
+    echo "Esecuzione apply..."
+    tofu apply -auto-approve plan.tfplan
 
-    echo "Salvando output..."
-    tofu output -json > terraform_output.json
+    # Salva gli output
+    echo "=== OUTPUT FINALE ==="
+    tofu output -json > terraform_output.json || echo "{}" > terraform_output.json
+    
+    if [ -s terraform_output.json ]; then
+      echo "Output salvati:"
+      cat terraform_output.json | jq . || cat terraform_output.json
+    else
+      echo "Nessun output definito"
+    fi
+
+    echo "✅ Applicazione completata!"
   artifacts:
     paths:
       - ${TOFU_DIR}/terraform_output.json
     reports:
       terraform: ${TOFU_DIR}/terraform_output.json
   dependencies:
-    - auth-proxmox
     - tofu-plan
-
-# Pulizia cache - automatico dopo apply riuscito
-tofu-cleanup:
-  stage: cleanup
-  image: alpine:3.21
-  extends:
-    - .rules_opentofu
-  script: |
-    if [ -d "${TOFU_DIR}/.terraform" ]; then
-      rm -rf ${TOFU_DIR}/.terraform
-      echo "Pulizia cache OpenTofu completata"
-    else
-      echo "Nessuna cache OpenTofu da pulire"
-    fi
-  dependencies:
-    - tofu-apply
-  cache:
-    key: ${CI_COMMIT_REF_SLUG}-opentofu
-    paths:
-      - ${TOFU_DIR}/.terraform
-    policy: pull
+  when: manual  # Richiede conferma manuale per l'apply
