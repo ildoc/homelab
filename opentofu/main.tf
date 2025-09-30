@@ -14,7 +14,7 @@ terraform {
 
 provider "pihole" {
   url       = var.pihole_url
-  password = data.vault_kv_secret_v2.pihole.data["api_token"]
+  password = data.vault_kv_secret_v2.pihole.data["password"]
 }
 
 # Variabili di configurazione
