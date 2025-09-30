@@ -39,6 +39,8 @@ spec:
               value: "0 * * * *"
             - name: TZ
               value: "Europe/Rome"
+            - name: CLIENT_SKIP_TLS_VERIFICATION
+              value: "true"
           resources:
             limits:
               cpu: 50m
