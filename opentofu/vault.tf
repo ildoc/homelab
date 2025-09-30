@@ -40,8 +40,7 @@ variable "vault_retry" {
   default     = 2
 }
 
-# Recupero dell'API token Pi-hole da Vault
 data "vault_kv_secret_v2" "pihole" {
-  mount = "opentofu"  # Modifica con il mount del tuo KV engine
-  name  = "pihole"  # Modifica con il path del tuo secret
+  mount = "opentofu"
+  name  = "pihole"  
 }

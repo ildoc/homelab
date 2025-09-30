@@ -2,18 +2,19 @@ terraform {
   required_providers {
     pihole = {
       source  = "ryanwholey/pihole"
-      version = "~> 0.2.0"
+      version = "2.0.0-beta.1"
     }
     vault = {
       source  = "hashicorp/vault"
-      version = "4.8.0"
+      version = "5.3.0"
     }
   }
+  required_version = ">= 1.6.0"
 }
 
 provider "pihole" {
   url       = var.pihole_url
-  api_token = data.vault_kv_secret_v2.pihole.data["api_token"]  # API token recuperato da Vault
+  password = data.vault_kv_secret_v2.pihole.data["api_token"]
 }
 
 # Variabili di configurazione
