@@ -50,7 +50,7 @@ invidious:
 
   # PostgreSQL Configuration - CORRETTA
   postgresql:
-    enabled: true
+    enabled: false
     image:
       tag: "17.6.0"
     auth:
@@ -129,11 +129,11 @@ invidious:
   # Configurazione Invidious
   config:
     db:
-      user: kemal
+      user: invidious_user
       password: ""  # Verrà preso da existingSecret
-      host: ""      # Auto-popolato
+      host: "192.168.0.30"
       port: 5432
-      dbname: invidious
+      dbname: invidious_db
     
     check_tables: true
     port: 3000

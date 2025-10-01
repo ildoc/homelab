@@ -2,11 +2,12 @@
 - name: Install PostgreSQL extensions
   community.postgresql.postgresql_ext:
     name: "{{ item.1 }}"
-    database: "{{ item.0.name }}"  # <-- Cambiato da 'db' a 'database'
+    db: "{{ item.0.name }}"
     state: present
     login_host: localhost
     login_user: "{{ db.postgres.admin_user }}"
     login_password: "{{ db.postgres.admin_password }}"
+    login_db: postgres
     port: 5432
   loop: "{{ db.postgres.databases | default([]) | subelements('extensions', skip_missing=True) }}"
   loop_control:
