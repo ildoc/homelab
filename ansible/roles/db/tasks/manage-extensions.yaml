@@ -1,0 +1,22 @@
+---
+- name: Install PostgreSQL extensions
+  community.postgresql.postgresql_ext:
+    name: "{{ item.1 }}"
+    db: "{{ item.0.name }}"
+    state: present
+    login_host: localhost
+    login_user: "{{ db.postgres.admin_user }}"
+    login_password: "{{ db.postgres.admin_password }}"
+    port: 5432
+  loop: "{{ db.postgres.databases | default([]) | subelements('extensions', skip_missing=True) }}"
+  loop_control:
+    label: "{{ item.1 }} in {{ item.0.name }}"
+  register: ext_installation
+
+- name: Display extension installation results
+  ansible.builtin.debug:
+    msg: "Extension {{ item.item.1 }} in {{ item.item.0.name }}: {{ 'Installed' if item.changed else 'Already present' }}"
+  loop: "{{ ext_installation.results }}"
+  loop_control:
+    label: "{{ item.item.1 }}"
+  when: ext_installation.results is defined

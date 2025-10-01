@@ -1,0 +1,25 @@
+---
+- name: Create PostgreSQL databases
+  community.postgresql.postgresql_db:
+    name: "{{ item.name }}"
+    encoding: "{{ item.encoding | default('UTF8') }}"
+    lc_collate: "{{ item.lc_collate | default('en_US.UTF-8') }}"
+    lc_ctype: "{{ item.lc_ctype | default('en_US.UTF-8') }}"
+    template: "{{ item.template | default('template0') }}"
+    owner: "{{ item.owner | default(omit) }}"
+    state: present
+    login_host: localhost
+    login_user: "{{ db.postgres.admin_user }}"
+    login_password: "{{ db.postgres.admin_password }}"
+    port: 5432
+  loop: "{{ db.postgres.databases | default([]) }}"
+  loop_control:
+    label: "{{ item.name }}"
+  register: db_creation
+
+- name: Display database creation results
+  ansible.builtin.debug:
+    msg: "Database {{ item.item.name }}: {{ 'Created' if item.changed else 'Already exists' }}"
+  loop: "{{ db_creation.results }}"
+  loop_control:
+    label: "{{ item.item.name }}"

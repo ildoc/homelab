@@ -1,0 +1,102 @@
+---
+- name: Grant database privileges to users
+  community.postgresql.postgresql_privs:
+    database: "{{ item.1 }}"
+    state: present
+    privs: "{{ item.0.privileges | default('ALL') }}"
+    type: database
+    roles: "{{ item.0.name }}"
+    login_host: localhost
+    login_user: "{{ db.postgres.admin_user }}"
+    login_password: "{{ db.postgres.admin_password }}"
+    port: 5432
+  loop: "{{ db.postgres.users | default([]) | subelements('databases', skip_missing=True) }}"
+  loop_control:
+    label: "{{ item.0.name }} -> {{ item.1 }} (database)"
+
+- name: Grant schema privileges to users
+  community.postgresql.postgresql_privs:
+    database: "{{ item.1 }}"
+    state: present
+    privs: ALL
+    type: schema
+    objs: public
+    roles: "{{ item.0.name }}"
+    login_host: localhost
+    login_user: "{{ db.postgres.admin_user }}"
+    login_password: "{{ db.postgres.admin_password }}"
+    port: 5432
+  loop: "{{ db.postgres.users | default([]) | subelements('databases', skip_missing=True) }}"
+  loop_control:
+    label: "{{ item.0.name }} -> {{ item.1 }} (schema)"
+  when: item.0.privileges | default('ALL') == 'ALL'
+
+- name: Grant table privileges to users
+  community.postgresql.postgresql_privs:
+    database: "{{ item.1 }}"
+    state: present
+    privs: "{{ item.0.table_privs | default('ALL') }}"
+    type: table
+    objs: ALL_IN_SCHEMA
+    schema: public
+    roles: "{{ item.0.name }}"
+    login_host: localhost
+    login_user: "{{ db.postgres.admin_user }}"
+    login_password: "{{ db.postgres.admin_password }}"
+    port: 5432
+  loop: "{{ db.postgres.users | default([]) | subelements('databases', skip_missing=True) }}"
+  loop_control:
+    label: "{{ item.0.name }} -> {{ item.1 }} (tables)"
+
+- name: Grant sequence privileges to users
+  community.postgresql.postgresql_privs:
+    database: "{{ item.1 }}"
+    state: present
+    privs: "{{ item.0.sequence_privs | default('ALL') }}"
+    type: sequence
+    objs: ALL_IN_SCHEMA
+    schema: public
+    roles: "{{ item.0.name }}"
+    login_host: localhost
+    login_user: "{{ db.postgres.admin_user }}"
+    login_password: "{{ db.postgres.admin_password }}"
+    port: 5432
+  loop: "{{ db.postgres.users | default([]) | subelements('databases', skip_missing=True) }}"
+  loop_control:
+    label: "{{ item.0.name }} -> {{ item.1 }} (sequences)"
+  when: item.0.privileges | default('ALL') == 'ALL'
+
+- name: Set default privileges for future tables
+  community.postgresql.postgresql_default_privs:
+    database: "{{ item.1 }}"
+    state: present
+    privs: "{{ item.0.table_privs | default('ALL') }}"
+    type: table
+    schema: public
+    roles: "{{ item.0.name }}"
+    target_roles: "{{ item.0.owner | default(db.postgres.admin_user) }}"
+    login_host: localhost
+    login_user: "{{ db.postgres.admin_user }}"
+    login_password: "{{ db.postgres.admin_password }}"
+    port: 5432
+  loop: "{{ db.postgres.users | default([]) | subelements('databases', skip_missing=True) }}"
+  loop_control:
+    label: "{{ item.0.name }} -> {{ item.1 }} (default tables)"
+
+- name: Set default privileges for future sequences
+  community.postgresql.postgresql_default_privs:
+    database: "{{ item.1 }}"
+    state: present
+    privs: "{{ item.0.sequence_privs | default('ALL') }}"
+    type: sequence
+    schema: public
+    roles: "{{ item.0.name }}"
+    target_roles: "{{ item.0.owner | default(db.postgres.admin_user) }}"
+    login_host: localhost
+    login_user: "{{ db.postgres.admin_user }}"
+    login_password: "{{ db.postgres.admin_password }}"
+    port: 5432
+  loop: "{{ db.postgres.users | default([]) | subelements('databases', skip_missing=True) }}"
+  loop_control:
+    label: "{{ item.0.name }} -> {{ item.1 }} (default sequences)"
+  when: item.0.privileges | default('ALL') == 'ALL'

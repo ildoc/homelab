@@ -1,30 +1,43 @@
 ---
 services:
   postgres:
-    image: postgres:17
+    image: postgres:17-alpine
     container_name: postgres_db
-    restart: always
+    restart: unless-stopped
     environment:
       POSTGRES_USER: {{ db.postgres.admin_user }}
       POSTGRES_PASSWORD: {{ db.postgres.admin_password }}
-      POSTGRES_DB: default
+      POSTGRES_DB: postgres
+      POSTGRES_INITDB_ARGS: "-E UTF8 --locale=en_US.UTF-8"
+      PGDATA: /var/lib/postgresql/data/pgdata
     ports:
       - "5432:5432"
     volumes:
       - ./postgres:/var/lib/postgresql/data
+      - ./postgres-init:/docker-entrypoint-initdb.d:ro
     networks:
       - postgres-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 512M
 
   pgadmin:
     image: dpage/pgadmin4:9.8.0
     container_name: pgadmin
-    restart: always
+    restart: unless-stopped
     environment:
       PGADMIN_DEFAULT_EMAIL: {{ db.postgres.pgadmin_email }}
       PGADMIN_DEFAULT_PASSWORD: {{ db.postgres.pgadmin_password }}
       PGADMIN_CONFIG_SERVER_MODE: 'False'
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: 'False'
     ports:
       - "5050:80"
     volumes:
@@ -32,7 +45,8 @@ services:
     networks:
       - postgres-network
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
 
 networks:
   postgres-network:

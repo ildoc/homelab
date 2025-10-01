@@ -1,0 +1,24 @@
+---
+- name: Install docker
+  ansible.builtin.include_tasks: "{{ tasks_dir }}/docker/install.yaml"
+
+- name: Install PostgreSQL client and Python libraries
+  ansible.builtin.apt:
+    name:
+      - postgresql-client
+      - python3-psycopg2
+      - python3-pip
+    state: present
+    update_cache: true
+
+- name: Create postgres folder
+  ansible.builtin.file:
+    path: ~/postgres
+    state: directory
+    mode: '0755'
+
+- name: Create pgadmin folder
+  ansible.builtin.file:
+    path: ~/pgadmin
+    state: directory
+    mode: '0755'

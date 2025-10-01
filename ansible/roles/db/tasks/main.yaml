@@ -1,28 +1,21 @@
 ---
-- name: Install docker
-  ansible.builtin.include_tasks: "{{ tasks_dir }}/docker/install.yaml"
+- name: Include prerequisites tasks
+  ansible.builtin.include_tasks: prerequisites.yaml
 
-- name: Create postgres folder
-  ansible.builtin.file:
-    path: ~/postgres
-    state: directory
-    mode: '0777'
+- name: Include container deployment tasks
+  ansible.builtin.include_tasks: deploy-containers.yaml
 
-- name: Create pgadmin folder
-  ansible.builtin.file:
-    path: ~/pgadmin
-    state: directory
-    mode: '0777'
+- name: Include database management tasks
+  ansible.builtin.include_tasks: manage-databases.yaml
 
-- name: Set variables
-  ansible.builtin.set_fact:
-    remote_path: ~/docker-compose.yml
-    local_path: "{{ db_templates_path }}/docker-compose.yml.j2"
-    project_path: /root
+- name: Include user management tasks
+  ansible.builtin.include_tasks: manage-users.yaml
 
-- name: Include update docker-compose
-  ansible.builtin.include_tasks: "{{ tasks_dir }}/docker/update-compose-template.yaml"
-  vars:
-    update_compose_remote_path: "{{ remote_path }}"
-    template_file_name: "{{ local_path }}"
-    update_compose_project_path: "{{ project_path }}"
+- name: Include privileges management tasks
+  ansible.builtin.include_tasks: manage-privileges.yaml
+
+- name: Include extensions management tasks
+  ansible.builtin.include_tasks: manage-extensions.yaml
+
+- name: Include connectivity verification tasks
+  ansible.builtin.include_tasks: verify-connectivity.yaml

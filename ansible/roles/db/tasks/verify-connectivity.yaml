@@ -1,0 +1,34 @@
+---
+- name: Verify database connectivity for each user
+  community.postgresql.postgresql_ping:
+    db: "{{ item.1 }}"
+    login_host: localhost
+    login_user: "{{ item.0.name }}"
+    login_password: "{{ item.0.password }}"
+    port: 5432
+  loop: "{{ db.postgres.users | default([]) | subelements('databases', skip_missing=True) }}"
+  loop_control:
+    label: "{{ item.0.name }} -> {{ item.1 }}"
+  register: db_connectivity
+  failed_when: false
+  no_log: true
+
+- name: Display connectivity results
+  ansible.builtin.debug:
+    msg: "✓ User {{ item.item.0.name }} can connect to {{ item.item.1 }}"
+  loop: "{{ db_connectivity.results }}"
+  loop_control:
+    label: "{{ item.item.0.name }}"
+  when: 
+    - db_connectivity.results is defined
+    - item.is_available | default(false)
+
+- name: Display connectivity failures
+  ansible.builtin.debug:
+    msg: "✗ User {{ item.item.0.name }} CANNOT connect to {{ item.item.1 }}"
+  loop: "{{ db_connectivity.results }}"
+  loop_control:
+    label: "{{ item.item.0.name }}"
+  when: 
+    - db_connectivity.results is defined
+    - not (item.is_available | default(false))

@@ -1,0 +1,25 @@
+---
+- name: Set docker-compose variables
+  ansible.builtin.set_fact:
+    remote_path: ~/docker-compose.yml
+    local_path: "{{ db_templates_path }}/docker-compose.yml.j2"
+    project_path: /root
+
+- name: Include update docker-compose (unified version)
+  ansible.builtin.include_tasks: "{{ tasks_dir }}/docker/update-compose-unified.yaml"
+  vars:
+    update_compose_remote_path: "{{ remote_path }}"
+    template_file_name: "{{ local_path }}"
+    update_compose_project_path: "{{ project_path }}"
+
+- name: Wait for PostgreSQL to be ready
+  ansible.builtin.wait_for:
+    host: localhost
+    port: 5432
+    delay: 5
+    timeout: 60
+    state: started
+
+- name: Additional wait for PostgreSQL initialization
+  ansible.builtin.pause:
+    seconds: 10

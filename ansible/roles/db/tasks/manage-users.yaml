@@ -1,0 +1,25 @@
+---
+- name: Create PostgreSQL users
+  community.postgresql.postgresql_user:
+    name: "{{ item.name }}"
+    password: "{{ item.password }}"
+    state: present
+    login_host: localhost
+    login_user: "{{ db.postgres.admin_user }}"
+    login_password: "{{ db.postgres.admin_password }}"
+    port: 5432
+    encrypted: true
+    expires: "{{ item.expires | default(omit) }}"
+    role_attr_flags: "{{ item.role_attr_flags | default(omit) }}"
+  loop: "{{ db.postgres.users | default([]) }}"
+  loop_control:
+    label: "{{ item.name }}"
+  no_log: true
+  register: user_creation
+
+- name: Display user creation results (without passwords)
+  ansible.builtin.debug:
+    msg: "User {{ item.item.name }}: {{ 'Created' if item.changed else 'Already exists' }}"
+  loop: "{{ user_creation.results }}"
+  loop_control:
+    label: "{{ item.item.name }}"

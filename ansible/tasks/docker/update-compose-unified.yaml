@@ -8,8 +8,8 @@
 #   - update_compose_local_path: path to local file (for copy mode)
 #   - template_file_name: template file name (for template mode)
 #   - force_update: force update even if files are the same (default: false)
-#   - pull_retries: number of pull retries (default: 3)
-#   - pull_delay: delay between pull retries in seconds (default: 10)
+#   - pull_retries: number of pull retries (default: 5)
+#   - pull_delay: delay between pull retries in seconds (default: 20)
 #   - max_backups: maximum number of backup files to keep (default: 3)
 #   - validate_compose: validate docker-compose syntax before deployment (default: true)
 #   - cleanup_resources: cleanup unused Docker resources after deployment (default: true)
@@ -22,14 +22,14 @@
       - (update_compose_local_path is defined) or (template_file_name is defined)
     fail_msg: "Missing required variables. Need update_compose_remote_path, update_compose_project_path, and either update_compose_local_path or template_file_name"
 
-- name: Determine operation mode
+- name: Determine operation mode and set defaults
   ansible.builtin.set_fact:
     operation_mode: "{{ 'template' if template_file_name is defined else 'copy' }}"
-    pull_retries: "{{ pull_retries | default(3) }}"
-    pull_delay: "{{ pull_delay | default(10) }}"
-    max_backups: "{{ max_backups | default(3) }}"
-    validate_compose: "{{ validate_compose | default(true) }}"
-    cleanup_resources: "{{ cleanup_resources | default(true) }}"
+    pull_retries: "{{ pull_retries | default(5) | int }}"
+    pull_delay: "{{ pull_delay | default(20) | int }}"
+    max_backups: "{{ max_backups | default(3) | int }}"
+    validate_compose: "{{ validate_compose | default(true) | bool }}"
+    cleanup_resources: "{{ cleanup_resources | default(true) | bool }}"
 
 - name: Display operation mode
   ansible.builtin.debug:
@@ -111,12 +111,18 @@
           ansible.builtin.set_fact:
             sorted_backups: "{{ existing_backups.files | sort(attribute='mtime') }}"
 
+        - name: Calculate backups to remove
+          ansible.builtin.set_fact:
+            backups_to_remove_count: "{{ [0, (sorted_backups | length) - (max_backups | int) + 1] | max }}"
+
         - name: Remove excess backup files
           ansible.builtin.file:
             path: "{{ item.path }}"
             state: absent
-          loop: "{{ sorted_backups[:(sorted_backups | length - max_backups + 1)] }}"
-          when: sorted_backups | length >= max_backups
+          loop: "{{ sorted_backups[:backups_to_remove_count | int] }}"
+          when: backups_to_remove_count | int > 0
+          loop_control:
+            label: "{{ item.path }}"
 
     # Validation step
     - name: Create temporary docker-compose file for validation
@@ -153,6 +159,7 @@
             path: "{{ temp_compose_file }}"
             state: absent
           when: temp_compose_file is defined
+
     - name: Stop existing containers
       community.docker.docker_compose_v2:
         project_src: "{{ update_compose_project_path }}"
@@ -186,8 +193,8 @@
       community.docker.docker_compose_v2_pull:
         project_src: "{{ update_compose_project_path }}"
       register: pull_result
-      retries: "{{ pull_retries }}"
-      delay: "{{ pull_delay }}"
+      retries: "{{ pull_retries | int }}"
+      delay: "{{ pull_delay | int }}"
       until: not pull_result.failed
       failed_when: false
 

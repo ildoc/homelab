@@ -141,5 +141,27 @@ db:
     pgadmin_email: "{{ lookup('community.hashi_vault.hashi_vault', 'ansible/data/postgres:pgadmin_email') }}"
     pgadmin_password: "{{ lookup('community.hashi_vault.hashi_vault', 'ansible/data/postgres:pgadmin_password') }}"
 
+    databases:
+      - name: invidious_db
+        owner: invidious_user
+        encoding: UTF8
+        lc_collate: en_US.UTF-8
+        lc_ctype: en_US.UTF-8
+        extensions:
+          - pg_trgm
+          - btree_gin
+      
+    users:
+      # Utenti applicativi con accesso completo al loro database
+      - name: invidious_user
+        password: "{{ lookup('community.hashi_vault.hashi_vault', 'ansible/data/invidious:db_password') }}"
+        databases:
+          - invidious_db
+        privileges: ALL
+        table_privs: ALL
+        sequence_privs: ALL
+
+
+
 redis:
   users_acl: "{{ lookup('community.hashi_vault.hashi_vault', 'ansible/data/redis:users_acl') }}"
