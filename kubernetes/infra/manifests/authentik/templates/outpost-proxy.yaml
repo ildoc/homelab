@@ -1,0 +1,94 @@
+---
+# Deployment per Authentik Proxy Outpost
+# Questo è necessario per il forward authentication con Traefik
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: authentik-proxy-outpost
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  replicas: {{ .Values.outpost.replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: authentik-proxy-outpost
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: authentik-proxy-outpost
+        app.kubernetes.io/instance: {{ .Release.Name }}
+    spec:
+      containers:
+      - name: proxy
+        image: ghcr.io/goauthentik/proxy:{{ .Values.outpost.image.tag | default .Chart.AppVersion }}
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 9000
+          name: http
+          protocol: TCP
+        - containerPort: 9443
+          name: https
+          protocol: TCP
+        env:
+        - name: AUTHENTIK_HOST
+          value: "http://authentik-server.{{ .Release.Namespace }}.svc.cluster.local"
+        - name: AUTHENTIK_INSECURE
+          value: "true"
+        - name: AUTHENTIK_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: authentik-outpost-token
+              key: token
+        resources:
+          {{- toYaml .Values.outpost.resources | nindent 10 }}
+      {{- with .Values.outpost.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: authentik-proxy-outpost
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  type: ClusterIP
+  ports:
+    - port: 9000
+      targetPort: http
+      protocol: TCP
+      name: http
+    - port: 9443
+      targetPort: https
+      protocol: TCP
+      name: https
+  selector:
+    app.kubernetes.io/name: authentik-proxy-outpost
+    app.kubernetes.io/instance: {{ .Release.Name }}
+---
+# ExternalSecret per il token dell'outpost
+# Nota: Il token deve essere creato manualmente in Authentik UI dopo l'installazione
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: authentik-outpost-token
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  refreshInterval: "1h"
+  secretStoreRef:
+    name: vault-cluster-secret-store
+    kind: ClusterSecretStore
+  target:
+    name: authentik-outpost-token
+    creationPolicy: Owner
+  data:
+  - secretKey: token
+    remoteRef:
+      key: kubernetes/data/authentik
+      property: outpost-token

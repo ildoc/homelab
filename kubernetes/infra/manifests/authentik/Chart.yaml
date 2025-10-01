@@ -1,0 +1,8 @@
+---
+apiVersion: v2
+name: authentik-bootstrap
+version: 0.1.0
+dependencies:
+  - name: authentik
+    version: "2024.10.5"
+    repository: https://charts.goauthentik.io

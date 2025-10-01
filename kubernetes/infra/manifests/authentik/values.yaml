@@ -1,0 +1,211 @@
+---
+authentik:
+  # Configurazione globale
+  global:
+    storageClass: nfs-csi
+    
+    # Environment variables per i secrets
+    env:
+      - name: AUTHENTIK_SECRET_KEY
+        valueFrom:
+          secretKeyRef:
+            name: authentik-secret
+            key: secret-key
+      - name: AUTHENTIK_POSTGRESQL__PASSWORD
+        valueFrom:
+          secretKeyRef:
+            name: authentik-postgresql-secret
+            key: password
+      - name: AUTHENTIK_REDIS__PASSWORD
+        valueFrom:
+          secretKeyRef:
+            name: authentik-redis-secret
+            key: password
+            
+  authentik:
+    # Log level
+    log_level: info
+    
+    # Avatars
+    avatars: gravatar,initials
+    
+    # Error reporting
+    error_reporting:
+      enabled: false
+      
+    # Email configuration (opzionale, configuralo se hai SMTP)
+    email:
+      host: ""
+      port: 587
+      username: ""
+      use_tls: false
+      use_ssl: false
+      timeout: 30
+      from: "authentik@local.ildoc.it"
+      
+    # PostgreSQL connection
+    postgresql:
+      host: "authentik-postgresql"
+      port: 5432
+      name: "authentik"
+      user: "authentik"
+      
+    # Redis connection  
+    redis:
+      host: "authentik-redis-master"
+      
+  # Server deployment
+  server:
+    replicas: 2
+    
+    resources:
+      requests:
+        cpu: 100m
+        memory: 512Mi
+      limits:
+        cpu: 500m
+        memory: 1Gi
+        
+    # Anti-affinity per alta disponibilità
+    affinity:
+      podAntiAffinity:
+        preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  app.kubernetes.io/name: authentik
+                  app.kubernetes.io/component: server
+              topologyKey: kubernetes.io/hostname
+              
+    # Service Monitor per Prometheus (se disponibile)
+    metrics:
+      enabled: true
+      serviceMonitor:
+        enabled: false
+        
+  # Worker deployment
+  worker:
+    replicas: 2
+    
+    resources:
+      requests:
+        cpu: 100m
+        memory: 512Mi
+      limits:
+        cpu: 500m
+        memory: 1Gi
+        
+    affinity:
+      podAntiAffinity:
+        preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  app.kubernetes.io/name: authentik
+                  app.kubernetes.io/component: worker
+              topologyKey: kubernetes.io/hostname
+              
+  # PostgreSQL subchart configuration
+  postgresql:
+    enabled: true
+    
+    auth:
+      database: authentik
+      username: authentik
+      existingSecret: authentik-postgresql-secret
+      secretKeys:
+        adminPasswordKey: postgres-password
+        userPasswordKey: password
+        
+    primary:
+      persistence:
+        enabled: true
+        storageClass: nfs-csi
+        size: 10Gi
+        
+      resources:
+        requests:
+          cpu: 100m
+          memory: 256Mi
+        limits:
+          cpu: 500m
+          memory: 512Mi
+          
+      # PostgreSQL custom config per performance
+      extendedConfiguration: |
+        max_connections = 200
+        shared_buffers = 256MB
+        
+  # Redis subchart configuration
+  redis:
+    enabled: true
+    architecture: standalone
+    
+    auth:
+      enabled: true
+      existingSecret: authentik-redis-secret
+      existingSecretPasswordKey: password
+      
+    master:
+      persistence:
+        enabled: true
+        storageClass: nfs-csi
+        size: 5Gi
+        
+      resources:
+        requests:
+          cpu: 50m
+          memory: 128Mi
+        limits:
+          cpu: 200m
+          memory: 256Mi
+          
+  # Service configuration
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 9000
+    
+  # Disabilita ingress, useremo HTTPRoute
+  ingress:
+    enabled: false
+    
+  # ServiceAccount
+  serviceAccount:
+    create: true
+    annotations: {}
+
+# Configurazioni custom per il wrapper
+ingress:
+  hostname: auth.local.ildoc.it
+
+smtp:
+  enabled: false  # Abilita se hai un server SMTP
+  host: smtp.gmail.com
+  port: 587
+  username: ""
+  from: "authentik@local.ildoc.it"
+
+# Configurazione Outpost per forward auth
+outpost:
+  replicas: 2
+  image:
+    tag: "2024.10.5"  # Usa la stessa versione di authentik
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          podAffinityTerm:
+            labelSelector:
+              matchLabels:
+                app.kubernetes.io/name: authentik-proxy-outpost
+            topologyKey: kubernetes.io/hostname
