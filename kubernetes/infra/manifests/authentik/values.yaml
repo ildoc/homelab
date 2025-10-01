@@ -1,220 +1,206 @@
 ---
 authentik:
-  # Configurazione globale
-  global:
-    storageClass: nfs-csi
-    
-    # Environment variables per i secrets - MODIFICATO
-    env:
-      - name: AUTHENTIK_SECRET_KEY
-        valueFrom:
-          secretKeyRef:
-            name: authentik-secret
-            key: secret-key
-      
-  authentik:
-    # Log level
-    log_level: info
-    
-    # Avatars
-    avatars: gravatar,initials
-    
-    # Error reporting
-    error_reporting:
-      enabled: false
-      
-    # Email configuration (opzionale)
-    email:
-      host: ""
-      port: 587
-      username: ""
-      use_tls: false
-      use_ssl: false
-      timeout: 30
-      from: "authentik@local.ildoc.it"
-      
-    # PostgreSQL connection - IMPORTANTE: usa env variables
-    postgresql:
-      host: "{{ .Release.Name }}-postgresql"
-      port: 5432
-      name: "authentik"
-      user: "authentik"
-      password: ""  # Lascia vuoto, usa envFrom
-      
-    # Redis connection  
-    redis:
-      host: "{{ .Release.Name }}-redis-master"
-      password: ""  # Lascia vuoto, usa envFrom
-      
-  # Server deployment
-  server:
-    replicas: 2
-    
-    # AGGIUNGI envFrom per i secrets
-    envFrom:
-      - secretRef:
-          name: authentik-secret
-      - secretRef:
-          name: authentik-postgresql-secret
-      - secretRef:
-          name: authentik-redis-secret
-    
-    resources:
-      requests:
-        cpu: 100m
-        memory: 512Mi
-      limits:
-        cpu: 500m
-        memory: 1Gi
-        
-    affinity:
-      podAntiAffinity:
-        preferredDuringSchedulingIgnoredDuringExecution:
-          - weight: 100
-            podAffinityTerm:
-              labelSelector:
-                matchLabels:
-                  app.kubernetes.io/name: authentik
-                  app.kubernetes.io/component: server
-              topologyKey: kubernetes.io/hostname
-              
-    metrics:
-      enabled: true
-      serviceMonitor:
-        enabled: false
-    
-    ingress:
-      enabled: false  # Disabilitato, useremo HTTPRoute
-        
-  # Worker deployment
-  worker:
-    replicas: 2
-    
-    # AGGIUNGI envFrom per i secrets
-    envFrom:
-      - secretRef:
-          name: authentik-secret
-      - secretRef:
-          name: authentik-postgresql-secret
-      - secretRef:
-          name: authentik-redis-secret
-    
-    resources:
-      requests:
-        cpu: 100m
-        memory: 512Mi
-      limits:
-        cpu: 500m
-        memory: 1Gi
-        
-    affinity:
-      podAntiAffinity:
-        preferredDuringSchedulingIgnoredDuringExecution:
-          - weight: 100
-            podAffinityTerm:
-              labelSelector:
-                matchLabels:
-                  app.kubernetes.io/name: authentik
-                  app.kubernetes.io/component: worker
-              topologyKey: kubernetes.io/hostname
-              
-  # PostgreSQL subchart configuration
+  # Secret key - DEVE essere configurato come variabile d'ambiente
+  secret_key: ""  # Lascia vuoto, usa envFrom
+  
+  # Configurazione logging
+  log_level: info
+  
+  # Avatars
+  avatars: gravatar,initials
+  
+  # Error reporting
+  error_reporting:
+    enabled: false
+  
+  # Email configuration (opzionale)
+  email:
+    host: ""
+    port: 587
+    username: ""
+    use_tls: false
+    use_ssl: false
+    timeout: 30
+    from: "authentik@local.ildoc.it"
+  
+  # PostgreSQL - IMPORTANTE: lascia vuoto password, usa envFrom
   postgresql:
-    enabled: true
-    
-    # IMPORTANTE: Usa le immagini docker.io/library come da release notes 2025.8
-    image:
-      registry: docker.io
-      repository: postgres
-      tag: "17"  # Aggiornato a PostgreSQL 17
-    
-    auth:
-      database: authentik
-      username: authentik
-      existingSecret: authentik-postgresql-secret
-      secretKeys:
-        adminPasswordKey: postgres-password
-        userPasswordKey: password
-        
-    primary:
-      persistence:
-        enabled: true
-        storageClass: nfs-csi
-        size: 10Gi
-        
-      resources:
-        requests:
-          cpu: 100m
-          memory: 256Mi
-        limits:
-          cpu: 500m
-          memory: 512Mi
-          
-      extendedConfiguration: |
-        max_connections = 200
-        shared_buffers = 256MB
-        
-  # Redis subchart configuration
+    host: "authentik-postgresql"
+    port: 5432
+    name: "authentik"
+    user: "authentik"
+    password: ""  # Lascia vuoto
+  
+  # Redis - IMPORTANTE: lascia vuoto password, usa envFrom
   redis:
-    enabled: true
-    architecture: standalone
-    
-    # IMPORTANTE: Usa le immagini docker.io/library
-    image:
-      registry: docker.io
-      repository: redis
-      tag: "8.2"  # Aggiornato a Redis 8.2
-    
-    auth:
-      enabled: true
-      existingSecret: authentik-redis-secret
-      existingSecretPasswordKey: password
-      
-    master:
-      persistence:
-        enabled: true
-        storageClass: nfs-csi
-        size: 5Gi
-        
-      resources:
-        requests:
-          cpu: 50m
-          memory: 128Mi
-        limits:
-          cpu: 200m
-          memory: 256Mi
-          
-  # # Service configuration
-  # service:
-  #   type: ClusterIP
-  #   port: 80
-  #   targetPort: 9000
-    
-  # Disabilita ingress, useremo HTTPRoute
-  # ingress:
-  #   enabled: false
-    
-  # ServiceAccount
-  serviceAccount:
-    create: true
-    annotations: {}
+    host: "authentik-redis-master"
+    password: ""  # Lascia vuoto
 
-# Configurazioni custom per il wrapper
+# Global storage class
+global:
+  storageClass: nfs-csi
+
+# Server deployment
+server:
+  replicas: 2
+  
+  # CRITICO: usa envFrom per i secrets
+  envFrom:
+    - secretRef:
+        name: authentik-secret
+    - secretRef:
+        name: authentik-postgresql-secret
+    - secretRef:
+        name: authentik-redis-secret
+  
+  resources:
+    requests:
+      cpu: 100m
+      memory: 512Mi
+    limits:
+      cpu: 500m
+      memory: 1Gi
+  
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          podAffinityTerm:
+            labelSelector:
+              matchLabels:
+                app.kubernetes.io/name: authentik
+                app.kubernetes.io/component: server
+            topologyKey: kubernetes.io/hostname
+  
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: false
+  
+  ingress:
+    enabled: false  # Useremo HTTPRoute
+
+# Worker deployment
+worker:
+  replicas: 2
+  
+  # CRITICO: usa envFrom per i secrets
+  envFrom:
+    - secretRef:
+        name: authentik-secret
+    - secretRef:
+        name: authentik-postgresql-secret
+    - secretRef:
+        name: authentik-redis-secret
+  
+  resources:
+    requests:
+      cpu: 100m
+      memory: 512Mi
+    limits:
+      cpu: 500m
+      memory: 1Gi
+  
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          podAffinityTerm:
+            labelSelector:
+              matchLabels:
+                app.kubernetes.io/name: authentik
+                app.kubernetes.io/component: worker
+            topologyKey: kubernetes.io/hostname
+  
+  # Abilita metriche worker (nuovo in 2025.8)
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: false
+
+# PostgreSQL subchart
+postgresql:
+  enabled: true
+  
+  # Usa immagini docker.io/library (importante per 2025.8+)
+  image:
+    registry: docker.io
+    repository: library/postgres
+    tag: "17"
+  
+  auth:
+    database: authentik
+    username: authentik
+    existingSecret: authentik-postgresql-secret
+    secretKeys:
+      adminPasswordKey: postgres-password
+      userPasswordKey: password
+  
+  primary:
+    persistence:
+      enabled: true
+      storageClass: nfs-csi
+      size: 10Gi
+    
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+    
+    extendedConfiguration: |
+      max_connections = 200
+      shared_buffers = 256MB
+
+# Redis subchart
+redis:
+  enabled: true
+  architecture: standalone
+  
+  # Usa immagini docker.io/library (importante per 2025.8+)
+  image:
+    registry: docker.io
+    repository: library/redis
+    tag: "8.2"
+  
+  auth:
+    enabled: true
+    existingSecret: authentik-redis-secret
+    existingSecretPasswordKey: password
+  
+  master:
+    persistence:
+      enabled: true
+      storageClass: nfs-csi
+      size: 5Gi
+    
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        cpu: 200m
+        memory: 256Mi
+
+# ServiceAccount
+serviceAccount:
+  create: true
+  annotations: {}
+
+# Configurazioni custom per il wrapper chart
 ingress:
   hostname: auth.local.ildoc.it
 
 smtp:
   enabled: false
-  host: smtp.gmail.com
-  port: 587
-  username: ""
-  from: "authentik@local.ildoc.it"
 
 # Configurazione Outpost per forward auth
 outpost:
   replicas: 2
   image:
-    tag: "2025.8.4"  # Usa la versione corretta
+    tag: "2025.8.4"
   resources:
     requests:
       cpu: 50m

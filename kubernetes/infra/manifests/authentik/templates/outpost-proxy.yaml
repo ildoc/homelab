@@ -1,13 +1,36 @@
 ---
+# ExternalSecret per il token dell'outpost
+# DEVE essere creato PRIMA del deployment
+apiVersion: external-secrets.io/v1beta1
+kind: ExternalSecret
+metadata:
+  name: authentik-outpost-token
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+spec:
+  refreshInterval: "1h"
+  secretStoreRef:
+    name: vault-cluster-secret-store
+    kind: ClusterSecretStore
+  target:
+    name: authentik-outpost-token
+    creationPolicy: Owner
+  data:
+  - secretKey: token
+    remoteRef:
+      key: kubernetes/data/authentik
+      property: outpost-token
+
+---
 # Deployment per Authentik Proxy Outpost
-# Questo è necessario per il forward authentication con Traefik
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: authentik-proxy-outpost
   namespace: {{ .Release.Namespace }}
   annotations:
-    argocd.argoproj.io/sync-wave: "2"
+    argocd.argoproj.io/sync-wave: "4"
 spec:
   replicas: {{ .Values.outpost.replicas }}
   selector:
@@ -47,14 +70,16 @@ spec:
       affinity:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+
 ---
+# Service per Authentik Proxy Outpost
 apiVersion: v1
 kind: Service
 metadata:
   name: authentik-proxy-outpost
   namespace: {{ .Release.Namespace }}
   annotations:
-    argocd.argoproj.io/sync-wave: "2"
+    argocd.argoproj.io/sync-wave: "4"
 spec:
   type: ClusterIP
   ports:
@@ -69,26 +94,3 @@ spec:
   selector:
     app.kubernetes.io/name: authentik-proxy-outpost
     app.kubernetes.io/instance: {{ .Release.Name }}
----
-# ExternalSecret per il token dell'outpost
-# Nota: Il token deve essere creato manualmente in Authentik UI dopo l'installazione
-apiVersion: external-secrets.io/v1
-kind: ExternalSecret
-metadata:
-  name: authentik-outpost-token
-  namespace: {{ .Release.Namespace }}
-  annotations:
-    argocd.argoproj.io/sync-wave: "-1"
-spec:
-  refreshInterval: "1h"
-  secretStoreRef:
-    name: vault-cluster-secret-store
-    kind: ClusterSecretStore
-  target:
-    name: authentik-outpost-token
-    creationPolicy: Owner
-  data:
-  - secretKey: token
-    remoteRef:
-      key: kubernetes/data/authentik
-      property: outpost-token

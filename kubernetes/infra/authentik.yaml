@@ -8,7 +8,6 @@ metadata:
     - resources-finalizer.argocd.argoproj.io
   annotations:
     argocd.argoproj.io/sync-wave: "-60"
-    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
 spec:
   project: default
   source:
@@ -21,6 +20,19 @@ spec:
   syncPolicy:
     syncOptions:
       - CreateNamespace=true
+      - ServerSideApply=true  # Importante per risolvere conflitti con CRDs
     automated:
       prune: true
       selfHeal: true
+  # Ignora differenze note con le risorse gestite dal chart Bitnami
+  ignoreDifferences:
+    - group: apps
+      kind: StatefulSet
+      name: authentik-postgresql
+      jsonPointers:
+        - /spec/volumeClaimTemplates
+    - group: apps
+      kind: StatefulSet  
+      name: authentik-redis-master
+      jsonPointers:
+        - /spec/volumeClaimTemplates
