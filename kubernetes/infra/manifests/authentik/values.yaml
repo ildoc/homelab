@@ -181,11 +181,11 @@ authentik:
           cpu: 200m
           memory: 256Mi
           
-  # Service configuration
-  service:
-    type: ClusterIP
-    port: 80
-    targetPort: 9000
+  # # Service configuration
+  # service:
+  #   type: ClusterIP
+  #   port: 80
+  #   targetPort: 9000
     
   # Disabilita ingress, useremo HTTPRoute
   ingress:
@@ -211,7 +211,7 @@ smtp:
 outpost:
   replicas: 2
   image:
-    tag: "2025.8.1"  # Usa la versione corretta
+    tag: "2025.8.4"  # Usa la versione corretta
   resources:
     requests:
       cpu: 50m
