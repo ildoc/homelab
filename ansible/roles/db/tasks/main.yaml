@@ -5,11 +5,11 @@
 - name: Include container deployment tasks
   ansible.builtin.include_tasks: deploy-containers.yaml
 
-- name: Include database management tasks
-  ansible.builtin.include_tasks: manage-databases.yaml
-
 - name: Include user management tasks
   ansible.builtin.include_tasks: manage-users.yaml
+
+- name: Include database management tasks
+  ansible.builtin.include_tasks: manage-databases.yaml
 
 - name: Include privileges management tasks
   ansible.builtin.include_tasks: manage-privileges.yaml

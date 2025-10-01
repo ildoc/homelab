@@ -19,7 +19,7 @@
   loop: "{{ db_connectivity.results }}"
   loop_control:
     label: "{{ item.item.0.name }}"
-  when: 
+  when:
     - db_connectivity.results is defined
     - item.is_available | default(false)
 
@@ -29,6 +29,6 @@
   loop: "{{ db_connectivity.results }}"
   loop_control:
     label: "{{ item.item.0.name }}"
-  when: 
+  when:
     - db_connectivity.results is defined
     - not (item.is_available | default(false))
