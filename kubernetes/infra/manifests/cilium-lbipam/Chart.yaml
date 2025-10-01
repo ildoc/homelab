@@ -1,0 +1,3 @@
+apiVersion: v2
+name: cilium-lbipam
+version: 0.1.0

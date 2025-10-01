@@ -47,7 +47,7 @@ spec:
         
         # L2 announcements
         l2announcements:
-          enabled: false
+          enabled: true
         
         # Hubble
         hubble:

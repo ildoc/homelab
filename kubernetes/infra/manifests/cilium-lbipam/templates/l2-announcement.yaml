@@ -1,0 +1,12 @@
+apiVersion: cilium.io/v2alpha1
+kind: CiliumL2AnnouncementPolicy
+metadata:
+  name: gateway-l2-policy
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  # Annuncia tutti i LoadBalancer IP
+  loadBalancerIPs: true
+  # Interfaccia di rete (modifica se necessario)
+  interfaces:
+  - ^ens18$
