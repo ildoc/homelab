@@ -82,6 +82,9 @@ authentik:
       enabled: true
       serviceMonitor:
         enabled: false
+    
+    ingress:
+      enabled: false  # Disabilitato, useremo HTTPRoute
         
   # Worker deployment
   worker:
@@ -188,8 +191,8 @@ authentik:
   #   targetPort: 9000
     
   # Disabilita ingress, useremo HTTPRoute
-  ingress:
-    enabled: false
+  # ingress:
+  #   enabled: false
     
   # ServiceAccount
   serviceAccount:
