@@ -211,7 +211,7 @@ smtp:
 outpost:
   replicas: 2
   image:
-    tag: "2025.8.4"  # Usa la versione corretta
+    tag: "2025.8.1"  # Usa la versione corretta
   resources:
     requests:
       cpu: 50m
