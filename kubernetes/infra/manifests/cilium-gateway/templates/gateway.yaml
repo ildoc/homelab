@@ -27,3 +27,5 @@ spec:
           - name: local-ildoc-it-tls
             kind: Secret
             namespace: default
+  addresses:
+    - value: "192.168.0.80"
