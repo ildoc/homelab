@@ -18,17 +18,6 @@ spec:
     targetRevision: 1.18.2
     helm:
       valuesObject:
-        # Operator configuration - IMPORTANTE: suffix vuoto per Gateway API
-        operator:
-          replicas: 1
-          image:
-            # suffix: "-generic" -> usa operator-generic (NO Gateway API)
-            # suffix: "" -> usa operator (CON Gateway API)
-            suffix: ""
-            useDigest: false
-          prometheus:
-            enabled: true
-            port: 9963
 
         # Gateway API configuration
         gatewayAPI:
@@ -42,6 +31,8 @@ spec:
             clusterPoolIPv4MaskSize: 24
 
         # Kubernetes API server
+        # IMPORTANTE: Modifica con il tuo IP API server
+        # Trova con: kubectl cluster-info
         k8sServiceHost: "192.168.0.80"
         k8sServicePort: "6443"
 
