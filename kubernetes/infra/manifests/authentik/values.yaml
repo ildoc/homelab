@@ -4,24 +4,14 @@ authentik:
   global:
     storageClass: nfs-csi
     
-    # Environment variables per i secrets
+    # Environment variables per i secrets - MODIFICATO
     env:
       - name: AUTHENTIK_SECRET_KEY
         valueFrom:
           secretKeyRef:
             name: authentik-secret
             key: secret-key
-      - name: AUTHENTIK_POSTGRESQL__PASSWORD
-        valueFrom:
-          secretKeyRef:
-            name: authentik-postgresql-secret
-            key: password
-      - name: AUTHENTIK_REDIS__PASSWORD
-        valueFrom:
-          secretKeyRef:
-            name: authentik-redis-secret
-            key: password
-            
+      
   authentik:
     # Log level
     log_level: info
@@ -33,7 +23,7 @@ authentik:
     error_reporting:
       enabled: false
       
-    # Email configuration (opzionale, configuralo se hai SMTP)
+    # Email configuration (opzionale)
     email:
       host: ""
       port: 587
@@ -43,20 +33,31 @@ authentik:
       timeout: 30
       from: "authentik@local.ildoc.it"
       
-    # PostgreSQL connection
+    # PostgreSQL connection - IMPORTANTE: usa env variables
     postgresql:
-      host: "authentik-postgresql"
+      host: "{{ .Release.Name }}-postgresql"
       port: 5432
       name: "authentik"
       user: "authentik"
+      password: ""  # Lascia vuoto, usa envFrom
       
     # Redis connection  
     redis:
-      host: "authentik-redis-master"
+      host: "{{ .Release.Name }}-redis-master"
+      password: ""  # Lascia vuoto, usa envFrom
       
   # Server deployment
   server:
     replicas: 2
+    
+    # AGGIUNGI envFrom per i secrets
+    envFrom:
+      - secretRef:
+          name: authentik-secret
+      - secretRef:
+          name: authentik-postgresql-secret
+      - secretRef:
+          name: authentik-redis-secret
     
     resources:
       requests:
@@ -66,7 +67,6 @@ authentik:
         cpu: 500m
         memory: 1Gi
         
-    # Anti-affinity per alta disponibilità
     affinity:
       podAntiAffinity:
         preferredDuringSchedulingIgnoredDuringExecution:
@@ -78,7 +78,6 @@ authentik:
                   app.kubernetes.io/component: server
               topologyKey: kubernetes.io/hostname
               
-    # Service Monitor per Prometheus (se disponibile)
     metrics:
       enabled: true
       serviceMonitor:
@@ -87,6 +86,15 @@ authentik:
   # Worker deployment
   worker:
     replicas: 2
+    
+    # AGGIUNGI envFrom per i secrets
+    envFrom:
+      - secretRef:
+          name: authentik-secret
+      - secretRef:
+          name: authentik-postgresql-secret
+      - secretRef:
+          name: authentik-redis-secret
     
     resources:
       requests:
@@ -111,6 +119,12 @@ authentik:
   postgresql:
     enabled: true
     
+    # IMPORTANTE: Usa le immagini docker.io/library come da release notes 2025.8
+    image:
+      registry: docker.io
+      repository: postgres
+      tag: "17"  # Aggiornato a PostgreSQL 17
+    
     auth:
       database: authentik
       username: authentik
@@ -133,7 +147,6 @@ authentik:
           cpu: 500m
           memory: 512Mi
           
-      # PostgreSQL custom config per performance
       extendedConfiguration: |
         max_connections = 200
         shared_buffers = 256MB
@@ -142,6 +155,12 @@ authentik:
   redis:
     enabled: true
     architecture: standalone
+    
+    # IMPORTANTE: Usa le immagini docker.io/library
+    image:
+      registry: docker.io
+      repository: redis
+      tag: "8.2"  # Aggiornato a Redis 8.2
     
     auth:
       enabled: true
@@ -182,7 +201,7 @@ ingress:
   hostname: auth.local.ildoc.it
 
 smtp:
-  enabled: false  # Abilita se hai un server SMTP
+  enabled: false
   host: smtp.gmail.com
   port: 587
   username: ""
@@ -192,7 +211,7 @@ smtp:
 outpost:
   replicas: 2
   image:
-    tag: "2025.8.4"  # Usa la stessa versione di authentik
+    tag: "2025.8.4"  # Usa la versione corretta
   resources:
     requests:
       cpu: 50m
