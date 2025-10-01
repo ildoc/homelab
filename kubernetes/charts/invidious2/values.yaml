@@ -51,16 +51,6 @@ invidious:
   # PostgreSQL Configuration - CORRETTA
   postgresql:
     enabled: false
-    image:
-      tag: "17.6.0"
-    auth:
-      username: kemal
-      database: invidious
-      # IMPORTANTE: Specificare il secret qui direttamente
-      existingSecret: "invidious-secrets"
-      secretKeys:
-        adminPasswordKey: "postgresql-postgres-password"
-        userPasswordKey: "postgresql-password"
     
     # Configurazione primary (struttura corretta per Bitnami v16.x)
     primary:
