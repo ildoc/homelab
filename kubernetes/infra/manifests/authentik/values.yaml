@@ -25,10 +25,10 @@ authentik:
   
   # PostgreSQL - IMPORTANTE: lascia vuoto password, usa envFrom
   postgresql:
-    host: "authentik-postgresql"
+    host: "192.168.0.30"
     port: 5432
-    name: "authentik"
-    user: "authentik"
+    name: "authentik_db"
+    user: "authentik_user"
     password: ""  # Lascia vuoto
   
   # Redis - IMPORTANTE: lascia vuoto password, usa envFrom
@@ -120,39 +120,7 @@ worker:
 
 # PostgreSQL subchart
 postgresql:
-  enabled: true
-  
-  # Usa immagini docker.io/library (importante per 2025.8+)
-  image:
-    registry: docker.io
-    repository: library/postgres
-    tag: "17"
-  
-  auth:
-    database: authentik
-    username: authentik
-    existingSecret: authentik-postgresql-secret
-    secretKeys:
-      adminPasswordKey: postgres-password
-      userPasswordKey: password
-  
-  primary:
-    persistence:
-      enabled: true
-      storageClass: nfs-csi
-      size: 10Gi
-    
-    resources:
-      requests:
-        cpu: 100m
-        memory: 256Mi
-      limits:
-        cpu: 500m
-        memory: 512Mi
-    
-    extendedConfiguration: |
-      max_connections = 200
-      shared_buffers = 256MB
+  enabled: false
 
 # Redis subchart
 redis:
