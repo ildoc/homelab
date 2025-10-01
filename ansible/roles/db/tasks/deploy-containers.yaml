@@ -12,14 +12,44 @@
     template_file_name: "{{ local_path }}"
     update_compose_project_path: "{{ project_path }}"
 
-- name: Wait for PostgreSQL to be ready
-  ansible.builtin.wait_for:
-    host: localhost
+# Strategia: prova subito, se fallisce aspetta che la porta si apra
+- name: Try immediate PostgreSQL connection
+  community.postgresql.postgresql_ping:
+    login_host: localhost
+    login_user: "{{ db.postgres.admin_user }}"
+    login_password: "{{ db.postgres.admin_password }}"
+    login_db: postgres
     port: 5432
-    delay: 5
-    timeout: 60
-    state: started
+  register: immediate_check
+  failed_when: false
 
-- name: Additional wait for PostgreSQL initialization
-  ansible.builtin.pause:
-    seconds: 10
+- name: Wait for PostgreSQL if not immediately available
+  when: not immediate_check.is_available | default(false)
+  block:
+    - name: Display waiting message
+      ansible.builtin.debug:
+        msg: "PostgreSQL not immediately available, waiting for it to start..."
+
+    - name: Wait for PostgreSQL port
+      ansible.builtin.wait_for:
+        host: localhost
+        port: 5432
+        delay: 1
+        timeout: 60
+        state: started
+
+    - name: Wait for PostgreSQL to accept connections
+      community.postgresql.postgresql_ping:
+        login_host: localhost
+        login_user: "{{ db.postgres.admin_user }}"
+        login_password: "{{ db.postgres.admin_password }}"
+        login_db: postgres
+        port: 5432
+      register: delayed_check
+      retries: 15
+      delay: 3
+      until: delayed_check.is_available
+
+- name: Confirm PostgreSQL is ready
+  ansible.builtin.debug:
+    msg: "✓ PostgreSQL is ready and accepting connections"

@@ -21,4 +21,6 @@
   ansible.builtin.file:
     path: ~/pgadmin
     state: directory
-    mode: '0755'
+    mode: '0750'
+    owner: '5050'
+    group: '5050'

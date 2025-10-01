@@ -66,12 +66,14 @@
     label: "{{ item.0.name }} -> {{ item.1 }} (sequences)"
   when: item.0.privileges | default('ALL') == 'ALL'
 
+# Default privileges per tabelle future
 - name: Set default privileges for future tables
-  community.postgresql.postgresql_default_privs:
+  community.postgresql.postgresql_privs:
     database: "{{ item.1 }}"
     state: present
     privs: "{{ item.0.table_privs | default('ALL') }}"
-    type: table
+    type: default_privs
+    objs: TABLES
     schema: public
     roles: "{{ item.0.name }}"
     target_roles: "{{ item.0.owner | default(db.postgres.admin_user) }}"
@@ -83,12 +85,14 @@
   loop_control:
     label: "{{ item.0.name }} -> {{ item.1 }} (default tables)"
 
+# Default privileges per sequence future
 - name: Set default privileges for future sequences
-  community.postgresql.postgresql_default_privs:
+  community.postgresql.postgresql_privs:
     database: "{{ item.1 }}"
     state: present
     privs: "{{ item.0.sequence_privs | default('ALL') }}"
-    type: sequence
+    type: default_privs
+    objs: SEQUENCES
     schema: public
     roles: "{{ item.0.name }}"
     target_roles: "{{ item.0.owner | default(db.postgres.admin_user) }}"

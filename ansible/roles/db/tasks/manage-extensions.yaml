@@ -2,7 +2,7 @@
 - name: Install PostgreSQL extensions
   community.postgresql.postgresql_ext:
     name: "{{ item.1 }}"
-    db: "{{ item.0.name }}"
+    database: "{{ item.0.name }}"  # <-- Cambiato da 'db' a 'database'
     state: present
     login_host: localhost
     login_user: "{{ db.postgres.admin_user }}"

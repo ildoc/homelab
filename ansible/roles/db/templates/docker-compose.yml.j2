@@ -33,6 +33,7 @@ services:
     image: dpage/pgadmin4:9.8.0
     container_name: pgadmin
     restart: unless-stopped
+    user: root
     environment:
       PGADMIN_DEFAULT_EMAIL: {{ db.postgres.pgadmin_email }}
       PGADMIN_DEFAULT_PASSWORD: {{ db.postgres.pgadmin_password }}

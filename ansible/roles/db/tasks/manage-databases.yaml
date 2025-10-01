@@ -11,6 +11,7 @@
     login_host: localhost
     login_user: "{{ db.postgres.admin_user }}"
     login_password: "{{ db.postgres.admin_password }}"
+    maintenance_db: postgres
     port: 5432
   loop: "{{ db.postgres.databases | default([]) }}"
   loop_control:
