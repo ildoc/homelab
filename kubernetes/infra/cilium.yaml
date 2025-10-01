@@ -18,39 +18,34 @@ spec:
     targetRevision: 1.18.2
     helm:
       valuesObject:
-        operator:
-          image:
-            suffix: ""
         # Gateway API configuration
         gatewayAPI:
           enabled: true
-
-        # IPAM configuration (dalla tua ConfigMap)
+        
+        # IMPORTANTE: Richiesto per Gateway API
+        kubeProxyReplacement: true
+        
+        # IPAM configuration
         ipam:
           mode: cluster-pool
           operator:
             clusterPoolIPv4PodCIDRList: ["10.0.0.0/8"]
             clusterPoolIPv4MaskSize: 24
-
+        
         # Kubernetes API server
-        # IMPORTANTE: Modifica con il tuo IP API server
-        # Trova con: kubectl cluster-info
         k8sServiceHost: "192.168.0.80"
         k8sServicePort: "6443"
-
-        # Routing mode (dalla tua ConfigMap)
+        
+        # Routing mode
         routingMode: tunnel
         tunnelProtocol: vxlan
         autoDirectNodeRoutes: false
-
-        # kube-proxy replacement
-        kubeProxyReplacement: false
         
         # L2 announcements
         l2announcements:
           enabled: false
         
-        # Hubble (monitoring e observability)
+        # Hubble
         hubble:
           enabled: true
           relay:
@@ -59,23 +54,20 @@ spec:
             enabled: true
           tls:
             enabled: true
-
+        
         # Prometheus metrics
         prometheus:
           enabled: true
           port: 9962
-
+        
         # Cluster info
         cluster:
           name: kubernetes
           id: 0
-
+        
         # Debug
         debug:
           enabled: false
-
-        # Load Balancer IPAM
-        # Già abilitato di default con lbipam
 
   destination:
     server: https://kubernetes.default.svc
