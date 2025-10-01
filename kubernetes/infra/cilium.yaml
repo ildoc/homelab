@@ -8,24 +8,24 @@ metadata:
   finalizers:
     - resources-finalizer.argocd.argoproj.io
   annotations:
-    argocd.argoproj.io/sync-wave: "-100"  # Prima di tutto, è il CNI!
+    argocd.argoproj.io/sync-wave: "-100"
     argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
 spec:
   project: default
   source:
     repoURL: https://helm.cilium.io/
     chart: cilium
-    targetRevision: 1.17.2
+    targetRevision: 1.18.2
     helm:
       valuesObject:
-        # Operator configuration - usa immagine completa con Gateway API
+        # Operator configuration - IMPORTANTE: suffix vuoto per Gateway API
         operator:
           replicas: 1
           image:
-            repository: quay.io/cilium/operator
-            tag: v1.17.2
-            useDigest: true
-            digest: sha256:81f2d7198366e8dec2903a3a8361e4c68d47d19c68a0d42f0b7b6e3f0523f249
+            # suffix: "-generic" -> usa operator-generic (NO Gateway API)
+            # suffix: "" -> usa operator (CON Gateway API)
+            suffix: ""
+            useDigest: false
           prometheus:
             enabled: true
             port: 9963
@@ -34,30 +34,30 @@ spec:
         gatewayAPI:
           enabled: true
 
-        # Configurazioni dalla tua ConfigMap attuale
+        # IPAM configuration (dalla tua ConfigMap)
         ipam:
           mode: cluster-pool
           operator:
             clusterPoolIPv4PodCIDRList: ["10.0.0.0/8"]
             clusterPoolIPv4MaskSize: 24
 
-        # Trova il tuo API server con: kubectl cluster-info
-        k8sServiceHost: 192.168.0.80
-        k8sServicePort: 6443
+        # Kubernetes API server
+        k8sServiceHost: "192.168.0.80"
+        k8sServicePort: "6443"
 
-        # Routing
+        # Routing mode (dalla tua ConfigMap)
         routingMode: tunnel
         tunnelProtocol: vxlan
         autoDirectNodeRoutes: false
 
-        # kube-proxy replacement (hai false)
+        # kube-proxy replacement
         kubeProxyReplacement: false
         
-        # LoadBalancer IPAM
+        # L2 announcements
         l2announcements:
-          enabled: false  # Cambia a true se usi L2
+          enabled: false
         
-        # Hubble (già abilitato)
+        # Hubble (monitoring e observability)
         hubble:
           enabled: true
           relay:
@@ -81,28 +81,26 @@ spec:
         debug:
           enabled: false
 
+        # Load Balancer IPAM
+        # Già abilitato di default con lbipam
+
   destination:
     server: https://kubernetes.default.svc
     namespace: kube-system
   
   syncPolicy:
     automated:
-      prune: false  # ATTENZIONE: non fare prune del CNI!
+      prune: false  # NON fare prune del CNI!
       selfHeal: true
     syncOptions:
-      - CreateNamespace=false  # kube-system esiste già
-      - ServerSideApply=true   # Importante per Cilium
+      - CreateNamespace=false
+      - ServerSideApply=true
       - RespectIgnoreDifferences=true
 
-  # Ignora differenze su risorse gestite da Cilium stesso
+  # Ignora differenze su ConfigMap gestito da Cilium
   ignoreDifferences:
     - group: ""
       kind: ConfigMap
       name: cilium-config
       jsonPointers:
         - /data
-
----
-# kubernetes/infra/manifests/cilium-gateway/values.yaml
-# Questo file non serve più, la config è nell'Application sopra
-# Ma lo teniamo vuoto per compatibilità con la struttura esistente
