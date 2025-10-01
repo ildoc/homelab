@@ -192,7 +192,7 @@ smtp:
 outpost:
   replicas: 2
   image:
-    tag: "2024.10.5"  # Usa la stessa versione di authentik
+    tag: "2025.8.4"  # Usa la stessa versione di authentik
   resources:
     requests:
       cpu: 50m
