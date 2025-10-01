@@ -1,7 +1,7 @@
 ---
 # ExternalSecret per il token dell'outpost
 # DEVE essere creato PRIMA del deployment
-apiVersion: external-secrets.io/v1beta1
+apiVersion: external-secrets.io/v1
 kind: ExternalSecret
 metadata:
   name: authentik-outpost-token
