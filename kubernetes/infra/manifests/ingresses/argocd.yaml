@@ -1,6 +1,5 @@
----
-apiVersion: gateway.networking.k8s.io/v1
-kind: HTTPRoute
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: TLSRoute
 metadata:
   name: argocd-route
   namespace: argocd
@@ -12,10 +11,6 @@ spec:
   hostnames:
     - "argocd.local.ildoc.it"
   rules:
-    - matches:
-        - path:
-            type: PathPrefix
-            value: /
-      backendRefs:
+    - backendRefs:
         - name: argocd-server
           port: 443

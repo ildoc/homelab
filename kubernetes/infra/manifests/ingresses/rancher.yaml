@@ -1,6 +1,6 @@
 ---
-apiVersion: gateway.networking.k8s.io/v1
-kind: HTTPRoute
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: TLSRoute
 metadata:
   name: rancher-route
   namespace: cattle-system
@@ -12,10 +12,6 @@ spec:
   hostnames:
     - "rancher.local.ildoc.it"
   rules:
-    - matches:
-        - path:
-            type: PathPrefix
-            value: /
-      backendRefs:
+    - backendRefs:
         - name: rancher
           port: 443
