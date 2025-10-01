@@ -1,0 +1,104 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: invidious
+  namespace: apps
+spec:
+  selector:
+    matchLabels:
+      app: invidious
+  strategy:
+    type: Recreate
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      labels:
+        app: invidious
+    spec:
+      initContainers:
+        - name: config-merger
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              cp /tmp/config-base/invidious-config.yml /config/config.yml
+              sed -i "s|__DB_PASSWORD__|$(cat /tmp/secrets/db_password)|g" /config/config.yml
+              sed -i "s|__COMPANION_KEY__|$(cat /tmp/secrets/companion_key)|g" /config/config.yml
+              sed -i "s|__HMAC_KEY__|$(cat /tmp/secrets/hmac_key)|g" /config/config.yml
+          volumeMounts:
+            - name: config-base
+              mountPath: /tmp/config-base
+            - name: secrets
+              mountPath: /tmp/secrets
+            - name: merged-config
+              mountPath: /config
+      containers:
+        - name: invidious
+          image: quay.io/invidious/invidious:2025.09.24-42d34cd
+          env:
+            - name: INVIDIOUS_CONFIG_FILE
+              value: /config/config.yml
+          ports:
+            - containerPort: 3000
+              name: http
+          volumeMounts:
+            - name: merged-config
+              mountPath: /config
+          livenessProbe:
+            httpGet:
+              path: /api/v1/trending
+              port: 3000
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 2
+          resources:
+            limits:
+              cpu: 1500m
+              memory: 3Gi
+            requests:
+              cpu: 800m
+              memory: 1Gi 
+        
+        - name: companion
+          image: quay.io/invidious/invidious-companion:master-a866b71
+          env:
+            - name: SERVER_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: invidious-secrets
+                  key: companion_key
+          ports:
+            - containerPort: 8282
+              name: companion
+          volumeMounts:
+            - name: companion-cache
+              mountPath: /var/tmp/youtubei.js
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: true
+          resources:
+            limits:
+              cpu: 1500m
+              memory: 3Gi
+            requests:
+              cpu: 800m
+              memory: 1Gi 
+      
+      volumes:
+        - name: config-base
+          configMap:
+            name: invidious-config
+        - name: secrets
+          secret:
+            secretName: invidious-secrets
+        - name: merged-config
+          emptyDir: {}
+        - name: companion-cache
+          emptyDir: {}
