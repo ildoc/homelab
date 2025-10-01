@@ -6,9 +6,9 @@ metadata:
   namespace: argocd
 spec:
   parentRefs:
-    - name: traefik-gateway
+    - name: cilium-gateway
       kind: Gateway
-      namespace: traefik
+      namespace: kube-system
   hostnames:
     - "argocd.local.ildoc.it"
   rules:
@@ -16,13 +16,6 @@ spec:
         - path:
             type: PathPrefix
             value: /
-      # filters:
-      #   - type: ExtensionRef
-      #     extensionRef:
-      #       group: traefik.io
-      #       kind: Middleware
-      #       name: default-headers
-      #       namespace: default
       backendRefs:
         - name: argocd-server
           port: 443
