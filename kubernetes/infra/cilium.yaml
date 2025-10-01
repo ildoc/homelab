@@ -79,7 +79,7 @@ spec:
   
   syncPolicy:
     automated:
-      prune: false  # NON fare prune del CNI!
+      prune: false
       selfHeal: true
     syncOptions:
       - CreateNamespace=false

@@ -5,6 +5,7 @@ metadata:
   namespace: kube-system
   annotations:
     argocd.argoproj.io/sync-wave: "1"
+    kube-vip.io/loadbalancerIPs: "192.168.0.80"
 spec:
   gatewayClassName: cilium
   listeners:
@@ -26,5 +27,3 @@ spec:
           - name: local-ildoc-it-tls
             kind: Secret
             namespace: default
-  addresses:
-    - value: "192.168.0.80"
