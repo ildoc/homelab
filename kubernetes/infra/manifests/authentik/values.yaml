@@ -17,17 +17,17 @@ authentik:
     enabled: false
   
   # PostgreSQL ESTERNO - configurazione connessione
-  postgresql:
-    host: "192.168.0.30"
-    port: 5432
-    name: "authentik_db"
-    user: "authentik_user"
-    # password verrà letta automaticamente da AUTHENTIK_POSTGRESQL__PASSWORD nel secret
+  # postgresql:
+  #   host: "192.168.0.30"
+  #   port: 5432
+  #   name: "authentik_db"
+  #   user: "authentik_user"
+  #   # password verrà letta automaticamente da AUTHENTIK_POSTGRESQL__PASSWORD nel secret
   
-  # Redis ESTERNO - configurazione connessione
-  redis:
-    host: "192.168.0.40"
-    port: 6379
+  # # Redis ESTERNO - configurazione connessione
+  # redis:
+  #   host: "192.168.0.40"
+  #   port: 6379
     # password verrà letta automaticamente da AUTHENTIK_REDIS__PASSWORD nel secret
   
   # Email configuration (opzionale)
@@ -51,6 +51,37 @@ global:
   # Deployment strategy comune
   deploymentStrategy:
     type: RollingUpdate
+
+  env:
+    - name: AUTHENTIK_POSTGRESQL__HOST
+      value: "192.168.0.30"
+    - name: AUTHENTIK_POSTGRESQL__NAME
+      value: "authentik_user"
+    - name: AUTHENTIK_POSTGRESQL__USER
+      value: "authentik_db"
+    - name: AUTHENTIK_POSTGRESQL__PORT
+      value: "5432"
+    - name: AUTHENTIK_POSTGRESQL__PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: authentik-postgres-secret
+          key: postgres-password
+    - name: AUTHENTIK_REDIS__HOST
+      value: "192.168.0.40"
+    - name: AUTHENTIK_REDIS__PORT
+      value: "6379"
+    - name: AUTHENTIK_REDIS__USERNAME
+      value: "authentik"
+    - name: AUTHENTIK_REDIS__PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: authentik-secret
+          key: redis-password
+    - name: AUTHENTIK_SECRET_KEY
+      valueFrom:
+        secretKeyRef:
+          name: authentik-redis-secret
+          key: secret-key
 
 # =============================================================================
 # SERVER DEPLOYMENT
