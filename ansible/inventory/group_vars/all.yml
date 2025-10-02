@@ -154,26 +154,30 @@ db:
           - pg_trgm
           - btree_gin
       
-      - name: harbor_registry
-        owner: harbor_user
-        encoding: UTF8
-        lc_collate: en_US.UTF-8
-        lc_ctype: en_US.UTF-8
+      # - name: harbor_registry
+      #   owner: harbor_user
+      #   encoding: UTF8
+      #   lc_collate: en_US.UTF-8
+      #   lc_ctype: en_US.UTF-8
         
-      - name: harbor_notary_server
-        owner: harbor_user
+      # - name: harbor_notary_server
+      #   owner: harbor_user
+      #   encoding: UTF8
+      #   lc_collate: en_US.UTF-8
+      #   lc_ctype: en_US.UTF-8
+
+      # - name: harbor_notary_signer
+      #   owner: harbor_user
+      #   encoding: UTF8
+      #   lc_collate: en_US.UTF-8
+      #   lc_ctype: en_US.UTF-8
+
+      - name: authentik_db
+        owner: authentik_user
         encoding: UTF8
         lc_collate: en_US.UTF-8
         lc_ctype: en_US.UTF-8
 
-      - name: harbor_notary_signer
-        owner: invidious_user
-        encoding: UTF8
-        lc_collate: en_US.UTF-8
-        lc_ctype: en_US.UTF-8
-        extensions:
-          - pg_trgm
-          - btree_gin
       
     users:
       # Utenti applicativi con accesso completo al loro database
@@ -185,17 +189,23 @@ db:
         table_privs: ALL
         sequence_privs: ALL
       
-      - name: harbor_user
-        password: "{{ lookup('community.hashi_vault.hashi_vault', 'cross/data/apps/harbor:db_password') }}"
+      # - name: harbor_user
+      #   password: "{{ lookup('community.hashi_vault.hashi_vault', 'cross/data/apps/harbor:db_password') }}"
+      #   databases:
+      #     - harbor_registry
+      #     - harbor_notary_server
+      #     - harbor_notary_signer
+      #   privileges: ALL
+      #   table_privs: ALL
+      #   sequence_privs: ALL
+
+      - name: authentik_user
+        password: "{{ lookup('community.hashi_vault.hashi_vault', 'cross/data/apps/authentik:db_password') }}"
         databases:
-          - harbor_registry
-          - harbor_notary_server
-          - harbor_notary_signer
+          - authentik_db
         privileges: ALL
         table_privs: ALL
         sequence_privs: ALL
-
-
 
 redis:
   config:
@@ -217,9 +227,20 @@ redis:
         - "~*"
       description: "Admin user con accesso completo"
     
-    - name: harbor
+    # - name: harbor
+    #   enabled: true
+    #   password: "{{ lookup('community.hashi_vault.hashi_vault', 'cross/data/apps/harbor:redis_password') }}"
+    #   permissions:
+    #     - "+@read"
+    #     - "+@write"
+    #     - "+@connection"
+    #     - "-@dangerous"
+    #     - "~app:*"
+    #   description: "Utente read-write per applicazioni"
+
+    - name: authentik
       enabled: true
-      password: "{{ lookup('community.hashi_vault.hashi_vault', 'cross/data/apps/harbor:redis_password') }}"
+      password: "{{ lookup('community.hashi_vault.hashi_vault', 'cross/data/apps/authentik:redis_password') }}"
       permissions:
         - "+@read"
         - "+@write"

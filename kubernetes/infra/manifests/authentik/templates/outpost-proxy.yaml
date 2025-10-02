@@ -1,28 +1,4 @@
 ---
-# ExternalSecret per il token dell'outpost
-# DEVE essere creato PRIMA del deployment
-apiVersion: external-secrets.io/v1
-kind: ExternalSecret
-metadata:
-  name: authentik-outpost-token
-  namespace: {{ .Release.Namespace }}
-  annotations:
-    argocd.argoproj.io/sync-wave: "3"
-spec:
-  refreshInterval: "1h"
-  secretStoreRef:
-    name: vault-kubernetes-secret-store
-    kind: ClusterSecretStore
-  target:
-    name: authentik-outpost-token
-    creationPolicy: Owner
-  data:
-  - secretKey: token
-    remoteRef:
-      key: kubernetes/data/authentik
-      property: outpost-token
-
----
 # Deployment per Authentik Proxy Outpost
 apiVersion: apps/v1
 kind: Deployment

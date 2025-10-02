@@ -1,20 +1,182 @@
 ---
-external-secrets:
-  installCRDs: false
-  replicaCount: 3
-  crds:
-    install: false
-    createClusterExternalSecret: false
-    createClusterSecretStore: false
-    createPushSecret: false
+# Global configuration
+global:
+  storageClass: nfs-csi
 
-  serviceAccount:
-    create: true
-    name: external-secrets
+# Authentik Core Configuration
+authentik:
+  # Secret key - verrà passata tramite envFrom
+  secret_key: ""  
+  
+  # Log level
+  log_level: info
+  
+  # Avatars
+  avatars: gravatar,initials
+  
+  # Error reporting - disabilitato per produzione
+  error_reporting:
+    enabled: false
+  
+  # PostgreSQL ESTERNO - configurazione critica
+  postgresql:
+    host: "192.168.0.30"
+    port: 5432
+    name: "authentik_db"
+    user: "authentik_user"
+    password: ""  # Lascia vuoto, verrà passato tramite envFrom
+  
+  # Redis ESTERNO
+  redis:
+    host: "192.168.0.30"  # <-- Inserisci l'IP del tuo Redis esterno
+    port: 6379
+    password: ""  # Lascia vuoto, verrà passato tramite envFrom
+  
+  # Email configuration (opzionale)
+  email:
+    host: ""
+    port: 587
+    username: ""
+    use_tls: false
+    use_ssl: false
+    timeout: 30
+    from: "authentik@local.ildoc.it"
 
-apiServer: https://192.168.0.80:6443
+# Server deployment
+server:
+  replicas: 2
+  
+  # CRITICO: usa envFrom per iniettare secrets
+  envFrom:
+    - secretRef:
+        name: authentik-secret
+    - secretRef:
+        name: authentik-postgresql-secret
+    - secretRef:
+        name: authentik-redis-secret
+  
+  resources:
+    requests:
+      cpu: 100m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+  
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          podAffinityTerm:
+            labelSelector:
+              matchLabels:
+                app.kubernetes.io/name: authentik
+                app.kubernetes.io/component: server
+            topologyKey: kubernetes.io/hostname
+  
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: false
+  
+  # Disabilita Ingress - useremo HTTPRoute
+  ingress:
+    enabled: false
+  
+  # Abilita HTTPRoute per Cilium Gateway API
+  httpRoute:
+    enabled: true
+    parentRefs:
+      - name: cilium-gateway
+        namespace: kube-system
+        sectionName: https  # Usa il listener HTTPS
+    hostnames:
+      - "auth.local.ildoc.it"
+    rules:
+      - matches:
+          - path:
+              type: PathPrefix
+              value: /
+        backendRefs:
+          - name: authentik-server
+            port: 80
 
-vault:
-  address: http://vault:8200
-  roleName: external-secrets
-  policyName: kubernetes-secrets
+# Worker deployment
+worker:
+  replicas: 2
+  
+  # CRITICO: usa envFrom per iniettare secrets
+  envFrom:
+    - secretRef:
+        name: authentik-secret
+    - secretRef:
+        name: authentik-postgresql-secret
+    - secretRef:
+        name: authentik-redis-secret
+  
+  resources:
+    requests:
+      cpu: 100m
+      memory: 512Mi
+    limits:
+      cpu: 500m
+      memory: 1Gi
+  
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          podAffinityTerm:
+            labelSelector:
+              matchLabels:
+                app.kubernetes.io/name: authentik
+                app.kubernetes.io/component: worker
+            topologyKey: kubernetes.io/hostname
+  
+  # Metriche worker (nuovo in 2025.8)
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: false
+
+# PostgreSQL subchart - DISABILITATO (usi PostgreSQL esterno)
+postgresql:
+  enabled: false
+
+# Redis subchart - DISABILITATO (usi Redis esterno)
+redis:
+  enabled: false
+
+# ServiceAccount
+serviceAccount:
+  create: true
+  annotations: {}
+
+# Configurazioni custom per il wrapper chart
+ingress:
+  hostname: auth.local.ildoc.it
+
+smtp:
+  enabled: false
+
+# Configurazione Outpost per forward auth
+outpost:
+  replicas: 2
+  image:
+    tag: "2025.8.4"
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          podAffinityTerm:
+            labelSelector:
+              matchLabels:
+                app.kubernetes.io/name: authentik-proxy-outpost
+            topologyKey: kubernetes.io/hostname
