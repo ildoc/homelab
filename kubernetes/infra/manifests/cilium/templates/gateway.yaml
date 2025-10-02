@@ -30,7 +30,8 @@ spec:
       tls:
         mode: Terminate
         certificateRefs:
-          - name: {{ .Values.gateway.tls.secretName }}
+          - group: ""
             kind: Secret
+            name: {{ .Values.gateway.tls.secretName }}
             namespace: {{ .Values.gateway.tls.secretNamespace }}
 {{- end }}
