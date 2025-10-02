@@ -151,12 +151,43 @@ db:
           - pg_trgm
           - btree_gin
       
+      - name: harbor_registry
+        owner: harbor_user
+        encoding: UTF8
+        lc_collate: en_US.UTF-8
+        lc_ctype: en_US.UTF-8
+        
+      - name: harbor_notary_server
+        owner: harbor_user
+        encoding: UTF8
+        lc_collate: en_US.UTF-8
+        lc_ctype: en_US.UTF-8
+
+      - name: harbor_notary_signer
+        owner: invidious_user
+        encoding: UTF8
+        lc_collate: en_US.UTF-8
+        lc_ctype: en_US.UTF-8
+        extensions:
+          - pg_trgm
+          - btree_gin
+      
     users:
       # Utenti applicativi con accesso completo al loro database
       - name: invidious_user
         password: "{{ lookup('community.hashi_vault.hashi_vault', 'ansible/data/invidious:db_password') }}"
         databases:
           - invidious_db
+        privileges: ALL
+        table_privs: ALL
+        sequence_privs: ALL
+      
+      - name: harbor_user
+        password: "{{ lookup('community.hashi_vault.hashi_vault', 'cross/data/apps/harbor:db_password') }}"
+        databases:
+          - harbor_registry
+          - harbor_notary_server
+          - harbor_notary_signer
         privileges: ALL
         table_privs: ALL
         sequence_privs: ALL
@@ -185,7 +216,7 @@ redis:
     
     - name: harbor
       enabled: true
-      password: "{{ lookup('community.hashi_vault.hashi_vault', 'ansible/data/redis:app_harbor_password') }}"
+      password: "{{ lookup('community.hashi_vault.hashi_vault', 'cross/data/apps/harbor:redis_password') }}"
       permissions:
         - "+@read"
         - "+@write"

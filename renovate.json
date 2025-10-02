@@ -25,7 +25,8 @@
   "internalChecksFilter": "flexible",
   
   "ignorePaths": [
-    "**/kubernetes/applications/archived/**"
+    "**/kubernetes/applications/archived/**",
+    "**/opentofu/archived/**"
   ],
 
   "docker-compose": {

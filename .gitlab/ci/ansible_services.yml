@@ -24,3 +24,13 @@ update_redis:
     - if: '$CI_COMMIT_BRANCH == "master"'
       changes:
         - ansible/roles/redis/**/*
+
+update_db:
+  extends: .update_service_template
+  variables:
+    SERVICE_SSH_SERVER_IP: db
+    SERVICE_PLAYBOOK: "db.yml"
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "master"'
+      changes:
+        - ansible/roles/db/**/*

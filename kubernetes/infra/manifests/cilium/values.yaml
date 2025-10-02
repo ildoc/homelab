@@ -21,6 +21,7 @@ gateway:
     - cattle-system
     - apps
     - monitoring
+    - harbor
 
 # Cilium Helm Chart Values
 cilium:
