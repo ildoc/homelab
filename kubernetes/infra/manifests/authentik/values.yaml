@@ -33,7 +33,7 @@ authentik:
   
   # Redis - IMPORTANTE: lascia vuoto password, usa envFrom
   redis:
-    host: "authentik-redis-master"
+    host: "192.168.0.40"
     password: ""  # Lascia vuoto
 
 # Global storage class

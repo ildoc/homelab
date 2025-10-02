@@ -1,25 +1,4 @@
 ---
-# ReferenceGrant - DEVE essere creato PRIMA dell'HTTPRoute
-apiVersion: gateway.networking.k8s.io/v1beta1
-kind: ReferenceGrant
-metadata:
-  name: allow-traefik-to-authentik
-  namespace: {{ .Release.Namespace }}
-  annotations:
-    argocd.argoproj.io/sync-wave: "5"
-spec:
-  from:
-    - group: gateway.networking.k8s.io
-      kind: HTTPRoute
-      namespace: {{ .Release.Namespace }}
-    - group: gateway.networking.k8s.io
-      kind: Gateway
-      namespace: traefik
-  to:
-    - group: ""
-      kind: Service
-
----
 # HTTPRoute per Authentik
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
@@ -30,9 +9,9 @@ metadata:
     argocd.argoproj.io/sync-wave: "6"
 spec:
   parentRefs:
-    - name: traefik-gateway
-      kind: Gateway
-      namespace: traefik
+    - name: cilium-gateway
+      namespace: kube-system
+      sectionName: https
   hostnames:
     - "{{ .Values.ingress.hostname }}"
   rules:
