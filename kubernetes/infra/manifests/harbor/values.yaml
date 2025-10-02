@@ -1,0 +1,137 @@
+---
+harbor:
+  # Expose service via Gateway API (già configurato in ingresses/harbor.yaml)
+  expose:
+    type: clusterIP
+    tls:
+      enabled: true
+      # Usa il certificato wildcard già presente
+      certSource: secret
+      secret:
+        secretName: "local-ildoc-it-tls"
+        notarySecretName: "local-ildoc-it-tls"
+    
+    clusterIP:
+      name: harbor
+      ports:
+        httpPort: 80
+        httpsPort: 443
+
+  # External URL
+  externalURL: https://harbor.local.ildoc.it
+
+  # Persistenza
+  persistence:
+    enabled: true
+    persistentVolumeClaim:
+      registry:
+        storageClass: "nfs-csi"
+        size: 100Gi
+      jobservice:
+        jobLog:
+          storageClass: "nfs-csi"
+          size: 5Gi
+      trivy:
+        storageClass: "nfs-csi"
+        size: 10Gi
+
+  # Database esterno
+  database:
+    type: external
+    external:
+      host: "192.168.0.30"  # Modifica con il tuo host
+      port: "5432"
+      username: "harbor_user"
+      # Password gestita tramite ExternalSecret
+      existingSecret: "harbor-database-secret"
+      # Nomi database personalizzati per evitare collisioni
+      coreDatabase: "harbor_registry"
+      notaryServerDatabase: "harbor_notary_server"
+      notarySignerDatabase: "harbor_notary_signer"
+
+  # Redis esterno
+  redis:
+    type: external
+    external:
+      addr: "192.168.0.40:6379"  # Modifica con il tuo host
+      # Password gestita tramite ExternalSecret
+      existingSecret: "harbor-redis-secret"
+      coreDatabaseIndex: "0"
+      jobserviceDatabaseIndex: "1"
+      registryDatabaseIndex: "2"
+      trivyAdapterIndex: "5"
+
+  # Configurazione Core
+  core:
+    replicas: 2
+    resources:
+      requests:
+        memory: 256Mi
+        cpu: 100m
+      limits:
+        memory: 512Mi
+        cpu: 500m
+    
+    # Secret per admin password
+    existingSecret: "harbor-core-secret"
+
+  # JobService
+  jobservice:
+    replicas: 2
+    resources:
+      requests:
+        memory: 256Mi
+        cpu: 100m
+      limits:
+        memory: 512Mi
+        cpu: 500m
+
+  # Registry
+  registry:
+    replicas: 2
+    resources:
+      requests:
+        memory: 256Mi
+        cpu: 100m
+      limits:
+        memory: 512Mi
+        cpu: 500m
+    
+    # Secret per registry
+    existingSecret: "harbor-registry-secret"
+
+  # Portal (UI)
+  portal:
+    replicas: 2
+    resources:
+      requests:
+        memory: 64Mi
+        cpu: 50m
+      limits:
+        memory: 128Mi
+        cpu: 100m
+
+  # Trivy scanner
+  trivy:
+    enabled: true
+    replicas: 1
+    resources:
+      requests:
+        cpu: 200m
+        memory: 512Mi
+      limits:
+        cpu: 1000m
+        memory: 1Gi
+
+  # Notary (opzionale, per content trust)
+  notary:
+    enabled: false
+
+  # Metrics
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: false  # Abilita se usi Prometheus Operator
+
+  # Configurazione proxy cache per DockerHub
+  # Questo verrà configurato tramite UI o API dopo l'installazione

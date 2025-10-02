@@ -1,0 +1,9 @@
+---
+apiVersion: v2
+name: harbor-bootstrap
+version: 0.1.0
+description: Harbor Registry with DockerHub caching
+dependencies:
+  - name: harbor
+    version: "1.18.0"
+    repository: https://helm.goharbor.io
