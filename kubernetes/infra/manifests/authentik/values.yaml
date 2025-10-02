@@ -1,12 +1,11 @@
 ---
-# Global configuration
-global:
-  storageClass: nfs-csi
-
-# Authentik Core Configuration
+# =============================================================================
+# AUTHENTIK CORE CONFIGURATION
+# =============================================================================
 authentik:
-  # Secret key - verrà iniettato tramite variabile d'ambiente AUTHENTIK_SECRET_KEY
-  secret_key: ""  
+  # Secret key - DEVE essere iniettato tramite env var
+  # Lasciare vuoto perché verrà fornito da AUTHENTIK_SECRET_KEY
+  secret_key: ""
   
   # Log level
   log_level: info
@@ -14,56 +13,81 @@ authentik:
   # Avatars
   avatars: gravatar,initials
   
-  # Error reporting - disabilitato per produzione
+  # Error reporting - disabilitato
   error_reporting:
     enabled: false
   
-  # PostgreSQL ESTERNO
+  # PostgreSQL ESTERNO - configurazione connessione
   postgresql:
     host: "192.168.0.30"
     port: 5432
     name: "authentik_db"
     user: "authentik_user"
-    password: ""  # Verrà iniettato tramite AUTHENTIK_POSTGRESQL__PASSWORD
+    # password NON va specificata qui - verrà iniettata tramite env var
   
-  # Redis ESTERNO
+  # Redis ESTERNO - configurazione connessione
   redis:
     host: "192.168.0.40"
     port: 6379
-    password: ""  # Verrà iniettato tramite AUTHENTIK_REDIS__PASSWORD
+    # password NON va specificata qui - verrà iniettata tramite env var
   
   # Email configuration (opzionale)
   email:
     host: ""
     port: 587
     username: ""
+    password: ""
     use_tls: false
     use_ssl: false
     timeout: 30
     from: "authentik@local.ildoc.it"
 
-# Server deployment
+# =============================================================================
+# GLOBAL CONFIGURATION
+# =============================================================================
+global:
+  # Storage class per PVC (se necessario)
+  storageClass: nfs-csi
+  
+  # Deployment strategy comune
+  deploymentStrategy:
+    type: RollingUpdate
+
+# =============================================================================
+# SERVER DEPLOYMENT
+# =============================================================================
 server:
+  # Nome del deployment
+  name: server
+  
+  # Numero di repliche
   replicas: 2
   
-  # Inietta i secrets come variabili d'ambiente usando valueFrom
+  # IMPORTANTE: Iniezione secrets tramite variabili d'ambiente
+  # Questo è l'approccio raccomandato per usare existing secrets
   env:
+    # Secret key principale di Authentik
     - name: AUTHENTIK_SECRET_KEY
       valueFrom:
         secretKeyRef:
           name: authentik-secret
           key: AUTHENTIK_SECRET_KEY
+    
+    # Password PostgreSQL
     - name: AUTHENTIK_POSTGRESQL__PASSWORD
       valueFrom:
         secretKeyRef:
           name: authentik-postgresql-secret
           key: AUTHENTIK_POSTGRESQL__PASSWORD
+    
+    # Password Redis
     - name: AUTHENTIK_REDIS__PASSWORD
       valueFrom:
         secretKeyRef:
           name: authentik-redis-secret
           key: AUTHENTIK_REDIS__PASSWORD
   
+  # Resources
   resources:
     requests:
       cpu: 100m
@@ -72,6 +96,7 @@ server:
       cpu: 1000m
       memory: 2Gi
   
+  # Anti-affinity per distribuire i pod su nodi diversi
   affinity:
     podAntiAffinity:
       preferredDuringSchedulingIgnoredDuringExecution:
@@ -83,37 +108,88 @@ server:
                 app.kubernetes.io/component: server
             topologyKey: kubernetes.io/hostname
   
+  # Probes
+  livenessProbe:
+    httpGet:
+      path: /-/health/live/
+      port: http
+    initialDelaySeconds: 50
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  
+  readinessProbe:
+    httpGet:
+      path: /-/health/ready/
+      port: http
+    initialDelaySeconds: 50
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  
+  startupProbe:
+    httpGet:
+      path: /-/health/live/
+      port: http
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 60
+  
+  # Service configuration
+  service:
+    type: ClusterIP
+    port: 80
+    name: http
+    protocol: TCP
+    annotations: {}
+  
+  # Metrics
   metrics:
     enabled: true
     serviceMonitor:
       enabled: false
   
-  # Disabilita Ingress - useremo HTTPRoute (definito nei templates)
+  # Ingress - DISABILITATO (usiamo HTTPRoute custom)
   ingress:
     enabled: false
+  
+  # PDB
+  pdb:
+    enabled: true
+    minAvailable: 1
 
-# Worker deployment
+# =============================================================================
+# WORKER DEPLOYMENT
+# =============================================================================
 worker:
+  # Nome del deployment
+  name: worker
+  
+  # Numero di repliche
   replicas: 2
   
-  # Inietta i secrets come variabili d'ambiente usando valueFrom
+  # IMPORTANTE: Stesse variabili d'ambiente del server
   env:
     - name: AUTHENTIK_SECRET_KEY
       valueFrom:
         secretKeyRef:
           name: authentik-secret
           key: AUTHENTIK_SECRET_KEY
+    
     - name: AUTHENTIK_POSTGRESQL__PASSWORD
       valueFrom:
         secretKeyRef:
           name: authentik-postgresql-secret
           key: AUTHENTIK_POSTGRESQL__PASSWORD
+    
     - name: AUTHENTIK_REDIS__PASSWORD
       valueFrom:
         secretKeyRef:
           name: authentik-redis-secret
           key: AUTHENTIK_REDIS__PASSWORD
   
+  # Resources
   resources:
     requests:
       cpu: 100m
@@ -122,6 +198,7 @@ worker:
       cpu: 500m
       memory: 1Gi
   
+  # Anti-affinity
   affinity:
     podAntiAffinity:
       preferredDuringSchedulingIgnoredDuringExecution:
@@ -133,33 +210,64 @@ worker:
                 app.kubernetes.io/component: worker
             topologyKey: kubernetes.io/hostname
   
-  # Metriche worker (nuovo in 2025.8)
+  # PDB
+  pdb:
+    enabled: true
+    minAvailable: 1
+  
+  # Metrics (novità in 2025.8.x)
   metrics:
     enabled: true
     serviceMonitor:
       enabled: false
 
-# PostgreSQL subchart - DISABILITATO (usi PostgreSQL esterno)
+# =============================================================================
+# POSTGRESQL SUBCHART - DISABILITATO (usi PostgreSQL esterno)
+# =============================================================================
 postgresql:
   enabled: false
 
-# Redis subchart - DISABILITATO (usi Redis esterno)
+# =============================================================================
+# REDIS SUBCHART - DISABILITATO (usi Redis esterno)
+# =============================================================================
 redis:
   enabled: false
 
-# ServiceAccount
+# =============================================================================
+# SERVICE ACCOUNT
+# =============================================================================
 serviceAccount:
+  # Necessario per managed outposts
   create: true
   annotations: {}
+  
+  # Disabilita il secret del service account (non necessario)
+  serviceAccountSecret:
+    enabled: false
 
-# Configurazioni custom per il wrapper chart
+# =============================================================================
+# GEOIP - OPZIONALE
+# =============================================================================
+geoip:
+  enabled: false
+  editionIds: "GeoLite2-City GeoLite2-ASN"
+  updateInterval: 8
+  accountId: ""
+  licenseKey: ""
+
+# =============================================================================
+# CONFIGURAZIONI CUSTOM PER IL WRAPPER CHART
+# =============================================================================
+
+# Hostname per HTTPRoute custom
 ingress:
   hostname: auth.local.ildoc.it
 
+# SMTP (se necessario in futuro)
 smtp:
   enabled: false
 
-# Configurazione Outpost per forward auth
+# Outpost per forward auth (proxy provider)
 outpost:
   replicas: 2
   image:
