@@ -64,7 +64,7 @@ global:
     - name: AUTHENTIK_POSTGRESQL__PASSWORD
       valueFrom:
         secretKeyRef:
-          name: authentik-postgres-secret
+          name: authentik-postgresql-secret
           key: postgres-password
     - name: AUTHENTIK_REDIS__HOST
       value: "192.168.0.40"
