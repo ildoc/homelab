@@ -1,2 +1,4 @@
-user default off
-{{ redis.users_acl }}
+{% for user in redis.users -%}
+user {{ user.name }} {{ 'on' if user.enabled else 'off' }}{% if user.password is defined %} >{{ user.password }}{% endif %}{% if user.permissions is defined %} {{ user.permissions | join(' ') }}{% endif %}
+
+{% endfor -%}

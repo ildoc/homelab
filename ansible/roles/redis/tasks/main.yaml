@@ -1,41 +1,99 @@
 ---
+- name: Validate Redis configuration
+  ansible.builtin.assert:
+    that:
+      - redis.users is defined
+      - redis.users | length > 0
+      - redis.config is defined
+    fail_msg: "Redis configuration is incomplete"
+
 - name: Install docker
   ansible.builtin.include_tasks: "{{ tasks_dir }}/docker/install.yaml"
 
-- name: Create redis folder
+- name: Create redis directory structure
   ansible.builtin.file:
-    path: ~/redis
+    path: "{{ item.path }}"
     state: directory
-    mode: '0777'
+    mode: "{{ item.mode }}"
+    owner: "{{ item.owner }}"
+    group: "{{ item.group }}"
+  loop:
+    - { path: "~/redis", mode: "0755", owner: "999", group: "999" }
+    - { path: "~/redisinsight", mode: "0755", owner: "1000", group: "1000" }
 
-- name: Create redisinsight folder
-  ansible.builtin.file:
-    path: ~/redisinsight
-    state: directory
-    mode: '0777'
-
-- name: Create redis.conf
+- name: Generate redis.conf
   ansible.builtin.template:
     src: redis.conf.j2
     dest: "~/redis/redis.conf"
     mode: '0644'
+    owner: "999"
+    group: "999"
+  register: redis_conf_result
 
-- name: Create users.acl
+- name: Generate users.acl
   ansible.builtin.template:
     src: users.acl.j2
     dest: "~/redis/users.acl"
     mode: '0644'
+    owner: "999"
+    group: "999"
+  register: users_acl_result
 
-- name: Set variables
+- name: Check if configuration changed
+  ansible.builtin.set_fact:
+    redis_config_changed: "{{ redis_conf_result.changed or users_acl_result.changed }}"
+
+- name: Display configuration status
+  ansible.builtin.debug:
+    msg: "Redis configuration changed: {{ redis_config_changed }}"
+
+- name: Set variables for docker-compose deployment
   ansible.builtin.set_fact:
     remote_path: ~/docker-compose.yml
     local_path: "{{ redis_templates_path }}/docker-compose.yml.j2"
     project_path: /root
 
-- name: Include update docker-compose
+- name: Deploy docker-compose
   ansible.builtin.include_tasks: "{{ tasks_dir }}/docker/update-compose-template.yaml"
   vars:
     update_compose_remote_path: "{{ remote_path }}"
     template_file_name: "{{ local_path }}"
     update_compose_project_path: "{{ project_path }}"
-    force_update: true
+    force_update: "{{ redis_config_changed }}"
+
+- name: Wait for Redis to be ready
+  ansible.builtin.wait_for:
+    host: "{{ redis.bind_address | default('127.0.0.1') }}"
+    port: "{{ redis.port | default(6379) }}"
+    delay: 5
+    timeout: 60
+    state: started
+
+- name: Get admin password for verification
+  ansible.builtin.set_fact:
+    redis_admin_password: "{{ lookup('community.hashi_vault.hashi_vault', 'ansible/data/redis:admin_password') }}"
+  no_log: true
+
+- name: Verify Redis is responding
+  ansible.builtin.shell:
+    cmd: |
+      docker exec redis redis-cli -h {{ redis.bind_address | default('127.0.0.1') }} -p {{ redis.port | default(6379) }} --user admin --pass "{{ redis_admin_password }}" --no-auth-warning PING
+  register: redis_ping
+  failed_when: redis_ping.stdout != "PONG"
+  changed_when: false
+  no_log: true
+
+- name: Verify ACL configuration
+  ansible.builtin.shell:
+    cmd: |
+      docker exec redis redis-cli -h {{ redis.bind_address | default('127.0.0.1') }} -p {{ redis.port | default(6379) }} --user admin --pass "{{ redis_admin_password }}" --no-auth-warning ACL LIST
+  register: redis_acl_list
+  changed_when: false
+  no_log: true
+
+- name: Display Redis status
+  ansible.builtin.debug:
+    msg:
+      - "✓ Redis is up and running ({{ redis_ping.stdout }})"
+      - "✓ Listening on {{ redis.bind_address | default('127.0.0.1') }}:{{ redis.port | default(6379) }}"
+      - "✓ ACL users configured: {{ redis_acl_list.stdout_lines | length }}"
