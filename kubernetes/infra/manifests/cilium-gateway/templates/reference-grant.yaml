@@ -13,3 +13,39 @@ spec:
   to:
     - group: ""
       kind: Secret
+
+---
+# kubernetes/infra/manifests/cilium-gateway/templates/reference-grant-argocd.yaml
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: ReferenceGrant
+metadata:
+  name: allow-gateway-argocd-access
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  from:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      namespace: argocd
+  to:
+    - group: ""
+      kind: Service
+
+---
+# kubernetes/infra/manifests/cilium-gateway/templates/reference-grant-rancher.yaml
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: ReferenceGrant
+metadata:
+  name: allow-gateway-rancher-access
+  namespace: cattle-system
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  from:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      namespace: cattle-system
+  to:
+    - group: ""
+      kind: Service
