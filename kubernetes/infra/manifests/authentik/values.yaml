@@ -56,9 +56,9 @@ global:
     - name: AUTHENTIK_POSTGRESQL__HOST
       value: "192.168.0.30"
     - name: AUTHENTIK_POSTGRESQL__NAME
-      value: "authentik_user"
-    - name: AUTHENTIK_POSTGRESQL__USER
       value: "authentik_db"
+    - name: AUTHENTIK_POSTGRESQL__USER
+      value: "authentik_user"
     - name: AUTHENTIK_POSTGRESQL__PORT
       value: "5432"
     - name: AUTHENTIK_POSTGRESQL__PASSWORD
