@@ -10,7 +10,7 @@ spec:
       namespace: kube-system
       sectionName: https
   hostnames:
-    - {{ .Values.harbor.externalURL | quote }}
+    - {{ .Values.harbor.externalURL | replace "https://" "" | replace "http://" "" | quote }}
   rules:
     - matches:
         - path:
