@@ -22,6 +22,10 @@ spec:
       parameters:
         - name: "ingress.enabled"
           value: "false"
+        - name: "tls"
+          value: "external"  # IMPORTANTE: Disabilita TLS interno
+        - name: "hostname"
+          value: "rancher.local.ildoc.it"
   destination:
     server: https://kubernetes.default.svc
     namespace: cattle-system
