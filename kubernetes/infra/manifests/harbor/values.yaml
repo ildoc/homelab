@@ -39,22 +39,23 @@ harbor:
   database:
     type: external
     external:
-      host: "192.168.0.30"  # Modifica con il tuo host
+      host: "192.168.0.30"
       port: "5432"
       username: "harbor_user"
-      # Password gestita tramite ExternalSecret
+      password: ""  # Lascia vuoto, usa existingSecret
       existingSecret: "harbor-database-secret"
       # Nomi database personalizzati per evitare collisioni
       coreDatabase: "harbor_registry"
       notaryServerDatabase: "harbor_notary_server"
       notarySignerDatabase: "harbor_notary_signer"
+      sslmode: "disable"  # o "require" per SSL
 
   # Redis esterno
   redis:
     type: external
     external:
-      addr: "192.168.0.40:6379"  # Modifica con il tuo host
-      # Password gestita tramite ExternalSecret
+      addr: "192.168.0.40:6379"
+      password: ""  # Lascia vuoto, usa existingSecret
       existingSecret: "harbor-redis-secret"
       coreDatabaseIndex: "0"
       jobserviceDatabaseIndex: "1"
