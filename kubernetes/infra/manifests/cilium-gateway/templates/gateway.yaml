@@ -20,13 +20,11 @@ spec:
       allowedRoutes:
         namespaces:
           from: All
-    #   tls:
-    #     mode: Terminate
-    #     certificateRefs:
-    #       - name: local-ildoc-it-tls
-    #         kind: Secret
-    #         namespace: default
-        tls:
-          mode: Passthrough
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - name: local-ildoc-it-tls
+            kind: Secret
+            namespace: default
   addresses:
     - value: "192.168.0.81"
