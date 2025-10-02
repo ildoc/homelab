@@ -28,7 +28,7 @@ authentik:
   
   # Redis ESTERNO
   redis:
-    host: "192.168.0.40"  # <-- Inserisci l'IP del tuo Redis esterno
+    host: "192.168.0.30"  # <-- Inserisci l'IP del tuo Redis esterno
     port: 6379
     password: ""  # Lascia vuoto, verrà passato tramite envFrom
   
@@ -79,27 +79,9 @@ server:
     serviceMonitor:
       enabled: false
   
-  # Disabilita Ingress - useremo HTTPRoute
+  # Disabilita Ingress - useremo HTTPRoute (definito nei templates)
   ingress:
     enabled: false
-  
-  # Abilita HTTPRoute per Cilium Gateway API
-  httpRoute:
-    enabled: true
-    parentRefs:
-      - name: cilium-gateway
-        namespace: kube-system
-        sectionName: https  # Usa il listener HTTPS
-    hostnames:
-      - "auth.local.ildoc.it"
-    rules:
-      - matches:
-          - path:
-              type: PathPrefix
-              value: /
-        backendRefs:
-          - name: authentik-server
-            port: 80
 
 # Worker deployment
 worker:
