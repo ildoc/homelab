@@ -53,6 +53,10 @@ harbor:
       jobserviceDatabaseIndex: "1"
       registryDatabaseIndex: "2"
       trivyAdapterIndex: "5"
+      # username field can be an empty string when using default user
+      username: ""
+      # password is required for templating but will be overridden by existingSecret
+      password: "dummy-password-overridden-by-secret"
       # Usa il secret creato dall'Application harbor-secrets
       existingSecret: "harbor-redis-secret"
 
