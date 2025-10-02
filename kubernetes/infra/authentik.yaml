@@ -1,26 +1,26 @@
----
-apiVersion: argoproj.io/v1alpha1
-kind: Application
-metadata:
-  name: authentik
-  namespace: argocd
-  finalizers:
-    - resources-finalizer.argocd.argoproj.io
-  annotations:
-    argocd.argoproj.io/sync-wave: "-60"
-spec:
-  project: default
-  source:
-    repoURL: https://gitlab.local.ildoc.it/ildoc/homelab.git
-    targetRevision: HEAD
-    path: kubernetes/infra/manifests/authentik
-  destination:
-    server: https://kubernetes.default.svc
-    namespace: authentik
-  syncPolicy:
-    syncOptions:
-      - CreateNamespace=true
-      - ServerSideApply=true
-    automated:
-      prune: true
-      selfHeal: true
+# ---
+# apiVersion: argoproj.io/v1alpha1
+# kind: Application
+# metadata:
+#   name: authentik
+#   namespace: argocd
+#   finalizers:
+#     - resources-finalizer.argocd.argoproj.io
+#   annotations:
+#     argocd.argoproj.io/sync-wave: "-60"
+# spec:
+#   project: default
+#   source:
+#     repoURL: https://gitlab.local.ildoc.it/ildoc/homelab.git
+#     targetRevision: HEAD
+#     path: kubernetes/infra/manifests/authentik
+#   destination:
+#     server: https://kubernetes.default.svc
+#     namespace: authentik
+#   syncPolicy:
+#     syncOptions:
+#       - CreateNamespace=true
+#       - ServerSideApply=true
+#     automated:
+#       prune: true
+#       selfHeal: true
