@@ -75,12 +75,12 @@ global:
     - name: AUTHENTIK_REDIS__PASSWORD
       valueFrom:
         secretKeyRef:
-          name: authentik-secret
+          name: authentik-redis-secret
           key: redis-password
     - name: AUTHENTIK_SECRET_KEY
       valueFrom:
         secretKeyRef:
-          name: authentik-redis-secret
+          name: authentik-secret
           key: secret-key
 
 # =============================================================================
