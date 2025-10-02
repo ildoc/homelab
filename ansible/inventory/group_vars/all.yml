@@ -121,8 +121,11 @@ external_secrets:
   vault_token: "{{ lookup('community.hashi_vault.hashi_vault', 'ansible/data/external-secrets:vault_token') }}"
 
 invidious:
-  db_user: "{{ lookup('community.hashi_vault.hashi_vault', 'ansible/data/invidious:db_user') }}"
+  # db_user: "{{ lookup('community.hashi_vault.hashi_vault', 'ansible/data/invidious:db_user') }}"
+  db_user: invidious_user
   db_password: "{{ lookup('community.hashi_vault.hashi_vault', 'ansible/data/invidious:db_password') }}"
+  db_name: invidious_db
+  db_host: "192.168.0.30"
   visitor_data: "{{ lookup('community.hashi_vault.hashi_vault', 'ansible/data/invidious:visitor_data') }}"
   po_token: "{{ lookup('community.hashi_vault.hashi_vault', 'ansible/data/invidious:po_token') }}"
   hmac_key: "{{ lookup('community.hashi_vault.hashi_vault', 'ansible/data/invidious:hmac_key') }}"
