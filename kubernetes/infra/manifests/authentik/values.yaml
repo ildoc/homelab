@@ -3,10 +3,6 @@
 # AUTHENTIK CORE CONFIGURATION
 # =============================================================================
 authentik:
-  # Secret key - DEVE essere iniettato tramite env var
-  # Lasciare vuoto perché verrà fornito da AUTHENTIK_SECRET_KEY
-  secret_key: ""
-  
   # Log level
   log_level: info
   
@@ -23,13 +19,13 @@ authentik:
     port: 5432
     name: "authentik_db"
     user: "authentik_user"
-    # password NON va specificata qui - verrà iniettata tramite env var
+    # password verrà letta da AUTHENTIK_POSTGRESQL__PASSWORD nel secret
   
   # Redis ESTERNO - configurazione connessione
   redis:
     host: "192.168.0.40"
     port: 6379
-    # password NON va specificata qui - verrà iniettata tramite env var
+    # password verrà letta da AUTHENTIK_REDIS__PASSWORD nel secret
   
   # Email configuration (opzionale)
   email:
@@ -42,6 +38,11 @@ authentik:
     timeout: 30
     from: "authentik@local.ildoc.it"
 
+# IMPORTANTE: Usa i secret esistenti creati da External Secrets
+# Il chart usa envFrom per caricare automaticamente tutte le chiavi dal secret
+# Quindi dobbiamo creare/modificare il secret "authentik" per includere tutte le variabili
+env: {}
+
 # =============================================================================
 # GLOBAL CONFIGURATION
 # =============================================================================
@@ -52,6 +53,15 @@ global:
   # Deployment strategy comune
   deploymentStrategy:
     type: RollingUpdate
+  
+  # IMPORTANTE: Usa questo per iniettare env vars globali
+  envFrom:
+    - secretRef:
+        name: authentik-secret
+    - secretRef:
+        name: authentik-postgresql-secret
+    - secretRef:
+        name: authentik-redis-secret
 
 # =============================================================================
 # SERVER DEPLOYMENT
@@ -62,30 +72,6 @@ server:
   
   # Numero di repliche
   replicas: 2
-  
-  # IMPORTANTE: Iniezione secrets tramite variabili d'ambiente
-  # Questo è l'approccio raccomandato per usare existing secrets
-  env:
-    # Secret key principale di Authentik
-    - name: AUTHENTIK_SECRET_KEY
-      valueFrom:
-        secretKeyRef:
-          name: authentik-secret
-          key: AUTHENTIK_SECRET_KEY
-    
-    # Password PostgreSQL
-    - name: AUTHENTIK_POSTGRESQL__PASSWORD
-      valueFrom:
-        secretKeyRef:
-          name: authentik-postgresql-secret
-          key: AUTHENTIK_POSTGRESQL__PASSWORD
-    
-    # Password Redis
-    - name: AUTHENTIK_REDIS__PASSWORD
-      valueFrom:
-        secretKeyRef:
-          name: authentik-redis-secret
-          key: AUTHENTIK_REDIS__PASSWORD
   
   # Resources
   resources:
@@ -168,26 +154,6 @@ worker:
   
   # Numero di repliche
   replicas: 2
-  
-  # IMPORTANTE: Stesse variabili d'ambiente del server
-  env:
-    - name: AUTHENTIK_SECRET_KEY
-      valueFrom:
-        secretKeyRef:
-          name: authentik-secret
-          key: AUTHENTIK_SECRET_KEY
-    
-    - name: AUTHENTIK_POSTGRESQL__PASSWORD
-      valueFrom:
-        secretKeyRef:
-          name: authentik-postgresql-secret
-          key: AUTHENTIK_POSTGRESQL__PASSWORD
-    
-    - name: AUTHENTIK_REDIS__PASSWORD
-      valueFrom:
-        secretKeyRef:
-          name: authentik-redis-secret
-          key: AUTHENTIK_REDIS__PASSWORD
   
   # Resources
   resources:
