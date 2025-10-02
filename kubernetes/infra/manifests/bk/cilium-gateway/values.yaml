@@ -1,6 +1,0 @@
-cilium:
-  gatewayAPI:
-    enabled: true
-  
-  loadBalancer:
-    mode: dedicated
