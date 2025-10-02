@@ -12,28 +12,24 @@ spec:
   hostnames:
     - "argocd.local.ildoc.it"
   rules:
-    # Regola per gRPC (usato da CLI)
+    # Regola per gRPC (usato da CLI argocd)
     - matches:
         - path:
             type: PathPrefix
             value: /
           headers:
             - name: Content-Type
+              type: Exact
               value: application/grpc
       backendRefs:
         - name: argocd-server
-          port: 443
-    # Regola per Web UI
+          port: 80  # ArgoCD serve HTTP su porta 80 (con --insecure)
+    
+    # Regola per Web UI (HTTP)
     - matches:
         - path:
             type: PathPrefix
             value: /
-      filters:
-        - type: RequestHeaderModifier
-          requestHeaderModifier:
-            set:
-              - name: X-Forwarded-Proto
-                value: https
       backendRefs:
         - name: argocd-server
-          port: 443
+          port: 80
