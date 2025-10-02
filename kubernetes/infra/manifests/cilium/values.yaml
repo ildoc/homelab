@@ -1,0 +1,80 @@
+---
+# kubernetes/infra/manifests/cilium/values.yaml
+
+# Gateway API Configuration
+gateway:
+  enabled: true
+  ip: "192.168.0.81"
+  ipPool:
+    start: "192.168.0.81"
+    stop: "192.168.0.90"
+  l2Interface: "ens18"
+  
+  # Certificato TLS per il listener HTTPS
+  tls:
+    secretName: "local-ildoc-it-tls"
+    secretNamespace: "default"
+  
+  # Namespace che necessitano ReferenceGrant per accedere ai Service
+  referenceGrants:
+    - argocd
+    - cattle-system
+    - apps
+    - monitoring
+
+# Cilium Helm Chart Values
+cilium:
+  operator:
+    image:
+      suffix: ""
+
+  # Gateway API configuration
+  gatewayAPI:
+    enabled: true
+  
+  # IMPORTANTE: Richiesto per Gateway API
+  kubeProxyReplacement: true
+  
+  # IPAM configuration
+  ipam:
+    mode: cluster-pool
+    operator:
+      clusterPoolIPv4PodCIDRList: ["10.0.0.0/8"]
+      clusterPoolIPv4MaskSize: 24
+  
+  # Kubernetes API server
+  k8sServiceHost: "192.168.0.80"
+  k8sServicePort: "6443"
+  
+  # Routing mode
+  routingMode: tunnel
+  tunnelProtocol: vxlan
+  autoDirectNodeRoutes: false
+  
+  # L2 announcements
+  l2announcements:
+    enabled: true
+  
+  # Hubble
+  hubble:
+    enabled: true
+    relay:
+      enabled: true
+    ui:
+      enabled: true
+    tls:
+      enabled: true
+  
+  # Prometheus metrics
+  prometheus:
+    enabled: true
+    port: 9962
+  
+  # Cluster info
+  cluster:
+    name: kubernetes
+    id: 0
+  
+  # Debug
+  debug:
+    enabled: false

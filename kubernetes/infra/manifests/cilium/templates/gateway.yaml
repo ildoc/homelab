@@ -1,0 +1,36 @@
+---
+# kubernetes/infra/manifests/cilium/templates/gateway.yaml
+{{- if .Values.gateway.enabled }}
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: cilium-gateway
+  namespace: kube-system
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  gatewayClassName: cilium
+  addresses:
+    - type: IPAddress
+      value: {{ .Values.gateway.ip | quote }}
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+    
+    - name: https
+      protocol: HTTPS
+      port: 443
+      allowedRoutes:
+        namespaces:
+          from: All
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - name: {{ .Values.gateway.tls.secretName }}
+            kind: Secret
+            namespace: {{ .Values.gateway.tls.secretNamespace }}
+{{- end }}
