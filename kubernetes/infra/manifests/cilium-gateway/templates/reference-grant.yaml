@@ -1,3 +1,7 @@
+---
+# kubernetes/infra/manifests/cilium-gateway/templates/reference-grants.yaml
+
+# Certificati TLS (default → kube-system)
 apiVersion: gateway.networking.k8s.io/v1beta1
 kind: ReferenceGrant
 metadata:
@@ -15,11 +19,11 @@ spec:
       kind: Secret
 
 ---
-# kubernetes/infra/manifests/cilium-gateway/templates/reference-grant-argocd.yaml
+# ArgoCD (argocd → kube-system)
 apiVersion: gateway.networking.k8s.io/v1beta1
 kind: ReferenceGrant
 metadata:
-  name: allow-gateway-argocd-access
+  name: allow-gateway-access
   namespace: argocd
   annotations:
     argocd.argoproj.io/sync-wave: "0"
@@ -33,11 +37,11 @@ spec:
       kind: Service
 
 ---
-# kubernetes/infra/manifests/cilium-gateway/templates/reference-grant-rancher.yaml
+# Rancher (cattle-system → kube-system)
 apiVersion: gateway.networking.k8s.io/v1beta1
 kind: ReferenceGrant
 metadata:
-  name: allow-gateway-rancher-access
+  name: allow-gateway-access
   namespace: cattle-system
   annotations:
     argocd.argoproj.io/sync-wave: "0"
@@ -46,6 +50,42 @@ spec:
     - group: gateway.networking.k8s.io
       kind: HTTPRoute
       namespace: cattle-system
+  to:
+    - group: ""
+      kind: Service
+
+---
+# Apps (apps → kube-system)
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: ReferenceGrant
+metadata:
+  name: allow-gateway-access
+  namespace: apps
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  from:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      namespace: apps
+  to:
+    - group: ""
+      kind: Service
+
+---
+# Monitoring (monitoring → kube-system)
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: ReferenceGrant
+metadata:
+  name: allow-gateway-access
+  namespace: monitoring
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  from:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      namespace: monitoring
   to:
     - group: ""
       kind: Service

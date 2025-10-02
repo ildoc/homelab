@@ -5,9 +5,9 @@ metadata:
   namespace: apps
 spec:
   parentRefs:
-    - name: traefik-gateway
-      kind: Gateway
-      namespace: traefik
+    - name: cilium-gateway
+      namespace: kube-system
+      sectionName: https
   hostnames:
     - "n8n.local.ildoc.it"
   rules:
