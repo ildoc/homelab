@@ -5,7 +5,7 @@ global:
 
 # Authentik Core Configuration
 authentik:
-  # Secret key - verrà passata tramite envFrom
+  # Secret key - verrà iniettato tramite variabile d'ambiente AUTHENTIK_SECRET_KEY
   secret_key: ""  
   
   # Log level
@@ -18,19 +18,19 @@ authentik:
   error_reporting:
     enabled: false
   
-  # PostgreSQL ESTERNO - configurazione critica
+  # PostgreSQL ESTERNO
   postgresql:
     host: "192.168.0.30"
     port: 5432
     name: "authentik_db"
     user: "authentik_user"
-    password: ""  # Lascia vuoto, verrà passato tramite envFrom
+    password: ""  # Verrà iniettato tramite AUTHENTIK_POSTGRESQL__PASSWORD
   
   # Redis ESTERNO
   redis:
-    host: "192.168.0.30"  # <-- Inserisci l'IP del tuo Redis esterno
+    host: "192.168.0.40"
     port: 6379
-    password: ""  # Lascia vuoto, verrà passato tramite envFrom
+    password: ""  # Verrà iniettato tramite AUTHENTIK_REDIS__PASSWORD
   
   # Email configuration (opzionale)
   email:
@@ -46,14 +46,23 @@ authentik:
 server:
   replicas: 2
   
-  # CRITICO: usa envFrom per iniettare secrets
-  envFrom:
-    - secretRef:
-        name: authentik-secret
-    - secretRef:
-        name: authentik-postgresql-secret
-    - secretRef:
-        name: authentik-redis-secret
+  # Inietta i secrets come variabili d'ambiente usando valueFrom
+  env:
+    - name: AUTHENTIK_SECRET_KEY
+      valueFrom:
+        secretKeyRef:
+          name: authentik-secret
+          key: AUTHENTIK_SECRET_KEY
+    - name: AUTHENTIK_POSTGRESQL__PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: authentik-postgresql-secret
+          key: AUTHENTIK_POSTGRESQL__PASSWORD
+    - name: AUTHENTIK_REDIS__PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: authentik-redis-secret
+          key: AUTHENTIK_REDIS__PASSWORD
   
   resources:
     requests:
@@ -87,14 +96,23 @@ server:
 worker:
   replicas: 2
   
-  # CRITICO: usa envFrom per iniettare secrets
-  envFrom:
-    - secretRef:
-        name: authentik-secret
-    - secretRef:
-        name: authentik-postgresql-secret
-    - secretRef:
-        name: authentik-redis-secret
+  # Inietta i secrets come variabili d'ambiente usando valueFrom
+  env:
+    - name: AUTHENTIK_SECRET_KEY
+      valueFrom:
+        secretKeyRef:
+          name: authentik-secret
+          key: AUTHENTIK_SECRET_KEY
+    - name: AUTHENTIK_POSTGRESQL__PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: authentik-postgresql-secret
+          key: AUTHENTIK_POSTGRESQL__PASSWORD
+    - name: AUTHENTIK_REDIS__PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: authentik-redis-secret
+          key: AUTHENTIK_REDIS__PASSWORD
   
   resources:
     requests:
