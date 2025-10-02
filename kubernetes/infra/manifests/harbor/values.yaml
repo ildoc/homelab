@@ -30,32 +30,33 @@ harbor:
         storageClass: "nfs-csi"
         size: 10Gi
 
-  # Database esterno con existingSecret
+  # Database esterno - NON usare existingSecret
+  # Le password verranno iniettate via env vars dai secret
   database:
     type: external
     external:
       host: "192.168.0.30"
       port: "5432"
       username: "harbor_user"
+      password: "placeholder"  # Verrà sovrascritto da secret
       coreDatabase: "harbor_registry"
       notaryServerDatabase: "harbor_notary_server"
       notarySignerDatabase: "harbor_notary_signer"
       sslmode: "disable"
-      # Usa il secret creato dall'Application harbor-secrets
-      existingSecret: "harbor-database-secret"
 
-  # Redis esterno con existingSecret
+  # Redis esterno - NON usare existingSecret  
+  # Le password verranno iniettate via env vars dai secret
   redis:
     type: external
     external:
       addr: "192.168.0.40:6379"
+      password: "placeholder"  # Verrà sovrascritto da secret
       coreDatabaseIndex: "0"
       jobserviceDatabaseIndex: "1"
       registryDatabaseIndex: "2"
       trivyAdapterIndex: "5"
-      # Usa il secret creato dall'Application harbor-secrets
-      existingSecret: "harbor-redis-secret"
 
+  # Per questi componenti, existingSecret funziona correttamente
   core:
     replicas: 2
     resources:
@@ -65,8 +66,19 @@ harbor:
       limits:
         memory: 512Mi
         cpu: 500m
-    # Usa il secret creato dall'Application harbor-secrets
     existingSecret: "harbor-core-secret"
+    # Inietta password da secret come env vars
+    extraEnvVars:
+      - name: DATABASE_PASSWORD
+        valueFrom:
+          secretKeyRef:
+            name: harbor-database-secret
+            key: POSTGRESQL_PASSWORD
+      - name: REDIS_PASSWORD
+        valueFrom:
+          secretKeyRef:
+            name: harbor-redis-secret
+            key: REDIS_PASSWORD
 
   jobservice:
     replicas: 2
@@ -77,6 +89,18 @@ harbor:
       limits:
         memory: 512Mi
         cpu: 500m
+    # Inietta password da secret come env vars
+    extraEnvVars:
+      - name: DATABASE_PASSWORD
+        valueFrom:
+          secretKeyRef:
+            name: harbor-database-secret
+            key: POSTGRESQL_PASSWORD
+      - name: REDIS_PASSWORD
+        valueFrom:
+          secretKeyRef:
+            name: harbor-redis-secret
+            key: REDIS_PASSWORD
 
   registry:
     replicas: 2
@@ -87,8 +111,14 @@ harbor:
       limits:
         memory: 512Mi
         cpu: 500m
-    # Usa il secret creato dall'Application harbor-secrets
     existingSecret: "harbor-registry-secret"
+    # Inietta password Redis da secret
+    extraEnvVars:
+      - name: REDIS_PASSWORD
+        valueFrom:
+          secretKeyRef:
+            name: harbor-redis-secret
+            key: REDIS_PASSWORD
 
   portal:
     replicas: 2
@@ -110,6 +140,13 @@ harbor:
       limits:
         cpu: 1000m
         memory: 1Gi
+    # Inietta password Redis da secret
+    extraEnvVars:
+      - name: REDIS_PASSWORD
+        valueFrom:
+          secretKeyRef:
+            name: harbor-redis-secret
+            key: REDIS_PASSWORD
 
   notary:
     enabled: false
