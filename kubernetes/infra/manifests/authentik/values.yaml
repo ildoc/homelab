@@ -3,6 +3,9 @@
 # AUTHENTIK CORE CONFIGURATION
 # =============================================================================
 authentik:
+  # Il secret_key verrà letto automaticamente da AUTHENTIK_SECRET_KEY nel secret
+  # NON specificare secret_key qui, lascia che venga caricato dal secret "authentik"
+  
   # Log level
   log_level: info
   
@@ -19,13 +22,13 @@ authentik:
     port: 5432
     name: "authentik_db"
     user: "authentik_user"
-    # password verrà letta da AUTHENTIK_POSTGRESQL__PASSWORD nel secret
+    # password verrà letta automaticamente da AUTHENTIK_POSTGRESQL__PASSWORD nel secret
   
   # Redis ESTERNO - configurazione connessione
   redis:
     host: "192.168.0.40"
     port: 6379
-    # password verrà letta da AUTHENTIK_REDIS__PASSWORD nel secret
+    # password verrà letta automaticamente da AUTHENTIK_REDIS__PASSWORD nel secret
   
   # Email configuration (opzionale)
   email:
@@ -38,11 +41,6 @@ authentik:
     timeout: 30
     from: "authentik@local.ildoc.it"
 
-# IMPORTANTE: Usa i secret esistenti creati da External Secrets
-# Il chart usa envFrom per caricare automaticamente tutte le chiavi dal secret
-# Quindi dobbiamo creare/modificare il secret "authentik" per includere tutte le variabili
-env: {}
-
 # =============================================================================
 # GLOBAL CONFIGURATION
 # =============================================================================
@@ -53,15 +51,6 @@ global:
   # Deployment strategy comune
   deploymentStrategy:
     type: RollingUpdate
-  
-  # IMPORTANTE: Usa questo per iniettare env vars globali
-  envFrom:
-    - secretRef:
-        name: authentik-secret
-    - secretRef:
-        name: authentik-postgresql-secret
-    - secretRef:
-        name: authentik-redis-secret
 
 # =============================================================================
 # SERVER DEPLOYMENT
