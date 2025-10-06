@@ -30,6 +30,24 @@ argo-cd:
   configs:
     cm:
       timeout.reconciliation: 180s
+      # Health check per le EndpointSlices
+      resource.customizations.health.discovery.k8s.io_EndpointSlice: |
+        hs = {}
+        hs.status = "Healthy"
+        hs.message = "EndpointSlice is present"
+        return hs
       
     params:
       server.insecure: "true"
+      application.resourceTrackingMethod: "annotation"
+    
+    # Inclusione ristretta solo al namespace external-routes
+    resource.inclusions: |
+      - apiGroups:
+        - discovery.k8s.io
+        kinds:
+        - EndpointSlice
+        clusters:
+        - '*'
+        namespaces:
+        - external-routes
