@@ -1,0 +1,35 @@
+gateway:
+  enabled: true
+  name: cilium-gateway
+  namespace: kube-system
+  hostname: argocd.local.ildoc.it
+
+argo-cd:
+  global:
+    domain: argocd.local.ildoc.it
+
+  redis-ha:
+    enabled: true
+    haproxy:
+      enabled: true
+
+  controller:
+    replicas: 1  # StatefulSet mode
+
+  server:
+    replicas: 2  # HA recommended
+    ingress:
+      enabled: false
+
+  repoServer:
+    replicas: 2
+
+  applicationSet:
+    replicas: 2
+
+  configs:
+    cm:
+      timeout.reconciliation: 180s
+      
+    params:
+      server.insecure: "true"
