@@ -55,7 +55,7 @@ Tutto l'Homelab gestito (principalmente) con playbook Ansible, ArgoCD e pipeline
     <tr>
         <td><img width="32" src="https://avatars.githubusercontent.com/u/21054566?s=200&v=4"></td>
         <td><a href="https://cilium.io">Cilium</a></td>
-        <td>eBPF-based Networking, Observability e Security (CNI, Network Policy, ecc.)</td>
+        <td>CNI e controller per Gateway API</td>
     </tr>
     <tr>
         <td><img width="32" src="https://avatars.githubusercontent.com/u/314135?s=200&v=4"></td>
@@ -118,17 +118,12 @@ Tutto l'Homelab gestito (principalmente) con playbook Ansible, ArgoCD e pipeline
         <td>Update automatico delle dipendenze</td>
     </tr>
     <tr>
-        <td><img width="32" src="https://avatars.githubusercontent.com/u/14280338?s=200&v=4"></td>
-        <td><a href="https://doc.traefik.io/traefik/">Traefik</a></td>
-        <td>Kubernetes Ingress Controller</td>
-    </tr>
-    <tr>
         <td><img width="32" src="https://avatars.githubusercontent.com/u/53482242?s=200&v=4"></td>
         <td><a href="https://www.truenas.com/">TrueNAS</a></td>
         <td>NFS share, Backup</td>
     </tr>
     <tr>
-        <td><img width="32" src="https://upload.wikimedia.org/wikipedia/commons/1/16/Ubuntu_and_Ubuntu_Server_Icon.png"></td>
+        <td><img width="32" src="https://avatars.githubusercontent.com/u/4604537?s=200&v=4"></td>
         <td><a href="https://ubuntu.com/server">Ubuntu Server</a></td>
         <td>Os di base per i nodi Kubernetes</td>
     </tr>
