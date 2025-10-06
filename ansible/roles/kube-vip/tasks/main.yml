@@ -22,7 +22,6 @@
     --interface {{ kubernetes.vip_interface }}
     --address {{ kubernetes.vip_address }}
     --controlplane
-    --services
     --arp
     --leaderElection
   register: kube_vip_manifest
