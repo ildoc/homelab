@@ -3,8 +3,7 @@
 # AUTHENTIK CORE CONFIGURATION
 # =============================================================================
 authentik:
-  # Il secret_key verrà letto automaticamente da AUTHENTIK_SECRET_KEY nel secret
-  # NON specificare secret_key qui, lascia che venga caricato dal secret "authentik"
+  # RIMOSSO: Non specificare secret_key qui, viene caricato tramite env var
   
   # Log level
   log_level: info
@@ -16,19 +15,17 @@ authentik:
   error_reporting:
     enabled: false
   
-  # PostgreSQL ESTERNO - configurazione connessione
-  # postgresql:
-  #   host: "192.168.0.30"
-  #   port: 5432
-  #   name: "authentik_db"
-  #   user: "authentik_user"
-  #   # password verrà letta automaticamente da AUTHENTIK_POSTGRESQL__PASSWORD nel secret
+  # IMPORTANTE: Queste sezioni sono necessarie anche se usi environment variables
+  # Il chart le usa per alcune validazioni interne
+  postgresql:
+    host: "192.168.0.30"
+    port: 5432
+    name: "authentik_db"
+    user: "authentik_user"
   
-  # # Redis ESTERNO - configurazione connessione
-  # redis:
-  #   host: "192.168.0.40"
-  #   port: 6379
-    # password verrà letta automaticamente da AUTHENTIK_REDIS__PASSWORD nel secret
+  redis:
+    host: "192.168.0.40"
+    port: 6379
   
   # Email configuration (opzionale)
   email:
@@ -42,7 +39,7 @@ authentik:
     from: "authentik@local.ildoc.it"
 
 # =============================================================================
-# GLOBAL CONFIGURATION
+# GLOBAL CONFIGURATION - APPLICA A SERVER E WORKER
 # =============================================================================
 global:
   # Storage class per PVC (se necessario)
@@ -52,7 +49,9 @@ global:
   deploymentStrategy:
     type: RollingUpdate
 
+  # CRITICO: Environment variables che si applicano a TUTTI i pod
   env:
+    # PostgreSQL - configurazione completa
     - name: AUTHENTIK_POSTGRESQL__HOST
       value: "192.168.0.30"
     - name: AUTHENTIK_POSTGRESQL__NAME
@@ -66,6 +65,8 @@ global:
         secretKeyRef:
           name: authentik-postgresql-secret
           key: postgres-password
+    
+    # Redis - configurazione completa con username
     - name: AUTHENTIK_REDIS__HOST
       value: "192.168.0.40"
     - name: AUTHENTIK_REDIS__PORT
@@ -77,11 +78,21 @@ global:
         secretKeyRef:
           name: authentik-redis-secret
           key: redis-password
+    
+    # Secret key - OBBLIGATORIO
     - name: AUTHENTIK_SECRET_KEY
       valueFrom:
         secretKeyRef:
           name: authentik-secret
           key: secret-key
+    
+    # Host configuration - NOTA IL TRAILING SLASH
+    - name: AUTHENTIK_HOST
+      value: "https://auth.local.ildoc.it/"
+    
+    # Browser host (se diverso da AUTHENTIK_HOST)
+    - name: AUTHENTIK_HOST_BROWSER
+      value: "https://auth.local.ildoc.it/"
 
 # =============================================================================
 # SERVER DEPLOYMENT
@@ -114,7 +125,7 @@ server:
                 app.kubernetes.io/component: server
             topologyKey: kubernetes.io/hostname
   
-  # Probes
+  # Probes - aumentati i timeout per startup lento con DB esterno
   livenessProbe:
     httpGet:
       path: /-/health/live/
@@ -201,7 +212,7 @@ worker:
     enabled: true
     minAvailable: 1
   
-  # Metrics (novità in 2025.8.x)
+  # Metrics (supporto in 2025.8.x)
   metrics:
     enabled: true
     serviceMonitor:
@@ -220,14 +231,14 @@ redis:
   enabled: false
 
 # =============================================================================
-# SERVICE ACCOUNT
+# SERVICE ACCOUNT - NECESSARIO PER MANAGED OUTPOSTS
 # =============================================================================
 serviceAccount:
-  # Necessario per managed outposts
+  # CRITICO: Abilita questo per permettere la creazione di outpost managed
   create: true
   annotations: {}
   
-  # Disabilita il secret del service account (non necessario)
+  # Disabilita il secret del service account (non necessario per outpost esterni)
   serviceAccountSecret:
     enabled: false
 
