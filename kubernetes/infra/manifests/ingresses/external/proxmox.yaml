@@ -1,48 +1,68 @@
 ---
-apiVersion: v1
-kind: Service
+# ServiceEntry per definire il servizio esterno Proxmox
+apiVersion: networking.istio.io/v1beta1
+kind: ServiceEntry
 metadata:
   name: proxmox-external
   namespace: external-routes
 spec:
+  hosts:
+  - proxmox.local.ildoc.it
+  location: MESH_EXTERNAL
   ports:
-  - protocol: TCP
-    port: 8006
-    targetPort: 8006
+  - number: 8006
+    name: https
+    protocol: HTTPS
+  resolution: STATIC
+  endpoints:
+  - address: 192.168.0.10
+    ports:
+      https: 8006
+  - address: 192.168.0.11
+    ports:
+      https: 8006
+  - address: 192.168.0.12
+    ports:
+      https: 8006
 ---
-apiVersion: discovery.k8s.io/v1
-kind: EndpointSlice
+# Gateway Istio per traffico HTTPS
+apiVersion: networking.istio.io/v1beta1
+kind: Gateway
 metadata:
-  name: proxmox-external-1
+  name: proxmox-gateway
   namespace: external-routes
-  labels:
-    kubernetes.io/service-name: proxmox-external
-addressType: IPv4
-ports:
-- name: https
-  port: 8006
-  protocol: TCP
-endpoints:
-- addresses:
-  - "192.168.0.10"
-- addresses:
-  - "192.168.0.11"
-- addresses:
-  - "192.168.0.12"
+spec:
+  selector:
+    istio: gateway
+  servers:
+  - port:
+      number: 443
+      name: https
+      protocol: HTTPS
+    hosts:
+    - proxmox.local.ildoc.it
+    tls:
+      mode: SIMPLE
+      credentialName: local-ildoc-it-tls
 ---
-apiVersion: gateway.networking.k8s.io/v1
-kind: HTTPRoute
+# VirtualService per routing
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
 metadata:
   name: proxmox-route
   namespace: external-routes
 spec:
-  parentRefs:
-  - name: cilium-gateway
-    namespace: kube-system
-    sectionName: https
-  hostnames:
-  - "proxmox.local.ildoc.it"
-  rules:
-  - backendRefs:
-    - name: proxmox-external
-      port: 8006
+  hosts:
+  - proxmox.local.ildoc.it
+  gateways:
+  - proxmox-gateway
+  tls:
+  - match:
+    - port: 443
+      sniHosts:
+      - proxmox.local.ildoc.it
+    route:
+    - destination:
+        host: proxmox.local.ildoc.it
+        port:
+          number: 8006
