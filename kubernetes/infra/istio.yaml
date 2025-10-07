@@ -1,86 +1,86 @@
----
-apiVersion: argoproj.io/v1alpha1
-kind: Application
-metadata:
-  name: istio-base
-  namespace: argocd
-  annotations:
-    argocd.argoproj.io/sync-wave: "-90"  # Dopo Cilium (-100)
-  finalizers:
-    - resources-finalizer.argocd.argoproj.io
-spec:
-  project: default
-  source:
-    repoURL: https://istio-release.storage.googleapis.com/charts
-    targetRevision: 1.24.2  # Ultima stable con ambient GA
-    chart: base
-  destination:
-    server: https://kubernetes.default.svc
-    namespace: istio-system
-  syncPolicy:
-    syncOptions:
-      - CreateNamespace=true
-    automated:
-      prune: true
-      selfHeal: true
----
-apiVersion: argoproj.io/v1alpha1
-kind: Application
-metadata:
-  name: istiod
-  namespace: argocd
-  annotations:
-    argocd.argoproj.io/sync-wave: "-89"
-  finalizers:
-    - resources-finalizer.argocd.argoproj.io
-spec:
-  project: default
-  source:
-    repoURL: https://istio-release.storage.googleapis.com/charts
-    targetRevision: 1.24.2
-    chart: istiod
-    helm:
-      values: |
-        pilot:
-          resources:
-            requests:
-              cpu: 100m
-              memory: 512Mi
-        meshConfig:
-          # Compatibilità con Cilium
-          defaultConfig:
-            proxyMetadata:
-              # Importante per non interferire con Cilium
-              ISTIO_META_DNS_CAPTURE: "false"
-  destination:
-    server: https://kubernetes.default.svc
-    namespace: istio-system
-  syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
----
-apiVersion: argoproj.io/v1alpha1
-kind: Application
-metadata:
-  name: istio-external-gateway
-  namespace: argocd
-  annotations:
-    argocd.argoproj.io/sync-wave: "-85"
-  finalizers:
-    - resources-finalizer.argocd.argoproj.io
-spec:
-  project: default
-  source:
-    repoURL: https://gitlab.local.ildoc.it/ildoc/homelab.git
-    targetRevision: HEAD
-    path: kubernetes/infra/manifests/istio
-  destination:
-    server: https://kubernetes.default.svc
-    namespace: istio-system
-  syncPolicy:
-    syncOptions:
-      - CreateNamespace=false
-    automated:
-      prune: true
-      selfHeal: true
+# ---
+# apiVersion: argoproj.io/v1alpha1
+# kind: Application
+# metadata:
+#   name: istio-base
+#   namespace: argocd
+#   annotations:
+#     argocd.argoproj.io/sync-wave: "-90"  # Dopo Cilium (-100)
+#   finalizers:
+#     - resources-finalizer.argocd.argoproj.io
+# spec:
+#   project: default
+#   source:
+#     repoURL: https://istio-release.storage.googleapis.com/charts
+#     targetRevision: 1.24.2  # Ultima stable con ambient GA
+#     chart: base
+#   destination:
+#     server: https://kubernetes.default.svc
+#     namespace: istio-system
+#   syncPolicy:
+#     syncOptions:
+#       - CreateNamespace=true
+#     automated:
+#       prune: true
+#       selfHeal: true
+# ---
+# apiVersion: argoproj.io/v1alpha1
+# kind: Application
+# metadata:
+#   name: istiod
+#   namespace: argocd
+#   annotations:
+#     argocd.argoproj.io/sync-wave: "-89"
+#   finalizers:
+#     - resources-finalizer.argocd.argoproj.io
+# spec:
+#   project: default
+#   source:
+#     repoURL: https://istio-release.storage.googleapis.com/charts
+#     targetRevision: 1.24.2
+#     chart: istiod
+#     helm:
+#       values: |
+#         pilot:
+#           resources:
+#             requests:
+#               cpu: 100m
+#               memory: 512Mi
+#         meshConfig:
+#           # Compatibilità con Cilium
+#           defaultConfig:
+#             proxyMetadata:
+#               # Importante per non interferire con Cilium
+#               ISTIO_META_DNS_CAPTURE: "false"
+#   destination:
+#     server: https://kubernetes.default.svc
+#     namespace: istio-system
+#   syncPolicy:
+#     automated:
+#       prune: true
+#       selfHeal: true
+# ---
+# apiVersion: argoproj.io/v1alpha1
+# kind: Application
+# metadata:
+#   name: istio-external-gateway
+#   namespace: argocd
+#   annotations:
+#     argocd.argoproj.io/sync-wave: "-85"
+#   finalizers:
+#     - resources-finalizer.argocd.argoproj.io
+# spec:
+#   project: default
+#   source:
+#     repoURL: https://gitlab.local.ildoc.it/ildoc/homelab.git
+#     targetRevision: HEAD
+#     path: kubernetes/infra/manifests/istio
+#   destination:
+#     server: https://kubernetes.default.svc
+#     namespace: istio-system
+#   syncPolicy:
+#     syncOptions:
+#       - CreateNamespace=false
+#     automated:
+#       prune: true
+#       selfHeal: true
