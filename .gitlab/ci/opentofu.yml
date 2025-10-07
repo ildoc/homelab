@@ -31,7 +31,7 @@ cache:
 
 # Configurazione di base per i job OpenTofu
 .tofu_base:
-  image: alpine:3.21
+  image: alpine:3.22
   extends:
     - .rules_opentofu
   before_script: |
