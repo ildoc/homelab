@@ -32,9 +32,7 @@
   "docker-compose": {
     "fileMatch": [
       "(^|/)docker-compose[^/]*\\.ya?ml$",
-      "(^|/)docker-compose[^/]*\\.ya?ml\\.j2$",
-      "(^|/)compose[^/]*\\.ya?ml$",
-      "(^|/)compose[^/]*\\.ya?ml\\.j2$"
+      "(^|/)compose[^/]*\\.ya?ml$"
     ]
   },
   
@@ -44,19 +42,24 @@
     ]
   },
   
-  "ansible": {
-    "managerFilePatterns": [
-      "/ansible/.+\\.ya?ml$/",
-      "/ansible/.+\\.ya?ml\\.j2$/"
-    ]
-  },
-  
   "customManagers": [
     {
       "customType": "regex",
+      "description": "Update Docker images in Ansible docker-compose templates",
+      "fileMatch": [
+        "ansible/.+/templates/docker-compose\\.ya?ml\\.j2$",
+        "ansible/.+/files/docker-compose\\.ya?ml$"
+      ],
+      "matchStrings": [
+        "image:\\s*['\"]?(?<depName>[^:\\s'\"]+):(?<currentValue>[^\\s'\"]+)['\"]?"
+      ],
+      "datasourceTemplate": "docker"
+    },
+    {
+      "customType": "regex",
       "description": "Update Docker images in Kubernetes files",
-      "managerFilePatterns": [
-        "/^kubernetes/.+\\.ya?ml$/"
+      "fileMatch": [
+        "kubernetes/.+\\.ya?ml$"
       ],
       "matchStrings": [
         "image:\\s+(?<depName>.*?):(?<currentValue>.*?)\\s"
