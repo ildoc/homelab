@@ -25,26 +25,28 @@
     "docs/**"
   ],
   "docker-compose": {
-    "managerFilePatterns": [
+    "fileMatch": [
       "(^|/)docker-compose[^/]*\\.ya?ml$",
-      "(^|/)compose[^/]*\\.ya?ml$"
+      "(^|/)docker-compose[^/]*\\.ya?ml\\.j2$",
+      "(^|/)compose[^/]*\\.ya?ml$",
+      "(^|/)compose[^/]*\\.ya?ml\\.j2$"
     ]
   },
   "kubernetes": {
-    "managerFilePatterns": [
+    "fileMatch": [
       "kubernetes/.+\\.ya?ml$"
     ]
   },
   "customManagers": [
     {
       "customType": "regex",
-      "description": "Aggiorna immagini Docker in template Jinja2/Ansible",
-      "managerFilePatterns": [
-        "/(^|/)docker-compose[^/]*\\.ya?ml\\.j2$/",
-        "/(^|/)compose[^/]*\\.ya?ml\\.j2$/"
+      "description": "Aggiorna immagini Docker in template Jinja2/Ansible con variabili",
+      "fileMatch": [
+        "(^|/)docker-compose[^/]*\\.ya?ml\\.j2$",
+        "(^|/)compose[^/]*\\.ya?ml\\.j2$"
       ],
       "matchStrings": [
-        "image:\\s+[\"']?(?<depName>[^:\"'\\s]+):(?<currentValue>[^\"'\\s@]+)(?:@(?<currentDigest>sha256:[a-f0-9]+))?[\"']?"
+        "image:\\s+[\"']?(?<depName>[^:\"'\\s{]+):(?<currentValue>[^\"'\\s@{]+)(?:@(?<currentDigest>sha256:[a-f0-9]+))?[\"']?"
       ],
       "datasourceTemplate": "docker",
       "versioningTemplate": "docker"
@@ -77,7 +79,7 @@
       "followTag": "master"
     },
     {
-      "description": "Invidious - usa versioning loose per tag inconsistenti",
+      "description": "Invidious Companion - usa versioning loose per tag inconsistenti",
       "matchPackageNames": [
         "quay.io/invidious/invidious-companion"
       ],
