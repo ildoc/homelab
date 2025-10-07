@@ -63,7 +63,7 @@ spec:
         http1MaxPendingRequests: {{ $config.connectionPool.maxPendingRequests | default 512 }}
         maxRequestsPerConnection: {{ $config.connectionPool.maxRequestsPerConnection | default 10 }}
     
-    {{- if $config.outlierDetection.enabled }}
+    {{- if and $config.outlierDetection $config.outlierDetection.enabled }}
     # Outlier detection (health checking)
     outlierDetection:
       consecutiveErrors: {{ $config.outlierDetection.consecutiveErrors | default 5 }}
