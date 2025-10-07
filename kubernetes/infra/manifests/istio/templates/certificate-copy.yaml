@@ -1,13 +1,12 @@
 {{- if .Values.gateway.enabled }}
 ---
-# Certificato duplicato per istio-system namespace
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
   name: istio-gateway-tls
   namespace: {{ .Values.gateway.namespace }}
   annotations:
-    argocd.argoproj.io/sync-wave: "-1"
+    argocd.argoproj.io/sync-wave: "-2"
 spec:
   secretName: {{ .Values.gateway.tls.secretName }}
   issuerRef:
