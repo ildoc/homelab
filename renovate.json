@@ -26,7 +26,8 @@
   
   "ignorePaths": [
     "**/kubernetes/applications/archived/**",
-    "**/opentofu/archived/**"
+    "**/opentofu/archived/**",
+    "docs/**"
   ],
 
   "docker": {

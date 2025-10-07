@@ -38,7 +38,6 @@ gitlab-runner:
           service_account = "gitlab-runner"
           poll_interval = 3
           poll_timeout = 180
-          dns_policy = "ClusterFirst"
           
           # Cache volume
           [[runners.kubernetes.volumes.pvc]]
