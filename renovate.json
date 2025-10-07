@@ -7,56 +7,49 @@
     ":semanticCommits",
     ":timezone(Europe/Rome)"
   ],
-  
   "automerge": false,
   "platformAutomerge": false,
-  
   "separateMajorMinor": true,
   "separateMinorPatch": true,
   "separateMultipleMajor": true,
   "groupName": null,
-  
-  "assignees": ["ildoc"],
-  
+  "assignees": [
+    "ildoc"
+  ],
   "prConcurrentLimit": 50,
   "prHourlyLimit": 0,
-  
   "prCreation": "not-pending",
   "internalChecksFilter": "flexible",
-  
   "ignorePaths": [
     "**/archived/**",
     "docs/**"
   ],
-
   "docker-compose": {
     "managerFilePatterns": [
       "(^|/)docker-compose[^/]*\\.ya?ml$",
       "(^|/)compose[^/]*\\.ya?ml$"
     ]
   },
-  
   "kubernetes": {
     "managerFilePatterns": [
       "kubernetes/.+\\.ya?ml$"
     ]
   },
-  
   "customManagers": [
     {
       "customType": "regex",
       "description": "Aggiorna immagini Docker in template Jinja2/Ansible",
       "managerFilePatterns": [
-        "(^|/)docker-compose[^/]*\\.ya?ml\\.j2$"
+        "/(^|/)docker-compose[^/]*\\.ya?ml\\.j2$/",
+        "/(^|/)compose[^/]*\\.ya?ml\\.j2$/"
       ],
       "matchStrings": [
-        "(?:image:\\s+\\\"?)(?<depName>[^:]+):(?<currentValue>[^\\s@\"]+)(?:@(?<currentDigest>sha256:[a-f0-9]+))?\\\"?\\n"
+        "image:\\s+[\"']?(?<depName>[^:\"'\\s]+):(?<currentValue>[^\"'\\s@]+)(?:@(?<currentDigest>sha256:[a-f0-9]+))?[\"']?"
       ],
       "datasourceTemplate": "docker",
       "versioningTemplate": "docker"
     }
   ],
-
   "packageRules": [
     {
       "matchCategories": [
@@ -66,8 +59,12 @@
     },
     {
       "description": "Immagini quay.io con digest pinning",
-      "matchDatasources": ["docker"],
-      "matchPackagePatterns": ["^quay\\.io/"],
+      "matchDatasources": [
+        "docker"
+      ],
+      "matchPackagePatterns": [
+        "^quay\\.io/"
+      ],
       "pinDigests": true,
       "groupName": "quay.io images"
     },
@@ -89,29 +86,36 @@
     },
     {
       "description": "Disabilita automerge per tutto",
-      "matchPackageNames": ["*"],
+      "matchPackagePatterns": [
+        "*"
+      ],
       "automerge": false,
       "platformAutomerge": false,
       "groupName": null
     },
     {
       "description": "Security updates - senza stability days",
-      "matchUpdateTypes": ["patch"],
+      "matchUpdateTypes": [
+        "patch"
+      ],
       "minimumReleaseAge": null,
       "prCreation": "immediate"
     },
     {
       "description": "Major updates - più giorni di stability",
-      "matchUpdateTypes": ["major"],
+      "matchUpdateTypes": [
+        "major"
+      ],
       "minimumReleaseAge": "7 days"
     },
     {
       "description": "Minor updates - periodo standard",
-      "matchUpdateTypes": ["minor"],
+      "matchUpdateTypes": [
+        "minor"
+      ],
       "minimumReleaseAge": "3 days"
     }
   ],
-  
   "schedule": [
     "after 10pm every weekday",
     "every weekend",
