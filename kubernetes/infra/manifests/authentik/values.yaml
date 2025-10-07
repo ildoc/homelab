@@ -66,11 +66,13 @@ global:
           name: authentik-postgresql-secret
           key: postgres-password
     
-    # Redis - configurazione completa con username
+    # Redis - configurazione completa con username e DB dedicato
     - name: AUTHENTIK_REDIS__HOST
       value: "192.168.0.40"
     - name: AUTHENTIK_REDIS__PORT
       value: "6379"
+    - name: AUTHENTIK_REDIS__DB
+      value: "1"
     - name: AUTHENTIK_REDIS__USERNAME
       value: "authentik"
     - name: AUTHENTIK_REDIS__PASSWORD
@@ -78,6 +80,14 @@ global:
         secretKeyRef:
           name: authentik-redis-secret
           key: redis-password
+    
+    # Redis per Celery message queue (usa stesso DB per coerenza)
+    - name: AUTHENTIK_REDIS__CACHE_DB
+      value: "1"
+    - name: AUTHENTIK_REDIS__MESSAGE_QUEUE_DB
+      value: "1"
+    - name: AUTHENTIK_REDIS__WS_DB
+      value: "1"
     
     # Secret key - OBBLIGATORIO
     - name: AUTHENTIK_SECRET_KEY

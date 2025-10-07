@@ -243,10 +243,7 @@ redis:
       password: "{{ lookup('community.hashi_vault.hashi_vault', 'cross/data/apps/authentik:redis_password') }}"
       permissions:
         - "allchannels"
-        - "~authentik:*"
-        -  "~celery-*"
-        - "~_kombu.*"
-        - "~asgi:*"
+        - "~*"
         - "+@read"
         - "+@write"
         - "+@keyspace"
@@ -254,6 +251,7 @@ redis:
         - "+@pubsub"
         - "+@scripting"
         - "-@dangerous"
+        - "+select"
       description: "Utente read-write per applicazioni"
 
     # - name: app_readonly
