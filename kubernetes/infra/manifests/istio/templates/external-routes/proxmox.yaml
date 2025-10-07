@@ -1,0 +1,51 @@
+{{- if .Values.externalServices.proxmox.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: proxmox-external
+  namespace: {{ .Values.gateway.namespace }}
+  labels:
+    app: proxmox-external
+spec:
+  ports:
+  - name: https
+    port: 8006
+    protocol: TCP
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: proxmox-external
+  namespace: {{ .Values.gateway.namespace }}
+subsets:
+- addresses:
+  {{- range .Values.externalServices.proxmox.backend.endpoints }}
+  - ip: {{ .address | quote }}
+  {{- end }}
+  ports:
+  - name: https
+    port: {{ (index .Values.externalServices.proxmox.backend.endpoints 0).port }}
+    protocol: TCP
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: proxmox-route
+  namespace: {{ .Values.gateway.namespace }}
+spec:
+  parentRefs:
+  - name: {{ .Values.gateway.name }}
+    namespace: {{ .Values.gateway.namespace }}
+    sectionName: https
+  hostnames:
+  - {{ .Values.externalServices.proxmox.hostname | quote }}
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /
+    backendRefs:
+    - name: proxmox-external
+      port: 8006
+{{- end }}

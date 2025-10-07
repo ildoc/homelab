@@ -1,0 +1,4 @@
+apiVersion: v2
+name: istio-external-gateway
+version: 1.0.0
+description: Istio Gateway for external services

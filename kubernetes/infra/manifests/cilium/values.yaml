@@ -33,6 +33,15 @@ cilium:
   # Gateway API configuration
   gatewayAPI:
     enabled: true
+
+  socketLB:
+    # Importante: disabilita socket-level LB per permettere a Istio
+    # di intercettare traffico verso ClusterIP
+    hostNamespaceOnly: true
+  
+  bpf:
+    # Mantieni routing in host namespace per Istio compatibility
+    hostLegacyRouting: true
   
   # IMPORTANTE: Richiesto per Gateway API
   kubeProxyReplacement: true

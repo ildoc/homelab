@@ -1,8 +1,0 @@
----
-apiVersion: v2
-name: istio-base-bootstrap
-version: 0.1.0
-dependencies:
-  - name: base
-    version: "1.24.2"
-    repository: https://istio-release.storage.googleapis.com/charts

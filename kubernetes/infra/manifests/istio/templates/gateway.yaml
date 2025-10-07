@@ -1,0 +1,174 @@
+{{- if .Values.gateway.enabled }}
+---
+# ServiceEntry per rendere visibili gli external services
+apiVersion: networking.istio.io/v1beta1
+kind: ServiceEntry
+metadata:
+  name: external-services
+  namespace: {{ .Values.gateway.namespace }}
+spec:
+  hosts:
+  {{- if .Values.externalServices.proxmox.enabled }}
+  - {{ .Values.externalServices.proxmox.hostname }}
+  {{- end }}
+  {{- if .Values.externalServices.truenas.enabled }}
+  - {{ .Values.externalServices.truenas.hostname }}
+  {{- end }}
+  location: MESH_EXTERNAL
+  ports:
+  - number: 443
+    name: https
+    protocol: HTTPS
+  resolution: STATIC
+  endpoints:
+  {{- if .Values.externalServices.proxmox.enabled }}
+  {{- range .Values.externalServices.proxmox.backend.endpoints }}
+  - address: {{ .address }}
+    ports:
+      https: {{ .port }}
+  {{- end }}
+  {{- end }}
+  {{- if .Values.externalServices.truenas.enabled }}
+  {{- range .Values.externalServices.truenas.backend.endpoints }}
+  - address: {{ .address }}
+    ports:
+      https: {{ .port }}
+  {{- end }}
+  {{- end }}
+---
+# DestinationRule per skip verify sui backend
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: external-services-tls
+  namespace: {{ .Values.gateway.namespace }}
+spec:
+  host: "*.local.ildoc.it"  # Wildcard per tutti gli external
+  trafficPolicy:
+    tls:
+      mode: SIMPLE
+      {{- if or .Values.externalServices.proxmox.backend.skipVerify .Values.externalServices.truenas.backend.skipVerify }}
+      # Skip certificate verification per backend self-signed
+      insecureSkipVerify: true
+      {{- end }}
+---
+# Gateway Deployment (managed by Istio)
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.gateway.name }}
+  namespace: {{ .Values.gateway.namespace }}
+  labels:
+    app: {{ .Values.gateway.name }}
+    istio: external-gateway
+  annotations:
+    {{- toYaml .Values.gateway.serviceAnnotations | nindent 4 }}
+spec:
+  type: {{ .Values.gateway.serviceType }}
+  {{- if .Values.gateway.loadBalancerIP }}
+  loadBalancerIP: {{ .Values.gateway.loadBalancerIP }}
+  {{- end }}
+  selector:
+    app: {{ .Values.gateway.name }}
+    istio: external-gateway
+  ports:
+  - name: http
+    port: 80
+    protocol: TCP
+    targetPort: 8080
+  - name: https
+    port: 443
+    protocol: TCP
+    targetPort: 8443
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.gateway.name }}
+  namespace: {{ .Values.gateway.namespace }}
+  labels:
+    app: {{ .Values.gateway.name }}
+    istio: external-gateway
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: {{ .Values.gateway.name }}
+      istio: external-gateway
+  template:
+    metadata:
+      annotations:
+        inject.istio.io/templates: gateway
+      labels:
+        app: {{ .Values.gateway.name }}
+        istio: external-gateway
+        sidecar.istio.io/inject: "true"
+    spec:
+      serviceAccountName: {{ .Values.gateway.name }}
+      securityContext:
+        sysctls:
+        - name: net.ipv4.ip_unprivileged_port_start
+          value: "0"
+      containers:
+      - name: istio-proxy
+        image: auto
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ .Values.gateway.name }}
+  namespace: {{ .Values.gateway.namespace }}
+---
+# ReferenceGrant per accedere al certificato TLS
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: ReferenceGrant
+metadata:
+  name: allow-istio-gateway-cert
+  namespace: {{ .Values.gateway.tls.secretNamespace }}
+spec:
+  from:
+  - group: gateway.networking.k8s.io
+    kind: Gateway
+    namespace: {{ .Values.gateway.namespace }}
+  to:
+  - group: ""
+    kind: Secret
+    name: {{ .Values.gateway.tls.secretName }}
+---
+# Kubernetes Gateway API resource
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: {{ .Values.gateway.name }}
+  namespace: {{ .Values.gateway.namespace }}
+spec:
+  gatewayClassName: istio
+  listeners:
+  - name: http
+    port: 80
+    protocol: HTTP
+    hostname: "*.local.ildoc.it"
+    allowedRoutes:
+      namespaces:
+        from: All
+  - name: https
+    port: 443
+    protocol: HTTPS
+    hostname: "*.local.ildoc.it"
+    allowedRoutes:
+      namespaces:
+        from: All
+    tls:
+      mode: Terminate
+      certificateRefs:
+      - kind: Secret
+        name: {{ .Values.gateway.tls.secretName }}
+        namespace: {{ .Values.gateway.tls.secretNamespace }}
+{{- end }}

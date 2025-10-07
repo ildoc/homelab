@@ -1,0 +1,46 @@
+# Gateway configuration
+gateway:
+  enabled: true
+  name: istio-external-gateway
+  namespace: istio-system
+  
+  # IP dal pool Cilium (secondo IP)
+  loadBalancerIP: "192.168.0.82"
+  
+  # TLS certificate (stesso wildcard usato da Cilium)
+  tls:
+    secretName: "local-ildoc-it-tls"
+    secretNamespace: "default"
+  
+  # Service type
+  serviceType: LoadBalancer
+  serviceAnnotations:
+    # Cilium gestisce il LoadBalancer
+    io.cilium/lb-ipam-ips: "192.168.0.82"
+
+# External services configuration
+externalServices:
+  proxmox:
+    enabled: true
+    hostname: "proxmox.local.ildoc.it"
+    backend:
+      # Backend HTTPS con skip verify
+      protocol: HTTPS
+      skipVerify: true
+      endpoints:
+        - address: "192.168.0.10"
+          port: 8006
+        - address: "192.168.0.11"
+          port: 8006
+        - address: "192.168.0.12"
+          port: 8006
+  
+  truenas:
+    enabled: true
+    hostname: "truenas.local.ildoc.it"
+    backend:
+      protocol: HTTPS
+      skipVerify: true
+      endpoints:
+        - address: "192.168.0.123"
+          port: 443
