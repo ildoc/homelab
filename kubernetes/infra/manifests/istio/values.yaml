@@ -66,9 +66,8 @@ externalServices:
   invidious:
     enabled: true
     hostname: "invidious.local.ildoc.it"
-    protocol: HTTPS
+    protocol: HTTP
     port: 3000
-    skipVerify: true
     
     endpoints:
       - address: "192.168.0.111"
