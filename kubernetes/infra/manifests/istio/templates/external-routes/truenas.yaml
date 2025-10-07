@@ -1,23 +1,23 @@
-{{- if .Values.externalServices.proxmox.enabled }}
+{{- if .Values.externalServices.truenas.enabled }}
 ---
 # ServiceEntry definisce gli endpoint esterni come servizio
 apiVersion: networking.istio.io/v1beta1
 kind: ServiceEntry
 metadata:
-  name: proxmox-external
+  name: truenas-external
   namespace: {{ .Values.gateway.namespace }}
 spec:
   # Host interno che verrà usato per il routing
   hosts:
-  - proxmox-external.{{ .Values.gateway.namespace }}.svc.cluster.local
+  - truenas-external.{{ .Values.gateway.namespace }}.svc.cluster.local
   location: MESH_EXTERNAL
   ports:
-  - number: {{ (index .Values.externalServices.proxmox.backend.endpoints 0).port }}
+  - number: {{ (index .Values.externalServices.truenas.backend.endpoints 0).port }}
     name: https
     protocol: HTTPS
   resolution: STATIC
   endpoints:
-  {{- range .Values.externalServices.proxmox.backend.endpoints }}
+  {{- range .Values.externalServices.truenas.backend.endpoints }}
   - address: {{ .address }}
     ports:
       https: {{ .port }}
@@ -27,16 +27,16 @@ spec:
 apiVersion: networking.istio.io/v1beta1
 kind: DestinationRule
 metadata:
-  name: proxmox-external
+  name: truenas-external
   namespace: {{ .Values.gateway.namespace }}
 spec:
-  host: proxmox-external.{{ .Values.gateway.namespace }}.svc.cluster.local
+  host: truenas-external.{{ .Values.gateway.namespace }}.svc.cluster.local
   trafficPolicy:
     loadBalancer:
       simple: ROUND_ROBIN
     tls:
       mode: SIMPLE
-      {{- if .Values.externalServices.proxmox.backend.skipVerify }}
+      {{- if .Values.externalServices.truenas.backend.skipVerify }}
       insecureSkipVerify: true
       {{- end }}
 ---
@@ -44,11 +44,11 @@ spec:
 apiVersion: networking.istio.io/v1beta1
 kind: VirtualService
 metadata:
-  name: proxmox-external
+  name: truenas-external
   namespace: {{ .Values.gateway.namespace }}
 spec:
   hosts:
-  - {{ .Values.externalServices.proxmox.hostname }}
+  - {{ .Values.externalServices.truenas.hostname }}
   gateways:
   - {{ .Values.gateway.name }}
   http:
@@ -57,7 +57,7 @@ spec:
         prefix: /
     route:
     - destination:
-        host: proxmox-external.{{ .Values.gateway.namespace }}.svc.cluster.local
+        host: truenas-external.{{ .Values.gateway.namespace }}.svc.cluster.local
         port:
-          number: {{ (index .Values.externalServices.proxmox.backend.endpoints 0).port }}
+          number: {{ (index .Values.externalServices.truenas.backend.endpoints 0).port }}
 {{- end }}
