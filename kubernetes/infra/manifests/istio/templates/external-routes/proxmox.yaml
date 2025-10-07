@@ -1,63 +1,103 @@
 {{- if .Values.externalServices.proxmox.enabled }}
 ---
-# ServiceEntry definisce gli endpoint esterni come servizio
+# ServiceEntry: definisce Proxmox come servizio accessibile
 apiVersion: networking.istio.io/v1beta1
 kind: ServiceEntry
 metadata:
   name: proxmox-external
   namespace: {{ .Values.gateway.namespace }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
 spec:
-  # Host interno che verrà usato per il routing
+  # FQDN interno usato per il routing
   hosts:
   - proxmox-external.{{ .Values.gateway.namespace }}.svc.cluster.local
+  
+  # Servizio esterno al mesh
   location: MESH_EXTERNAL
+  
   ports:
   - number: {{ (index .Values.externalServices.proxmox.backend.endpoints 0).port }}
     name: https
     protocol: HTTPS
+  
+  # IP statici (non DNS)
   resolution: STATIC
+  
+  # I 3 nodi Proxmox
   endpoints:
   {{- range .Values.externalServices.proxmox.backend.endpoints }}
   - address: {{ .address }}
     ports:
       https: {{ .port }}
   {{- end }}
+
 ---
-# DestinationRule per TLS configuration
+# DestinationRule: configura TLS e load balancing
 apiVersion: networking.istio.io/v1beta1
 kind: DestinationRule
 metadata:
   name: proxmox-external
   namespace: {{ .Values.gateway.namespace }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
 spec:
   host: proxmox-external.{{ .Values.gateway.namespace }}.svc.cluster.local
+  
   trafficPolicy:
+    # Round-robin tra i 3 nodi
     loadBalancer:
       simple: ROUND_ROBIN
+    
+    # Configurazione TLS verso backend
     tls:
-      mode: SIMPLE
+      mode: SIMPLE  # Client TLS (non mTLS)
       {{- if .Values.externalServices.proxmox.backend.skipVerify }}
-      insecureSkipVerify: true
+      insecureSkipVerify: true  # Accetta cert self-signed
       {{- end }}
+    
+    # Timeout e retry
+    connectionPool:
+      http:
+        http1MaxPendingRequests: 1024
+        maxRequestsPerConnection: 10
+    outlierDetection:
+      consecutiveErrors: 5
+      interval: 30s
+      baseEjectionTime: 30s
+
 ---
-# VirtualService per mappare hostname esterno -> ServiceEntry interno
-apiVersion: networking.istio.io/v1beta1
-kind: VirtualService
+# HTTPRoute: mappa hostname pubblico -> ServiceEntry
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
 metadata:
   name: proxmox-external
   namespace: {{ .Values.gateway.namespace }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
 spec:
-  hosts:
-  - {{ .Values.externalServices.proxmox.hostname }}
-  gateways:
-  - {{ .Values.gateway.name }}
-  http:
-  - match:
-    - uri:
-        prefix: /
-    route:
-    - destination:
-        host: proxmox-external.{{ .Values.gateway.namespace }}.svc.cluster.local
-        port:
-          number: {{ (index .Values.externalServices.proxmox.backend.endpoints 0).port }}
+  # Collega a Istio Gateway
+  parentRefs:
+  - name: {{ .Values.gateway.name }}
+    namespace: {{ .Values.gateway.namespace }}
+  
+  # Hostname pubblico
+  hostnames:
+  - {{ .Values.externalServices.proxmox.hostname | quote }}
+  
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /
+    
+    # Backend è la ServiceEntry
+    backendRefs:
+    - name: proxmox-external
+      namespace: {{ .Values.gateway.namespace }}
+      port: {{ (index .Values.externalServices.proxmox.backend.endpoints 0).port }}
+      # NOTA: questo è un "trucco" - HTTPRoute punta a un Service
+      # che non esiste fisicamente, ma Istio lo risolve via ServiceEntry
+      group: ""
+      kind: Service
 {{- end }}

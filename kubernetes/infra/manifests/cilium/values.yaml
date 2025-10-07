@@ -7,7 +7,7 @@ gateway:
   ip: "192.168.0.81"
   ipPool:
     start: "192.168.0.81"
-    stop: "192.168.0.90"
+    stop: "192.168.0.81"
   l2Interface: "ens18"
   
   # Certificato TLS per il listener HTTPS
@@ -34,14 +34,14 @@ cilium:
   gatewayAPI:
     enabled: true
 
-  # socketLB:
-  #   # Importante: disabilita socket-level LB per permettere a Istio
-  #   # di intercettare traffico verso ClusterIP
-  #   hostNamespaceOnly: true
+  socketLB:
+    # Importante: disabilita socket-level LB per permettere a Istio
+    # di intercettare traffico verso ClusterIP
+    hostNamespaceOnly: true
   
-  # bpf:
-  #   # Mantieni routing in host namespace per Istio compatibility
-  #   hostLegacyRouting: true
+  bpf:
+    # Mantieni routing in host namespace per Istio compatibility
+    hostLegacyRouting: true
   
   # IMPORTANTE: Richiesto per Gateway API
   kubeProxyReplacement: true

@@ -1,63 +1,87 @@
 {{- if .Values.externalServices.truenas.enabled }}
 ---
-# ServiceEntry definisce gli endpoint esterni come servizio
+# ServiceEntry per TrueNAS
 apiVersion: networking.istio.io/v1beta1
 kind: ServiceEntry
 metadata:
   name: truenas-external
   namespace: {{ .Values.gateway.namespace }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
 spec:
-  # Host interno che verrà usato per il routing
   hosts:
   - truenas-external.{{ .Values.gateway.namespace }}.svc.cluster.local
+  
   location: MESH_EXTERNAL
+  
   ports:
   - number: {{ (index .Values.externalServices.truenas.backend.endpoints 0).port }}
     name: https
     protocol: HTTPS
+  
   resolution: STATIC
+  
   endpoints:
   {{- range .Values.externalServices.truenas.backend.endpoints }}
   - address: {{ .address }}
     ports:
       https: {{ .port }}
   {{- end }}
+
 ---
-# DestinationRule per TLS configuration
+# DestinationRule per TLS config
 apiVersion: networking.istio.io/v1beta1
 kind: DestinationRule
 metadata:
   name: truenas-external
   namespace: {{ .Values.gateway.namespace }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
 spec:
   host: truenas-external.{{ .Values.gateway.namespace }}.svc.cluster.local
+  
   trafficPolicy:
     loadBalancer:
       simple: ROUND_ROBIN
+    
     tls:
       mode: SIMPLE
       {{- if .Values.externalServices.truenas.backend.skipVerify }}
       insecureSkipVerify: true
       {{- end }}
+    
+    connectionPool:
+      http:
+        http1MaxPendingRequests: 512
+        maxRequestsPerConnection: 10
+
 ---
-# VirtualService per mappare hostname esterno -> ServiceEntry interno
-apiVersion: networking.istio.io/v1beta1
-kind: VirtualService
+# HTTPRoute per routing
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
 metadata:
   name: truenas-external
   namespace: {{ .Values.gateway.namespace }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
 spec:
-  hosts:
-  - {{ .Values.externalServices.truenas.hostname }}
-  gateways:
-  - {{ .Values.gateway.name }}
-  http:
-  - match:
-    - uri:
-        prefix: /
-    route:
-    - destination:
-        host: truenas-external.{{ .Values.gateway.namespace }}.svc.cluster.local
-        port:
-          number: {{ (index .Values.externalServices.truenas.backend.endpoints 0).port }}
+  parentRefs:
+  - name: {{ .Values.gateway.name }}
+    namespace: {{ .Values.gateway.namespace }}
+  
+  hostnames:
+  - {{ .Values.externalServices.truenas.hostname | quote }}
+  
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /
+    
+    backendRefs:
+    - name: truenas-external
+      namespace: {{ .Values.gateway.namespace }}
+      port: {{ (index .Values.externalServices.truenas.backend.endpoints 0).port }}
+      group: ""
+      kind: Service
 {{- end }}

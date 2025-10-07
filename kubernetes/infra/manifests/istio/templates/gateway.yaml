@@ -1,34 +1,14 @@
 {{- if .Values.gateway.enabled }}
 ---
-# Gateway Deployment (managed by Istio)
+# ServiceAccount per il Gateway
 apiVersion: v1
-kind: Service
+kind: ServiceAccount
 metadata:
   name: {{ .Values.gateway.name }}
   namespace: {{ .Values.gateway.namespace }}
-  labels:
-    app: {{ .Values.gateway.name }}
-    istio: external-gateway
-  annotations:
-    {{- toYaml .Values.gateway.serviceAnnotations | nindent 4 }}
-spec:
-  type: {{ .Values.gateway.serviceType }}
-  {{- if .Values.gateway.loadBalancerIP }}
-  loadBalancerIP: {{ .Values.gateway.loadBalancerIP }}
-  {{- end }}
-  selector:
-    app: {{ .Values.gateway.name }}
-    istio: external-gateway
-  ports:
-  - name: http
-    port: 80
-    protocol: TCP
-    targetPort: 8080
-  - name: https
-    port: 443
-    protocol: TCP
-    targetPort: 8443
+
 ---
+# Deployment del Gateway (Istio injecta Envoy come sidecar)
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -46,6 +26,7 @@ spec:
   template:
     metadata:
       annotations:
+        # Usa il template gateway per injection
         inject.istio.io/templates: gateway
       labels:
         app: {{ .Values.gateway.name }}
@@ -54,12 +35,13 @@ spec:
     spec:
       serviceAccountName: {{ .Values.gateway.name }}
       securityContext:
+        # Permetti binding su porte < 1024 senza root
         sysctls:
         - name: net.ipv4.ip_unprivileged_port_start
           value: "0"
       containers:
       - name: istio-proxy
-        image: auto
+        image: auto  # Istio injecta l'immagine corretta
         resources:
           requests:
             cpu: 100m
@@ -67,19 +49,80 @@ spec:
           limits:
             cpu: 500m
             memory: 512Mi
+
 ---
+# Service LoadBalancer gestito da Cilium
 apiVersion: v1
-kind: ServiceAccount
+kind: Service
 metadata:
   name: {{ .Values.gateway.name }}
   namespace: {{ .Values.gateway.namespace }}
+  labels:
+    app: {{ .Values.gateway.name }}
+    istio: external-gateway
+  annotations:
+    # IMPORTANTE: dice a Cilium di usare questo IP specifico
+    io.cilium/lb-ipam-ips: {{ .Values.gateway.loadBalancerIP | quote }}
+spec:
+  type: LoadBalancer
+  loadBalancerIP: {{ .Values.gateway.loadBalancerIP }}
+  selector:
+    app: {{ .Values.gateway.name }}
+    istio: external-gateway
+  ports:
+  - name: http
+    port: 80
+    protocol: TCP
+    targetPort: 8080
+  - name: https
+    port: 443
+    protocol: TCP
+    targetPort: 8443
+
 ---
-# ReferenceGrant per accedere al certificato TLS
+# Gateway usando K8s Gateway API (non quella Istio legacy)
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: {{ .Values.gateway.name }}
+  namespace: {{ .Values.gateway.namespace }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  gatewayClassName: istio  # Istio implementa le K8s Gateway API
+  listeners:
+  - name: http
+    hostname: "*.local.ildoc.it"
+    port: 80
+    protocol: HTTP
+    allowedRoutes:
+      namespaces:
+        from: All
+  
+  - name: https
+    hostname: "*.local.ildoc.it"
+    port: 443
+    protocol: HTTPS
+    allowedRoutes:
+      namespaces:
+        from: All
+    tls:
+      mode: Terminate
+      certificateRefs:
+      - name: {{ .Values.gateway.tls.secretName }}
+        namespace: {{ .Values.gateway.tls.secretNamespace }}
+        group: ""
+        kind: Secret
+
+---
+# ReferenceGrant per accedere al certificato in default namespace
 apiVersion: gateway.networking.k8s.io/v1beta1
 kind: ReferenceGrant
 metadata:
   name: allow-istio-gateway-cert
   namespace: {{ .Values.gateway.tls.secretNamespace }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
 spec:
   from:
   - group: gateway.networking.k8s.io
@@ -89,31 +132,4 @@ spec:
   - group: ""
     kind: Secret
     name: {{ .Values.gateway.tls.secretName }}
----
-# Istio Gateway resource (usa API Istio nativa, non K8s Gateway API)
-apiVersion: networking.istio.io/v1beta1
-kind: Gateway
-metadata:
-  name: {{ .Values.gateway.name }}
-  namespace: {{ .Values.gateway.namespace }}
-spec:
-  selector:
-    app: {{ .Values.gateway.name }}
-    istio: external-gateway
-  servers:
-  - port:
-      number: 80
-      name: http
-      protocol: HTTP
-    hosts:
-    - "*.local.ildoc.it"
-  - port:
-      number: 443
-      name: https
-      protocol: HTTPS
-    hosts:
-    - "*.local.ildoc.it"
-    tls:
-      mode: SIMPLE
-      credentialName: {{ .Values.gateway.tls.secretName }}
 {{- end }}
