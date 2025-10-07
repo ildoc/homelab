@@ -1,0 +1,132 @@
+{{- range $name, $config := .Values.externalServices }}
+{{- if $config.enabled }}
+---
+# ServiceEntry per {{ $name }}
+apiVersion: networking.istio.io/v1beta1
+kind: ServiceEntry
+metadata:
+  name: {{ $name }}-external
+  namespace: {{ $.Values.gateway.namespace }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  hosts:
+  - {{ $name }}-external.{{ $.Values.gateway.namespace }}.svc.cluster.local
+  
+  location: MESH_EXTERNAL
+  
+  ports:
+  - number: {{ $config.port }}
+    name: {{ $config.protocol | lower }}
+    protocol: {{ $config.protocol | upper }}
+  
+  resolution: STATIC
+  
+  endpoints:
+  {{- range $config.endpoints }}
+  - address: {{ .address }}
+    ports:
+      {{ $config.protocol | lower }}: {{ $config.port }}
+  {{- end }}
+
+---
+# DestinationRule per {{ $name }}
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: {{ $name }}-external
+  namespace: {{ $.Values.gateway.namespace }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  host: {{ $name }}-external.{{ $.Values.gateway.namespace }}.svc.cluster.local
+  
+  trafficPolicy:
+    {{- if gt (len $config.endpoints) 1 }}
+    # Load balancing solo se ci sono multiple endpoints
+    loadBalancer:
+      simple: {{ $config.loadBalancer | default "ROUND_ROBIN" }}
+    {{- end }}
+    
+    {{- if eq ($config.protocol | upper) "HTTPS" }}
+    # Configurazione TLS per backend HTTPS
+    tls:
+      mode: SIMPLE
+      {{- if $config.skipVerify }}
+      insecureSkipVerify: true
+      {{- end }}
+    {{- end }}
+    
+    # Connection pool settings
+    connectionPool:
+      http:
+        http1MaxPendingRequests: {{ $config.connectionPool.maxPendingRequests | default 512 }}
+        maxRequestsPerConnection: {{ $config.connectionPool.maxRequestsPerConnection | default 10 }}
+    
+    {{- if $config.outlierDetection.enabled }}
+    # Outlier detection (health checking)
+    outlierDetection:
+      consecutiveErrors: {{ $config.outlierDetection.consecutiveErrors | default 5 }}
+      interval: {{ $config.outlierDetection.interval | default "30s" }}
+      baseEjectionTime: {{ $config.outlierDetection.baseEjectionTime | default "30s" }}
+    {{- end }}
+
+---
+# HTTPRoute per {{ $name }}
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: {{ $name }}-external
+  namespace: {{ $.Values.gateway.namespace }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  parentRefs:
+  - name: {{ $.Values.gateway.name }}
+    namespace: {{ $.Values.gateway.namespace }}
+  
+  hostnames:
+  - {{ $config.hostname | quote }}
+  
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /
+    
+    {{- if $config.filters }}
+    # Request/Response filters (es. header manipulation)
+    filters:
+    {{- range $config.filters }}
+    - type: {{ .type }}
+      {{- if eq .type "RequestHeaderModifier" }}
+      requestHeaderModifier:
+        {{- if .set }}
+        set:
+        {{- range .set }}
+        - name: {{ .name }}
+          value: {{ .value }}
+        {{- end }}
+        {{- end }}
+        {{- if .add }}
+        add:
+        {{- range .add }}
+        - name: {{ .name }}
+          value: {{ .value }}
+        {{- end }}
+        {{- end }}
+        {{- if .remove }}
+        remove: {{ .remove }}
+        {{- end }}
+      {{- end }}
+    {{- end }}
+    {{- end }}
+    
+    backendRefs:
+    - name: {{ $name }}-external
+      namespace: {{ $.Values.gateway.namespace }}
+      port: {{ $config.port }}
+      group: ""
+      kind: Service
+{{- end }}
+{{- end }}

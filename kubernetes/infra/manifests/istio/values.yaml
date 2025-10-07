@@ -4,43 +4,139 @@ gateway:
   name: istio-external-gateway
   namespace: istio-system
   
-  # IP dal pool Cilium (secondo IP)
+  # IP dal pool Cilium
   loadBalancerIP: "192.168.0.82"
   
-  # TLS certificate (stesso wildcard usato da Cilium)
+  # TLS certificate (wildcard gestito da cert-manager)
   tls:
     secretName: "local-ildoc-it-tls"
     secretNamespace: "default"
-  
-  # Service type
-  serviceType: LoadBalancer
-  serviceAnnotations:
-    # Cilium gestisce il LoadBalancer
-    io.cilium/lb-ipam-ips: "192.168.0.82"
 
-# External services configuration
+# =====================================================
+# External Services Configuration
+# =====================================================
+# Per aggiungere un nuovo servizio esterno, basta
+# aggiungerlo qui con questa struttura
+# =====================================================
+
 externalServices:
+  # Cluster Proxmox (3 nodi con load balancing)
   proxmox:
     enabled: true
     hostname: "proxmox.local.ildoc.it"
-    backend:
-      # Backend HTTPS con skip verify
-      protocol: HTTPS
-      skipVerify: true
-      endpoints:
-        - address: "192.168.0.10"
-          port: 8006
-        - address: "192.168.0.11"
-          port: 8006
-        - address: "192.168.0.12"
-          port: 8006
+    protocol: HTTPS
+    port: 8006
+    skipVerify: true
+    loadBalancer: ROUND_ROBIN
+    
+    # Multiple endpoints = automatic load balancing
+    endpoints:
+      - address: "192.168.0.10"
+      - address: "192.168.0.11"
+      - address: "192.168.0.12"
+    
+    # Connection pool settings
+    connectionPool:
+      maxPendingRequests: 1024
+      maxRequestsPerConnection: 10
+    
+    # Health checking
+    outlierDetection:
+      enabled: true
+      consecutiveErrors: 5
+      interval: "30s"
+      baseEjectionTime: "30s"
   
+  # TrueNAS
   truenas:
     enabled: true
     hostname: "truenas.local.ildoc.it"
-    backend:
-      protocol: HTTPS
-      skipVerify: true
-      endpoints:
-        - address: "192.168.0.123"
-          port: 443
+    protocol: HTTPS
+    port: 443
+    skipVerify: true
+    
+    endpoints:
+      - address: "192.168.0.123"
+    
+    connectionPool:
+      maxPendingRequests: 512
+      maxRequestsPerConnection: 10
+  
+  # Invidious (YouTube frontend)
+  invidious:
+    enabled: true
+    hostname: "invidious.local.ildoc.it"
+    protocol: HTTP
+    port: 443
+    
+    endpoints:
+      - address: "192.168.0.111"
+    
+    connectionPool:
+      maxPendingRequests: 512
+      maxRequestsPerConnection: 10
+  
+  # Proxmox Backup Server
+  pbs:
+    enabled: true
+    hostname: "pbs.local.ildoc.it"
+    protocol: HTTPS
+    port: 8007
+    skipVerify: true
+    
+    endpoints:
+      - address: "192.168.0.204"
+    
+    connectionPool:
+      maxPendingRequests: 512
+      maxRequestsPerConnection: 10
+
+# =====================================================
+# Esempi di configurazioni avanzate (commentati)
+# =====================================================
+
+  # Esempio: servizio con header customizzati
+  # myapp:
+  #   enabled: false
+  #   hostname: "myapp.local.ildoc.it"
+  #   protocol: HTTP
+  #   port: 8080
+  #   
+  #   endpoints:
+  #     - address: "192.168.0.50"
+  #   
+  #   # Aggiungi/modifica header HTTP
+  #   filters:
+  #     - type: RequestHeaderModifier
+  #       set:
+  #         - name: X-Forwarded-Proto
+  #           value: https
+  #       add:
+  #         - name: X-Custom-Header
+  #           value: my-value
+  #       remove:
+  #         - Host
+
+  # Esempio: servizio con multiple repliche e health check
+  # api-cluster:
+  #   enabled: false
+  #   hostname: "api.local.ildoc.it"
+  #   protocol: HTTPS
+  #   port: 443
+  #   skipVerify: false
+  #   loadBalancer: LEAST_REQUEST  # o ROUND_ROBIN, RANDOM, PASSTHROUGH
+  #   
+  #   endpoints:
+  #     - address: "192.168.0.100"
+  #     - address: "192.168.0.101"
+  #     - address: "192.168.0.102"
+  #   
+  #   connectionPool:
+  #     maxPendingRequests: 2048
+  #     maxRequestsPerConnection: 20
+  #   
+  #   outlierDetection:
+  #     enabled: true
+  #     consecutiveErrors: 3
+  #     interval: "10s"
+  #     baseEjectionTime: "60s"
