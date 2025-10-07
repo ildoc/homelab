@@ -26,7 +26,6 @@ spec:
   template:
     metadata:
       annotations:
-        # Usa il template gateway per injection
         inject.istio.io/templates: gateway
       labels:
         app: {{ .Values.gateway.name }}
@@ -35,13 +34,12 @@ spec:
     spec:
       serviceAccountName: {{ .Values.gateway.name }}
       securityContext:
-        # Permetti binding su porte < 1024 senza root
         sysctls:
         - name: net.ipv4.ip_unprivileged_port_start
           value: "0"
       containers:
       - name: istio-proxy
-        image: auto  # Istio injecta l'immagine corretta
+        image: auto
         resources:
           requests:
             cpu: 100m
@@ -51,36 +49,8 @@ spec:
             memory: 512Mi
 
 ---
-# Service LoadBalancer gestito da Cilium
-apiVersion: v1
-kind: Service
-metadata:
-  name: {{ .Values.gateway.name }}
-  namespace: {{ .Values.gateway.namespace }}
-  labels:
-    app: {{ .Values.gateway.name }}
-    istio: external-gateway
-  annotations:
-    # IMPORTANTE: dice a Cilium di usare questo IP specifico
-    io.cilium/lb-ipam-ips: {{ .Values.gateway.loadBalancerIP | quote }}
-spec:
-  type: LoadBalancer
-  loadBalancerIP: {{ .Values.gateway.loadBalancerIP }}
-  selector:
-    app: {{ .Values.gateway.name }}
-    istio: external-gateway
-  ports:
-  - name: http
-    port: 80
-    protocol: TCP
-    targetPort: 8080
-  - name: https
-    port: 443
-    protocol: TCP
-    targetPort: 8443
-
----
-# Gateway usando K8s Gateway API (non quella Istio legacy)
+# Gateway usando K8s Gateway API
+# Istio creerà automaticamente il Service LoadBalancer
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
@@ -88,8 +58,16 @@ metadata:
   namespace: {{ .Values.gateway.namespace }}
   annotations:
     argocd.argoproj.io/sync-wave: "0"
+    # Annotation per Cilium IPAM - queste vengono copiate sul Service
+    io.cilium/lb-ipam-ips: {{ .Values.gateway.loadBalancerIP | quote }}
 spec:
-  gatewayClassName: istio  # Istio implementa le K8s Gateway API
+  gatewayClassName: istio
+  
+  # IMPORTANTE: Questo fa sì che Istio crei il Service con l'IP specificato
+  addresses:
+  - type: IPAddress
+    value: {{ .Values.gateway.loadBalancerIP | quote }}
+  
   listeners:
   - name: http
     hostname: "*.local.ildoc.it"

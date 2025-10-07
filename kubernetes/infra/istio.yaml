@@ -5,15 +5,19 @@ metadata:
   name: istio-base
   namespace: argocd
   annotations:
-    argocd.argoproj.io/sync-wave: "-90"  # Dopo Cilium (-100)
+    argocd.argoproj.io/sync-wave: "-90"
   finalizers:
     - resources-finalizer.argocd.argoproj.io
 spec:
   project: default
   source:
     repoURL: https://istio-release.storage.googleapis.com/charts
-    targetRevision: 1.24.2  # Ultima stable con ambient GA
+    targetRevision: 1.24.2
     chart: base
+    helm:
+      values: |
+        # Abilita supporto per K8s Gateway API
+        defaultRevision: default
   destination:
     server: https://kubernetes.default.svc
     namespace: istio-system
@@ -23,6 +27,7 @@ spec:
     automated:
       prune: true
       selfHeal: true
+
 ---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -42,15 +47,19 @@ spec:
     helm:
       values: |
         pilot:
+          # IMPORTANTE: abilita Gateway API support
+          env:
+            PILOT_ENABLE_GATEWAY_API: "true"
+            PILOT_ENABLE_GATEWAY_API_DEPLOYMENT_CONTROLLER: "true"
           resources:
             requests:
               cpu: 100m
               memory: 512Mi
+        
         meshConfig:
           # Compatibilità con Cilium
           defaultConfig:
             proxyMetadata:
-              # Importante per non interferire con Cilium
               ISTIO_META_DNS_CAPTURE: "false"
   destination:
     server: https://kubernetes.default.svc
@@ -59,6 +68,7 @@ spec:
     automated:
       prune: true
       selfHeal: true
+
 ---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
