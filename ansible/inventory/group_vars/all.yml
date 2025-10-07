@@ -252,6 +252,7 @@ redis:
         - "+@scripting"
         - "-@dangerous"
         - "+select"
+        - "+keys"
       description: "Utente read-write per applicazioni"
 
     # - name: app_readonly
