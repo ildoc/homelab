@@ -29,12 +29,14 @@
     "**/opentofu/archived/**"
   ],
 
+  "docker": {
+    "pinDigests": true
+  },
+
   "docker-compose": {
     "fileMatch": [
       "(^|/)docker-compose[^/]*\\.ya?ml$",
-      "(^|/)docker-compose[^/]*\\.ya?ml\\.j2$",
-      "(^|/)compose[^/]*\\.ya?ml$",
-      "(^|/)compose[^/]*\\.ya?ml\\.j2$"
+      "(^|/)compose[^/]*\\.ya?ml$"
     ]
   },
   
@@ -44,13 +46,44 @@
     ]
   },
   
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Aggiorna immagini Docker in template Jinja2/Ansible",
+      "fileMatch": [
+        "(^|/)docker-compose[^/]*\\.ya?ml\\.j2$"
+      ],
+      "matchStrings": [
+        "(?:image:\\s+\\\"?)(?<depName>[^:]+):(?<currentValue>[^\\s@\"]+)(?:@(?<currentDigest>sha256:[a-f0-9]+))?\\\"?\\n"
+      ],
+      "datasourceTemplate": "docker",
+      "versioningTemplate": "docker"
+    }
+  ],
+
   "packageRules": [
     {
-      "description": "Test specifico per immagini Invidious",
+      "description": "Immagini quay.io con digest pinning",
       "matchDatasources": ["docker"],
-      "matchPackagePatterns": ["^quay\\.io/invidious/"],
-      "enabled": true,
-      "prCreation": "immediate"
+      "matchPackagePatterns": ["^quay\\.io/"],
+      "pinDigests": true,
+      "groupName": "quay.io images"
+    },
+    {
+      "description": "Invidious - usa versioning loose per tag inconsistenti",
+      "matchPackageNames": [
+        "quay.io/invidious/invidious"
+      ],
+      "versioning": "loose",
+      "followTag": "master"
+    },
+    {
+      "description": "Invidious - usa versioning loose per tag inconsistenti",
+      "matchPackageNames": [
+        "quay.io/invidious/invidious-companion"
+      ],
+      "versioning": "loose",
+      "followTag": "latest"
     },
     {
       "description": "Disabilita automerge per tutto",
