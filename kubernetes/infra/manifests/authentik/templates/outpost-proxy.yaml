@@ -32,7 +32,7 @@ spec:
           protocol: TCP
         env:
         - name: AUTHENTIK_HOST
-          value: "http://authentik-server.{{ .Release.Namespace }}.svc.cluster.local"
+          value: "http://authentik-server.{{ .Release.Namespace }}.svc.cluster.local/"
         - name: AUTHENTIK_INSECURE
           value: "true"
         - name: AUTHENTIK_TOKEN
