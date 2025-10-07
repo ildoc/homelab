@@ -46,6 +46,13 @@
   
   "packageRules": [
     {
+      "description": "Test specifico per immagini Invidious",
+      "matchDatasources": ["docker"],
+      "matchPackagePatterns": ["^quay\\.io/invidious/"],
+      "enabled": true,
+      "prCreation": "immediate"
+    },
+    {
       "description": "Disabilita automerge per tutto",
       "matchPackageNames": ["*"],
       "automerge": false,
