@@ -108,11 +108,14 @@ tofu-plan:
     # Riassunto delle modifiche
     echo "=== RIASSUNTO MODIFICHE ==="
     if [ -s plan.json ]; then
-      CHANGES=$(jq -r '.resource_changes[]? | "\(.address): \(.change.actions | join(","))"' plan.json 2>/dev/null || echo "Nessuna modifica")
+      CHANGES=$(jq -r '.resource_changes[]? | 
+        "\(.address): \(.change.actions | join(","))"' \
+        plan.json 2>/dev/null || echo "Nessuna modifica")
       echo "$CHANGES"
-      
+
       # Conta le risorse
-      RESOURCES_COUNT=$(jq '.resource_changes | length' plan.json 2>/dev/null || echo "0")
+      RESOURCES_COUNT=$(jq '.resource_changes | length' \
+        plan.json 2>/dev/null || echo "0")
       echo "Totale risorse da modificare: $RESOURCES_COUNT"
     else
       echo "Nessuna modifica rilevata"
@@ -138,7 +141,7 @@ tofu-apply:
   stage: apply
   script: |
     echo "=== Applicazione modifiche Pi-hole DNS ==="
-    
+
     # Verifica che il piano esista
     if [ ! -f plan.tfplan ]; then
       echo "ERRORE: File del piano non trovato!"
@@ -164,7 +167,7 @@ tofu-apply:
     # Salva gli output
     echo "=== OUTPUT FINALE ==="
     tofu output -json > terraform_output.json || echo "{}" > terraform_output.json
-    
+
     if [ -s terraform_output.json ]; then
       echo "Output salvati:"
       cat terraform_output.json | jq . || cat terraform_output.json

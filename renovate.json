@@ -25,24 +25,19 @@
   "internalChecksFilter": "flexible",
   
   "ignorePaths": [
-    "**/kubernetes/applications/archived/**",
-    "**/opentofu/archived/**",
+    "**/archived/**",
     "docs/**"
   ],
 
-  "docker": {
-    "pinDigests": true
-  },
-
   "docker-compose": {
-    "fileMatch": [
+    "managerFilePatterns": [
       "(^|/)docker-compose[^/]*\\.ya?ml$",
       "(^|/)compose[^/]*\\.ya?ml$"
     ]
   },
   
   "kubernetes": {
-    "fileMatch": [
+    "managerFilePatterns": [
       "kubernetes/.+\\.ya?ml$"
     ]
   },
@@ -51,7 +46,7 @@
     {
       "customType": "regex",
       "description": "Aggiorna immagini Docker in template Jinja2/Ansible",
-      "fileMatch": [
+      "managerFilePatterns": [
         "(^|/)docker-compose[^/]*\\.ya?ml\\.j2$"
       ],
       "matchStrings": [
@@ -63,6 +58,12 @@
   ],
 
   "packageRules": [
+    {
+      "matchCategories": [
+        "docker"
+      ],
+      "pinDigests": true
+    },
     {
       "description": "Immagini quay.io con digest pinning",
       "matchDatasources": ["docker"],

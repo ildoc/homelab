@@ -1,3 +1,4 @@
+---
 .update_service_template:
   stage: update_services
   image:
