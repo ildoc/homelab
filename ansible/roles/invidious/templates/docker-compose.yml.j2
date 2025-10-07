@@ -20,6 +20,8 @@ services:
         - private_url: "http://companion:8282/companion"
         invidious_companion_key: "{{ invidious.companion_key }}"
         hmac_key: "{{ invidious.hmac_key }}"
+        https_only: true
+        statistic_enabled: true
     healthcheck:
       test: ["CMD-SHELL", "wget -nv --tries=1 --spider http://127.0.0.1:3000/api/v1/trending || exit 1"]
       interval: 30s
