@@ -12,9 +12,3 @@
 
 - name: Setup GitLab
   ansible.builtin.include_tasks: setup_gitlab.yaml
-
-- name: Docker cleanup configuration
-  ansible.builtin.include_tasks: docker_cleanup.yaml
-  tags:
-    - docker-cleanup
-    - maintenance

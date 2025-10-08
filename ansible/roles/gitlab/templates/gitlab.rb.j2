@@ -1,44 +1,361 @@
-# SSH port
-gitlab_rails['gitlab_shell_ssh_port'] = 22
-gitlab_rails['gitlab_ssh_host'] = "{{ gitlab.domain }}"
+################################################################################
+# GitLab Configuration File
+################################################################################
+# Questo file viene gestito da Ansible - Non modificare manualmente!
+# Per modifiche, aggiorna il template: ansible/roles/gitlab/templates/gitlab.rb.j2
+################################################################################
 
-# HTTPS
+################################################################################
+## External URL e configurazioni base
+################################################################################
+
+# URL principale di accesso a GitLab (richiesto)
 external_url 'https://{{ gitlab.domain }}'
 
+# URL per il Container Registry
 registry_external_url 'https://registry.{{ gitlab.domain }}'
 
+################################################################################
+## SSH Configuration
+################################################################################
+
+# Porta SSH per GitLab Shell
+gitlab_rails['gitlab_shell_ssh_port'] = 22
+
+# Host SSH per i comandi git clone
+gitlab_rails['gitlab_ssh_host'] = "{{ gitlab.domain }}"
+
+################################################################################
+## Container Registry Settings
+################################################################################
+
+# Abilita il Container Registry integrato
 registry['enable'] = true
+
+# Configurazione binding del registry
 registry['registry_http_addr'] = "0.0.0.0:5000"
 
+# Disabilita NGINX interno per il registry (usiamo NGINX esterno)
 registry_nginx['enable'] = false
 
+################################################################################
+## NGINX Settings (Internal)
+################################################################################
+# NGINX interno gestisce solo HTTP, SSL è gestito da NGINX esterno
+
+# Limita worker processes per ridurre consumo memoria
 nginx['worker_processes'] = 2
+
+# NGINX ascolta solo su porta HTTP interna
 nginx['listen_port'] = 80
 nginx['listen_https'] = false
 
+# Aumenta worker connections per gestire più richieste concorrenti
+nginx['worker_connections'] = 1024
+
+# Timeout per richieste lente (es: clone di repository grandi)
+nginx['proxy_connect_timeout'] = 300
+nginx['proxy_read_timeout'] = 300
+nginx['proxy_send_timeout'] = 300
+
+# Headers per reverse proxy
+nginx['proxy_set_headers'] = {
+  "Host" => "$http_host",
+  "X-Real-IP" => "$remote_addr",
+  "X-Forwarded-For" => "$proxy_add_x_forwarded_for",
+  "X-Forwarded-Proto" => "https",
+  "X-Forwarded-Ssl" => "on"
+}
+
+################################################################################
+## GitLab Rails Settings
+################################################################################
+
+# Disabilita funzionalità non necessarie per risparmiare risorse
 gitlab_rails['gitlab_default_projects_features_snippets'] = false
 gitlab_rails['gitlab_default_projects_features_wiki'] = false
 
-mattermost['enable'] = false
-prometheus_monitoring['enable'] = false 
-# grafana['enable'] = false 
-alertmanager['enable'] = false 
-postgres_exporter['enable'] = false 
-redis_exporter['enable'] = false 
-gitlab_exporter['enable'] = false 
-geo_secondary['enable'] = false 
-# sidekiq['cluster'] = false
+# Timeout per richieste Rails
+# NOTA: GitLab calcola automaticamente = worker_timeout * 0.95
+# Con worker_timeout = 60s → max_request_duration ≈ 57s (automatico)
+# Non configurare manualmente a meno che non serva un valore custom
 
-# Le seguenti configurazioni erano state aggiunte nel commit "fix grafana" - commentate per ora
+# Aumenta timeout per operazioni Git (utile per repository grandi)
+gitlab_rails['gitlab_shell_timeout'] = 900
+
+# Job artifact settings - limiti upload
+gitlab_rails['max_artifacts_size'] = 1024  # 1GB in MB
+
+# LFS settings - abilita Git Large File Storage
+gitlab_rails['lfs_enabled'] = true
+gitlab_rails['lfs_storage_path'] = "/var/opt/gitlab/gitlab-rails/shared/lfs-objects"
+
+# Backup settings
+gitlab_rails['manage_backup_path'] = true
+gitlab_rails['backup_path'] = "/var/opt/gitlab/backups"
+gitlab_rails['backup_keep_time'] = 604800  # 7 giorni in secondi
+
+################################################################################
+## Cleanup & Housekeeping (GitLab native)
+################################################################################
+
+# CI/CD Artifacts - Scadenza automatica
+gitlab_rails['artifacts_expire_at'] = '30 days'
+
+# Cron job per pulizia artifact scaduti (eseguito da Sidekiq)
+gitlab_rails['expire_build_artifacts_worker_cron'] = "50 * * * *"  # Ogni ora
+
+# Pipeline cleanup - cancella vecchie pipeline
+gitlab_rails['ci_delete_old_pipeline_data_worker_cron'] = "0 4 * * 0"  # Domenica 4am
+
+# Package registry cleanup
+gitlab_rails['packages_cleanup_package_file_worker_cron'] = "20 2 * * *"  # 2:20am
+
+# Repository housekeeping - git gc automatico
+gitlab_rails['housekeeping_enabled'] = true
+gitlab_rails['housekeeping_full_repack_period'] = 50  # Full repack ogni 50 push
+gitlab_rails['housekeeping_gc_period'] = 200  # Git GC ogni 200 push
+gitlab_rails['housekeeping_incremental_repack_period'] = 10  # Incremental ogni 10 push
+
+################################################################################
+## Puma Settings (Application Server)
+################################################################################
+
+# Numero di worker Puma - ridotto per ambienti con memoria limitata
+# Raccomandato: 1 worker ogni 1GB di RAM disponibile
+# Con 1 worker + memory killer attivo, si ottimizza l'uso della RAM
+puma['worker_processes'] = 1
+
+# Thread per worker - bilanciamento tra performance e memoria
+puma['min_threads'] = 4
+puma['max_threads'] = 4
+
+# Worker timeout aumentato per operazioni lente
+puma['worker_timeout'] = 60
+
+# Abilita memory killer per prevenire memory leak
+puma['per_worker_max_memory_mb'] = 1024  # 1GB per worker
+
+################################################################################
+## PostgreSQL Settings
+################################################################################
+
+# Riduci connessioni massime per risparmiare memoria
+postgresql['max_connections'] = 50
+
+# Shared buffers - raccomandato 1/4 della RAM totale (max 14GB)
+# Per container Docker, il default di 256MB è adeguato
+postgresql['shared_buffers'] = "256MB"
+
+# Work memory per query complesse
+postgresql['work_mem'] = "16MB"
+
+# Maintenance work memory per VACUUM e CREATE INDEX
+postgresql['maintenance_work_mem'] = "64MB"
+
+# Checkpoint settings per ottimizzare performance I/O
+postgresql['checkpoint_completion_target'] = 0.9
+postgresql['wal_buffers'] = "16MB"
+
+# Query timeout per prevenire query bloccanti
+postgresql['statement_timeout'] = "60000"  # 60 secondi
+
+# Log delle query lente (utile per debugging)
+postgresql['log_min_duration_statement'] = 1000  # Log query > 1 secondo
+
+################################################################################
+## Redis Settings
+################################################################################
+
+# Limita connessioni client Redis
+redis['maxclients'] = 100
+
+# Timeout per connessioni idle
+redis['timeout'] = 300
+
+################################################################################
+## Gitaly Settings (Git RPC Service)
+################################################################################
+
+# Timeout per operazioni Git lunghe
+gitaly['configuration'] = {
+  # Logging
+  logging: {
+    level: 'warn',
+    format: 'json',
+  },
+  # Git configuration
+  git: {
+    catfile_cache_size: 100,
+  },
+  # Concurrency limits
+  concurrency: [
+    {
+      rpc: "/gitaly.SmartHTTPService/PostReceivePack",
+      max_per_repo: 20,
+    },
+    {
+      rpc: "/gitaly.SSHService/SSHUploadPack",
+      max_per_repo: 20,
+    },
+  ],
+}
+
+################################################################################
+## Sidekiq Settings (Background Jobs)
+################################################################################
+
+# Numero di worker Sidekiq - ridotto per ambienti con poca memoria
+sidekiq['max_concurrency'] = 10
+
+# Memory killer per Sidekiq
+sidekiq['memory_killer_max_memory_growth_kb'] = 300000  # ~300MB
+
+################################################################################
+## Monitoring & Telemetry
+################################################################################
+# Disabilita componenti di monitoring non essenziali per risparmiare risorse
+
+# Mattermost (chat integrata) - disabilitato
+mattermost['enable'] = false
+
+# Prometheus monitoring - disabilitato per risparmiare ~400-500MB RAM
+prometheus_monitoring['enable'] = false
+
+# NOTA: Grafana è stato rimosso da GitLab 16.3 - non configurare più
+# grafana['enable'] = false  # ❌ ERRORE - questa configurazione non esiste più!
+
+# Alertmanager - disabilitato
+alertmanager['enable'] = false
+
+# Exporter vari - disabilitati
+postgres_exporter['enable'] = false
+redis_exporter['enable'] = false
+gitlab_exporter['enable'] = false
+node_exporter['enable'] = false
+
+# Geo replication - disabilitato (non necessario per single-server)
+geo_secondary['enable'] = false
+
+################################################################################
+## GitLab Pages (Static Sites Hosting)
+################################################################################
+# Disabilita se non necessario per risparmiare risorse
+
+gitlab_pages['enable'] = false
+
+################################################################################
+## GitLab KAS (Kubernetes Agent Server)
+################################################################################
+# Disabilita se non usi GitLab Kubernetes Agent
+
+gitlab_kas['enable'] = false
+
+################################################################################
+## Suggested Reviewers
+################################################################################
+# Disabilita ML features se non necessarie
+
+gitlab_rails['suggested_reviewers_enabled'] = false
+
+################################################################################
+## Email Configuration
+################################################################################
+# Configurazione SMTP - Decommentare e configurare se necessario
+
+# gitlab_rails['smtp_enable'] = true
+# gitlab_rails['smtp_address'] = "smtp.gmail.com"
+# gitlab_rails['smtp_port'] = 587
+# gitlab_rails['smtp_user_name'] = "my.email@gmail.com"
+# gitlab_rails['smtp_password'] = "my-password"
+# gitlab_rails['smtp_domain'] = "smtp.gmail.com"
+# gitlab_rails['smtp_authentication'] = "login"
+# gitlab_rails['smtp_enable_starttls_auto'] = true
+# gitlab_rails['smtp_tls'] = false
+# gitlab_rails['smtp_openssl_verify_mode'] = 'peer'
+
+# Email mittente
+# gitlab_rails['gitlab_email_from'] = 'gitlab@{{ gitlab.domain }}'
+# gitlab_rails['gitlab_email_reply_to'] = 'noreply@{{ gitlab.domain }}'
+
+################################################################################
+## Advanced Performance Tuning
+################################################################################
+
+# Shared memory - importante per Docker
+# Il valore 256m nel docker-compose corrisponde a questa impostazione
+
+# Garbage collection per Ruby (migliora gestione memoria)
+gitlab_rails['env'] = {
+  'MALLOC_CONF' => 'dirty_decay_ms:1000,muzzy_decay_ms:1000',
+  'RUBY_GC_HEAP_GROWTH_FACTOR' => '1.1',
+  'RUBY_GC_MALLOC_LIMIT' => '16000000',
+  'RUBY_GC_OLDMALLOC_LIMIT' => '16000000'
+}
+
+# Applica le stesse impostazioni a Gitaly
+gitaly['env'] = {
+  'MALLOC_CONF' => 'dirty_decay_ms:1000,muzzy_decay_ms:1000'
+}
+
+################################################################################
+## Security Settings
+################################################################################
+
+# Rate limiting per prevenire abusi
+gitlab_rails['rack_attack_git_basic_auth'] = {
+  'enabled' => true,
+  'ip_whitelist' => ["127.0.0.1", "192.168.0.0/16"],
+  'maxretry' => 10,
+  'findtime' => 60,
+  'bantime' => 3600
+}
+
+# Session timeout
+gitlab_rails['session_expire_delay'] = 10080  # 7 giorni in minuti
+
+################################################################################
+## Container Registry Storage
+################################################################################
+
+# Configurazione storage per il registry - SOLO filesystem
+# NOTA: Devi specificare SOLO UN tipo di storage (filesystem O s3, non entrambi)
+registry['storage'] = {
+  'filesystem' => {
+    'rootdirectory' => '/var/opt/gitlab/gitlab-rails/shared/registry'
+  }
+}
+
+# Registry garbage collection
+registry['garbage_collect'] = {
+  'enabled' => true,
+}
+
+# Se in futuro vuoi usare S3 invece di filesystem, sostituisci con:
+# registry['storage'] = {
+#   's3' => {
+#     'accesskey' => 'YOUR_ACCESS_KEY',
+#     'secretkey' => 'YOUR_SECRET_KEY',
+#     'bucket' => 'your-bucket-name',
+#     'region' => 'us-east-1'
+#   }
+# }
+
+################################################################################
+## IMPORTANTE - Configurazioni commentate per riferimento futuro
+################################################################################
+
+# Se in futuro vuoi riabilitare il monitoring:
+# prometheus_monitoring['enable'] = true
 # gitlab_exporter['enable'] = true
-# prometheus['enable'] = true
 # node_exporter['enable'] = true
 # redis_exporter['enable'] = true
 # postgres_exporter['enable'] = true
 
-puma['worker_processes'] = 1
+# NOTA IMPORTANTE: Grafana è stato rimosso da GitLab Omnibus dalla versione 16.3
+# Se hai bisogno di Grafana, devi installarlo separatamente e configurare
+# l'integrazione seguendo: https://docs.gitlab.com/administration/monitoring/performance/grafana_configuration/
 
-postgresql['max_connections'] = 50
-
-redis['maxclients'] = 100
-
+################################################################################
+# Fine configurazione
+################################################################################
