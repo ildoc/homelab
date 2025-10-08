@@ -54,21 +54,25 @@
   ],
   "packageRules": [
     {
+      "description": "Pin digests per tutte le immagini Docker - raggruppate",
       "matchCategories": [
         "docker"
       ],
-      "pinDigests": true
+      "pinDigests": true,
+      "matchUpdateTypes": [
+        "pin"
+      ],
+      "groupName": "Docker digest pins"
     },
     {
-      "description": "Immagini quay.io con digest pinning",
+      "description": "Raggruppa aggiornamenti digest Docker",
       "matchDatasources": [
         "docker"
       ],
-      "matchPackagePatterns": [
-        "^quay\\.io/"
+      "matchUpdateTypes": [
+        "digest"
       ],
-      "pinDigests": true,
-      "groupName": "quay.io images"
+      "groupName": "Docker digest updates"
     },
     {
       "description": "Invidious - usa versioning loose per tag inconsistenti",
