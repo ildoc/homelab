@@ -7,32 +7,25 @@
     ":semanticCommits",
     ":timezone(Europe/Rome)"
   ],
-
   "assignees": ["ildoc"],
-
   "automerge": false,
   "platformAutomerge": false,
-
   "prConcurrentLimit": 50,
   "prHourlyLimit": 0,
   "prCreation": "not-pending",
   "internalChecksFilter": "flexible",
-
   "separateMajorMinor": false,
   "separateMinorPatch": false,
   "separateMultipleMajor": false,
-
   "ignorePaths": [
     "**/archived/**",
     "docs/**"
   ],
-
   "schedule": [
     "after 10pm every weekday",
     "every weekend",
     "before 5am every weekday"
   ],
-
   "docker-compose": {
     "managerFilePatterns": [
       "(^|/)docker-compose[^/]*\\.ya?ml$",
@@ -46,7 +39,6 @@
       "kubernetes/.+\\.ya?ml$"
     ]
   },
-
   "customManagers": [
     {
       "customType": "regex",
@@ -73,32 +65,21 @@
       ]
     }
   ],
-
   "packageRules": [
     {
-      "description": "Disabilita pacchetti non rilevanti (solo Docker, Helm, GitHub Actions, GitLab CI, Terraform, Ansible)",
+      "description": "Disabilita tutti gli aggiornamenti di default",
       "matchPackagePatterns": ["*"],
-      "excludeDatasources": [
-        "docker",
-        "helm",
-        "helm-values",
-        "gitlabci",
-        "github-actions",
-        "terraform",
-        "ansible-galaxy"
-      ],
       "enabled": false
     },
-
     {
-      "description": "Aggiornamenti Docker",
+      "description": "Abilita aggiornamenti Docker",
       "matchDatasources": ["docker"],
       "enabled": true,
       "recreateWhen": "auto",
       "rebaseWhen": "auto"
     },
     {
-      "description": "Pin digests Docker (MR unica)",
+      "description": "Pin digests per tutte le immagini Docker - MR unica",
       "matchDatasources": ["docker"],
       "pinDigests": true,
       "matchUpdateTypes": ["pin", "digest"],
@@ -107,34 +88,29 @@
       "commitMessageTopic": "Docker digest updates",
       "commitMessageExtra": "(grouped)"
     },
-
     {
-      "description": "Aggiornamenti Helm chart e values",
+      "description": "Abilita aggiornamenti Helm",
       "matchDatasources": ["helm", "helm-values"],
       "enabled": true,
       "rebaseWhen": "auto"
     },
-
     {
-      "description": "Aggiornamenti GitLab CI e GitHub Actions",
-      "matchDatasources": ["gitlabci", "github-actions"],
+      "description": "Abilita aggiornamenti GitHub Actions e GitLab CI",
+      "matchDatasources": ["github-actions", "gitlabci"],
       "enabled": true
     },
-
     {
-      "description": "Aggiornamenti Terraform / OpenTofu",
+      "description": "Abilita aggiornamenti Terraform / OpenTofu",
       "matchDatasources": ["terraform"],
       "enabled": true,
       "rebaseWhen": "auto",
       "rangeStrategy": "bump"
     },
-
     {
-      "description": "Aggiornamenti Ansible Galaxy roles/collections",
+      "description": "Abilita aggiornamenti Ansible Galaxy",
       "matchDatasources": ["ansible-galaxy"],
       "enabled": true
     },
-
     {
       "description": "Security patches - priorità immediata",
       "matchUpdateTypes": ["patch"],
