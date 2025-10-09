@@ -68,8 +68,18 @@
   "packageRules": [
     {
       "description": "Disabilita tutti gli aggiornamenti di default",
-      "matchPackagePatterns": ["*"],
-      "enabled": false
+      "matchManagers": [
+        "docker-compose",
+        "regex",
+        "kubernetes",
+        "gitlabci",
+        "helm-requirements",
+        "helm-values",
+        "github-actions",
+        "terraform",
+        "ansible-galaxy"
+      ],
+      "enabled": true
     },
     {
       "description": "Abilita aggiornamenti Docker",
