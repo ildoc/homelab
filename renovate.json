@@ -7,7 +7,9 @@
     ":semanticCommits",
     ":timezone(Europe/Rome)"
   ],
-  "assignees": ["ildoc"],
+  "assignees": [
+    "ildoc"
+  ],
   "automerge": false,
   "platformAutomerge": false,
   "prConcurrentLimit": 50,
@@ -42,13 +44,13 @@
   "customManagers": [
     {
       "customType": "regex",
-      "description": "Aggiorna immagini Docker in template Jinja2/Ansible - versione base",
-      "managerFilePatterns": [
+      "description": "Aggiorna immagini Docker nei template Jinja2/Ansible",
+      "fileMatch": [
         "(^|/)docker-compose[^/]*\\.ya?ml\\.j2$",
         "(^|/)compose[^/]*\\.ya?ml\\.j2$"
       ],
       "matchStrings": [
-        "image:\\s+[\"']?(?<depName>[^:\"'\\s{]+):(?<currentValue>[^\"'\\s@{]+)(?:@(?<currentDigest>sha256:[a-f0-9]+))?[\"']?"
+        "image:\\s+[\"']?(?<depName>[a-zA-Z0-9._\\-/]+):(?<currentValue>[a-zA-Z0-9._\\-]+)(?:@(?<currentDigest>sha256:[a-f0-9]+))?[\"']?"
       ],
       "datasourceTemplate": "docker",
       "versioningTemplate": "docker"
@@ -56,7 +58,7 @@
     {
       "customType": "regex",
       "description": "Aggiorna immagini Docker con commenti Renovate espliciti",
-      "managerFilePatterns": [
+      "fileMatch": [
         "(^|/)docker-compose[^/]*\\.ya?ml\\.j2$",
         "(^|/)compose[^/]*\\.ya?ml\\.j2$"
       ],
@@ -68,16 +70,23 @@
   "packageRules": [
     {
       "description": "Abilita aggiornamenti Docker",
-      "matchDatasources": ["docker"],
+      "matchDatasources": [
+        "docker"
+      ],
       "enabled": true,
       "recreateWhen": "auto",
       "rebaseWhen": "auto"
     },
     {
       "description": "Pin digests per tutte le immagini Docker - MR unica",
-      "matchDatasources": ["docker"],
+      "matchDatasources": [
+        "docker"
+      ],
       "pinDigests": true,
-      "matchUpdateTypes": ["pin", "digest"],
+      "matchUpdateTypes": [
+        "pin",
+        "digest"
+      ],
       "groupName": "Docker SHA256 digest pins",
       "groupSlug": "docker-digests",
       "commitMessageTopic": "Docker digest updates",
@@ -85,46 +94,68 @@
     },
     {
       "description": "Abilita aggiornamenti Helm",
-      "matchDatasources": ["helm", "helm-values"],
+      "matchDatasources": [
+        "helm",
+        "helm-values"
+      ],
       "enabled": true,
       "rebaseWhen": "auto"
     },
     {
       "description": "Abilita aggiornamenti GitHub Actions e GitLab CI",
-      "matchDatasources": ["github-actions", "gitlabci"],
+      "matchDatasources": [
+        "github-actions",
+        "gitlabci"
+      ],
       "enabled": true
     },
     {
       "description": "Abilita aggiornamenti Terraform / OpenTofu",
-      "matchDatasources": ["terraform"],
+      "matchDatasources": [
+        "terraform"
+      ],
       "enabled": true,
       "rebaseWhen": "auto",
       "rangeStrategy": "bump"
     },
     {
       "description": "Abilita aggiornamenti Ansible Galaxy",
-      "matchDatasources": ["ansible-galaxy"],
+      "matchDatasources": [
+        "ansible-galaxy"
+      ],
       "enabled": true
     },
     {
       "description": "Security patches - priorità immediata",
-      "matchUpdateTypes": ["patch"],
-      "matchDatasources": ["docker"],
+      "matchUpdateTypes": [
+        "patch"
+      ],
+      "matchDatasources": [
+        "docker"
+      ],
       "minimumReleaseAge": null,
       "prCreation": "immediate",
       "prPriority": 5
     },
     {
       "description": "Major updates - stabilità estesa",
-      "matchUpdateTypes": ["major"],
-      "matchDatasources": ["docker"],
+      "matchUpdateTypes": [
+        "major"
+      ],
+      "matchDatasources": [
+        "docker"
+      ],
       "minimumReleaseAge": "7 days",
       "prPriority": 1
     },
     {
       "description": "Minor updates - stabilità standard",
-      "matchUpdateTypes": ["minor"],
-      "matchDatasources": ["docker"],
+      "matchUpdateTypes": [
+        "minor"
+      ],
+      "matchDatasources": [
+        "docker"
+      ],
       "minimumReleaseAge": "3 days",
       "prPriority": 3
     }
