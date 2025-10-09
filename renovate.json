@@ -7,41 +7,54 @@
     ":semanticCommits",
     ":timezone(Europe/Rome)"
   ],
+  
+  "assignees": ["ildoc"],
+  
   "automerge": false,
   "platformAutomerge": false,
-  "separateMajorMinor": true,
-  "separateMinorPatch": true,
-  "separateMultipleMajor": true,
-  "groupName": null,
-  "assignees": [
-    "ildoc"
-  ],
+  
   "prConcurrentLimit": 50,
   "prHourlyLimit": 0,
   "prCreation": "not-pending",
   "internalChecksFilter": "flexible",
+  
+  "separateMajorMinor": false,
+  "separateMinorPatch": false,
+  "separateMultipleMajor": false,
+  
+  "rollupType": "highest",
+  
   "ignorePaths": [
     "**/archived/**",
     "docs/**"
   ],
+  
+  "schedule": [
+    "after 10pm every weekday",
+    "every weekend",
+    "before 5am every weekday"
+  ],
+  
   "docker-compose": {
-    "fileMatch": [
+    "managerFilePatterns": [
       "(^|/)docker-compose[^/]*\\.ya?ml$",
       "(^|/)docker-compose[^/]*\\.ya?ml\\.j2$",
       "(^|/)compose[^/]*\\.ya?ml$",
       "(^|/)compose[^/]*\\.ya?ml\\.j2$"
     ]
   },
+  
   "kubernetes": {
-    "fileMatch": [
+    "managerFilePatterns": [
       "kubernetes/.+\\.ya?ml$"
     ]
   },
+  
   "customManagers": [
     {
       "customType": "regex",
-      "description": "Aggiorna immagini Docker in template Jinja2/Ansible con variabili",
-      "fileMatch": [
+      "description": "Aggiorna immagini Docker in template Jinja2/Ansible - versione base",
+      "managerFilePatterns": [
         "(^|/)docker-compose[^/]*\\.ya?ml\\.j2$",
         "(^|/)compose[^/]*\\.ya?ml\\.j2$"
       ],
@@ -50,81 +63,87 @@
       ],
       "datasourceTemplate": "docker",
       "versioningTemplate": "docker"
+    },
+    {
+      "customType": "regex",
+      "description": "Aggiorna immagini Docker con commenti Renovate espliciti",
+      "managerFilePatterns": [
+        "(^|/)docker-compose[^/]*\\.ya?ml\\.j2$",
+        "(^|/)compose[^/]*\\.ya?ml\\.j2$"
+      ],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>\\S+)(?: depName=(?<depName>\\S+))?(?: versioning=(?<versioning>\\S+))?\\s+image:\\s+[\"']?(?<packageName>[^:\"'\\s]+):(?<currentValue>[^\"'\\s@]+)(?:@(?<currentDigest>sha256:[a-f0-9]+))?[\"']?"
+      ]
     }
   ],
+  
   "packageRules": [
     {
-      "description": "Pin digests per tutte le immagini Docker - raggruppate",
-      "matchCategories": [
-        "docker"
-      ],
+      "description": "Disabilita tutti gli aggiornamenti di default",
+      "matchPackagePatterns": ["*"],
+      "enabled": false
+    },
+    
+    {
+      "description": "Abilita solo aggiornamenti Docker per singola immagine",
+      "matchDatasources": ["docker"],
+      "enabled": true,
+      "recreateWhen": "always",
+      "rebaseWhen": "auto",
+      "rollupType": "highest",
+      "groupName": null
+    },
+    
+    {
+      "description": "Pin digests per tutte le immagini Docker - una MR unica",
+      "matchDatasources": ["docker"],
       "pinDigests": true,
-      "matchUpdateTypes": [
-        "pin"
-      ],
-      "groupName": "Docker digest pins"
+      "matchUpdateTypes": ["pin", "digest"],
+      "groupName": "Docker SHA256 digest pins",
+      "groupSlug": "docker-digests",
+      "commitMessageTopic": "Docker digest updates",
+      "commitMessageExtra": "(grouped)",
+      "separateMultipleMajor": false,
+      "separateMinorPatch": false
     },
+    
     {
-      "description": "Raggruppa aggiornamenti digest Docker",
-      "matchDatasources": [
-        "docker"
-      ],
-      "matchUpdateTypes": [
-        "digest"
-      ],
-      "groupName": "Docker digest updates"
-    },
-    {
-      "description": "Invidious - usa versioning loose per tag inconsistenti",
-      "matchPackageNames": [
-        "quay.io/invidious/invidious"
-      ],
+      "description": "Invidious - versioning loose per tag inconsistenti",
+      "matchPackageNames": ["quay.io/invidious/invidious"],
       "versioning": "loose",
       "followTag": "master"
     },
+    
     {
-      "description": "Invidious Companion - usa versioning loose per tag inconsistenti",
-      "matchPackageNames": [
-        "quay.io/invidious/invidious-companion"
-      ],
+      "description": "Invidious Companion - versioning loose per tag inconsistenti", 
+      "matchPackageNames": ["quay.io/invidious/invidious-companion"],
       "versioning": "loose",
       "followTag": "latest"
     },
+    
     {
-      "description": "Disabilita automerge per tutto",
-      "matchPackagePatterns": [
-        "*"
-      ],
-      "automerge": false,
-      "platformAutomerge": false,
-      "groupName": null
-    },
-    {
-      "description": "Security updates - senza stability days",
-      "matchUpdateTypes": [
-        "patch"
-      ],
+      "description": "Security patches - priorità immediata",
+      "matchUpdateTypes": ["patch"],
+      "matchDatasources": ["docker"],
       "minimumReleaseAge": null,
-      "prCreation": "immediate"
+      "prCreation": "immediate",
+      "prPriority": 5
     },
+    
     {
-      "description": "Major updates - più giorni di stability",
-      "matchUpdateTypes": [
-        "major"
-      ],
-      "minimumReleaseAge": "7 days"
+      "description": "Major updates - stability period esteso",
+      "matchUpdateTypes": ["major"],
+      "matchDatasources": ["docker"],
+      "minimumReleaseAge": "7 days",
+      "prPriority": 1
     },
+    
     {
-      "description": "Minor updates - periodo standard",
-      "matchUpdateTypes": [
-        "minor"
-      ],
-      "minimumReleaseAge": "3 days"
+      "description": "Minor updates - stability period standard",
+      "matchUpdateTypes": ["minor"],
+      "matchDatasources": ["docker"],
+      "minimumReleaseAge": "3 days",
+      "prPriority": 3
     }
-  ],
-  "schedule": [
-    "after 10pm every weekday",
-    "every weekend",
-    "before 5am every weekday"
   ]
 }
