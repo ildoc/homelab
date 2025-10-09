@@ -7,40 +7,14 @@
     ":semanticCommits",
     ":timezone(Europe/Rome)"
   ],
-  "assignees": [
-    "ildoc"
-  ],
+  "assignees": ["ildoc"],
   "automerge": false,
   "platformAutomerge": false,
   "prConcurrentLimit": 50,
   "prHourlyLimit": 0,
   "prCreation": "not-pending",
   "internalChecksFilter": "flexible",
-  "separateMajorMinor": false,
-  "separateMinorPatch": false,
-  "separateMultipleMajor": false,
-  "ignorePaths": [
-    "**/archived/**",
-    "docs/**"
-  ],
-  "schedule": [
-    "after 10pm every weekday",
-    "every weekend",
-    "before 5am every weekday"
-  ],
-  "docker-compose": {
-    "managerFilePatterns": [
-      "(^|/)docker-compose[^/]*\\.ya?ml$",
-      "(^|/)docker-compose[^/]*\\.ya?ml\\.j2$",
-      "(^|/)compose[^/]*\\.ya?ml$",
-      "(^|/)compose[^/]*\\.ya?ml\\.j2$"
-    ]
-  },
-  "kubernetes": {
-    "managerFilePatterns": [
-      "kubernetes/.+\\.ya?ml$"
-    ]
-  },
+  "ignorePaths": ["**/archived/**", "docs/**"],
   "customManagers": [
     {
       "customType": "regex",
@@ -54,110 +28,44 @@
       ],
       "datasourceTemplate": "docker",
       "versioningTemplate": "docker"
-    },
-    {
-      "customType": "regex",
-      "description": "Aggiorna immagini Docker con commenti Renovate espliciti",
-      "fileMatch": [
-        "(^|/)docker-compose[^/]*\\.ya?ml\\.j2$",
-        "(^|/)compose[^/]*\\.ya?ml\\.j2$"
-      ],
-      "matchStrings": [
-        "# renovate: datasource=(?<datasource>\\S+)(?: depName=(?<depName>\\S+))?(?: versioning=(?<versioning>\\S+))?\\s+image:\\s+[\"']?(?<packageName>[^:\"'\\s]+):(?<currentValue>[^\"'\\s@]+)(?:@(?<currentDigest>sha256:[a-f0-9]+))?[\"']?"
-      ]
     }
   ],
   "packageRules": [
     {
-      "description": "Abilita aggiornamenti Docker",
-      "matchDatasources": [
-        "docker"
-      ],
+      "description": "Aggiornamenti Docker",
+      "matchDatasources": ["docker"],
       "enabled": true,
       "recreateWhen": "auto",
       "rebaseWhen": "auto"
     },
     {
-      "description": "Pin digests per tutte le immagini Docker - MR unica",
-      "matchDatasources": [
-        "docker"
-      ],
+      "description": "Pin digests per immagini Docker",
+      "matchDatasources": ["docker"],
       "pinDigests": true,
-      "matchUpdateTypes": [
-        "pin",
-        "digest"
-      ],
+      "matchUpdateTypes": ["pin", "digest"],
       "groupName": "Docker SHA256 digest pins",
-      "groupSlug": "docker-digests",
-      "commitMessageTopic": "Docker digest updates",
-      "commitMessageExtra": "(grouped)"
+      "groupSlug": "docker-digests"
     },
     {
-      "description": "Abilita aggiornamenti Helm",
-      "matchDatasources": [
-        "helm",
-        "helm-values"
-      ],
-      "enabled": true,
-      "rebaseWhen": "auto"
-    },
-    {
-      "description": "Abilita aggiornamenti GitHub Actions e GitLab CI",
-      "matchDatasources": [
-        "github-actions",
-        "gitlabci"
-      ],
+      "description": "Aggiornamenti Helm",
+      "matchDatasources": ["helm", "helm-values"],
       "enabled": true
     },
     {
-      "description": "Abilita aggiornamenti Terraform / OpenTofu",
-      "matchDatasources": [
-        "terraform"
-      ],
+      "description": "Aggiornamenti GitHub Actions e GitLab CI",
+      "matchDatasources": ["github-actions", "gitlabci"],
+      "enabled": true
+    },
+    {
+      "description": "Aggiornamenti Terraform / OpenTofu",
+      "matchDatasources": ["terraform"],
       "enabled": true,
-      "rebaseWhen": "auto",
       "rangeStrategy": "bump"
     },
     {
-      "description": "Abilita aggiornamenti Ansible Galaxy",
-      "matchDatasources": [
-        "ansible-galaxy"
-      ],
+      "description": "Aggiornamenti Ansible Galaxy",
+      "matchDatasources": ["ansible-galaxy"],
       "enabled": true
-    },
-    {
-      "description": "Security patches - priorità immediata",
-      "matchUpdateTypes": [
-        "patch"
-      ],
-      "matchDatasources": [
-        "docker"
-      ],
-      "minimumReleaseAge": null,
-      "prCreation": "immediate",
-      "prPriority": 5
-    },
-    {
-      "description": "Major updates - stabilità estesa",
-      "matchUpdateTypes": [
-        "major"
-      ],
-      "matchDatasources": [
-        "docker"
-      ],
-      "minimumReleaseAge": "7 days",
-      "prPriority": 1
-    },
-    {
-      "description": "Minor updates - stabilità standard",
-      "matchUpdateTypes": [
-        "minor"
-      ],
-      "matchDatasources": [
-        "docker"
-      ],
-      "minimumReleaseAge": "3 days",
-      "prPriority": 3
     }
   ]
 }
