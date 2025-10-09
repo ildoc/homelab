@@ -44,3 +44,4 @@ ignore: |
   molecule/*/molecule.yml
   .cache/
   venv/
+  **/archived/**

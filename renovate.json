@@ -1,15 +1,15 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "description": "Configurazione Renovate per aggiornamenti automatici di Docker, Helm, Terraform e altro",
   "extends": [
     "config:recommended",
     ":disableRateLimiting",
     ":dependencyDashboard",
     ":semanticCommits",
-    ":timezone(Europe/Rome)"
+    ":timezone(Europe/Rome)",
+    "docker:pinDigests"
   ],
-  "assignees": [
-    "ildoc"
-  ],
+  "assignees": ["ildoc"],
   "automerge": false,
   "platformAutomerge": false,
   "prConcurrentLimit": 50,
@@ -20,73 +20,98 @@
     "**/archived/**",
     "docs/**"
   ],
+  "enabledManagers": [
+    "docker-compose",
+    "dockerfile",
+    "helm-values",
+    "helmfile",
+    "kubernetes",
+    "terraform",
+    "github-actions",
+    "gitlabci",
+    "ansible-galaxy",
+    "custom.regex"
+  ],
   "customManagers": [
     {
       "customType": "regex",
-      "description": "Aggiorna immagini Docker nei template Jinja2/Ansible",
+      "description": "Aggiorna immagini Docker nei template Jinja2/Ansible con commento renovate",
       "managerFilePatterns": [
         "/(^|/)docker-compose[^/]*\\.ya?ml\\.j2$/",
         "/(^|/)compose[^/]*\\.ya?ml\\.j2$/"
       ],
       "matchStrings": [
-        "image:\\s+[\"']?(?<depName>[a-zA-Z0-9._\\-/]+):(?<currentValue>[a-zA-Z0-9._\\-]+)(?:@(?<currentDigest>sha256:[a-f0-9]+))?[\"']?"
+        "#\\s*renovate:\\s*datasource=(?<datasource>\\S+)\\s+depName=(?<depName>\\S+)(?:\\s+versioning=(?<versioning>\\S+))?\\s+image:\\s+[\"']?\\S+:(?<currentValue>[^@\\s\"']+)(?:@(?<currentDigest>sha256:[a-f0-9]+))?[\"']?"
       ],
-      "datasourceTemplate": "docker",
-      "versioningTemplate": "docker"
+      "versioningTemplate": "{{#if versioning}}{{{versioning}}}{{else}}docker{{/if}}"
+    },
+    {
+      "customType": "regex",
+      "description": "Aggiorna immagini Docker nei template Jinja2/Ansible senza commento",
+      "managerFilePatterns": [
+        "/(^|/)docker-compose[^/]*\\.ya?ml\\.j2$/",
+        "/(^|/)compose[^/]*\\.ya?ml\\.j2$/"
+      ],
+      "matchStrings": [
+        "^(?!.*#\\s*renovate:).*image:\\s+[\"']?(?<depName>[a-zA-Z0-9._\\-/]+):(?<currentValue>[a-zA-Z0-9._\\-]+)(?:@(?<currentDigest>sha256:[a-f0-9]+))?[\"']?"
+      ],
+      "datasourceTemplate": "docker"
     }
   ],
   "packageRules": [
     {
-      "description": "Aggiornamenti Docker",
-      "matchDatasources": [
-        "docker"
-      ],
+      "description": "Raggruppa tutti gli aggiornamenti digest Docker in una singola PR",
+      "matchDatasources": ["docker"],
+      "matchUpdateTypes": ["digest"],
+      "groupName": "Docker digest pins",
+      "groupSlug": "docker-digests",
+      "separateMajorMinor": false,
+      "separateMinorPatch": false
+    },
+    {
+      "description": "Invidious - usa loose versioning per tag non-standard",
+      "matchDatasources": ["docker"],
+      "matchPackagePatterns": ["^quay\\.io/invidious/"],
+      "versioning": "loose",
+      "separateMajorMinor": false
+    },
+    {
+      "description": "pgAdmin4 - filtra solo versioni >= 9.0.0",
+      "matchDatasources": ["docker"],
+      "matchPackageNames": ["dpage/pgadmin4"],
+      "allowedVersions": ">=9.0.0"
+    },
+    {
+      "description": "Aggiornamenti non-major Docker - una PR con l'ultima versione disponibile",
+      "matchDatasources": ["docker"],
+      "matchUpdateTypes": ["minor", "patch"]
+    },
+    {
+      "description": "Aggiornamenti major Docker - una PR separata per immagine",
+      "matchDatasources": ["docker"],
+      "matchUpdateTypes": ["major"]
+    },
+    {
+      "description": "Aggiornamenti Helm charts",
+      "matchDatasources": ["helm"],
+      "enabled": true
+    },
+    {
+      "description": "Aggiornamenti GitHub Actions",
+      "matchDatasources": ["github-tags"],
+      "matchManagers": ["github-actions"],
       "enabled": true,
-      "recreateWhen": "auto",
-      "rebaseWhen": "auto"
+      "pinDigests": true
     },
     {
-      "description": "Pin digests per immagini Docker",
-      "matchDatasources": [
-        "docker"
-      ],
-      "pinDigests": true,
-      "matchUpdateTypes": [
-        "pin",
-        "digest"
-      ],
-      "groupName": "Docker SHA256 digest pins",
-      "groupSlug": "docker-digests"
-    },
-    {
-      "description": "Aggiornamenti Helm",
-      "matchDatasources": [
-        "helm",
-        "helm-values"
-      ],
-      "enabled": true
-    },
-    {
-      "description": "Aggiornamenti GitHub Actions e GitLab CI",
-      "matchDatasources": [
-        "github-actions",
-        "gitlabci"
-      ],
-      "enabled": true
-    },
-    {
-      "description": "Aggiornamenti Terraform / OpenTofu",
-      "matchDatasources": [
-        "terraform"
-      ],
+      "description": "Aggiornamenti Terraform/OpenTofu",
+      "matchDatasources": ["terraform-provider", "terraform-module"],
       "enabled": true,
       "rangeStrategy": "bump"
     },
     {
       "description": "Aggiornamenti Ansible Galaxy",
-      "matchDatasources": [
-        "ansible-galaxy"
-      ],
+      "matchDatasources": ["galaxy", "galaxy-collection"],
       "enabled": true
     }
   ]

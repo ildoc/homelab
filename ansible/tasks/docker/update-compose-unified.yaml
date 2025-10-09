@@ -10,7 +10,6 @@
 #   - force_update: force update even if files are the same (default: false)
 #   - pull_retries: number of pull retries (default: 5)
 #   - pull_delay: delay between pull retries in seconds (default: 20)
-#   - max_backups: maximum number of backup files to keep (default: 3)
 #   - validate_compose: validate docker-compose syntax before deployment (default: true)
 #   - cleanup_resources: cleanup unused Docker resources after deployment (default: true)
 
@@ -27,7 +26,6 @@
     operation_mode: "{{ 'template' if template_file_name is defined else 'copy' }}"
     pull_retries: "{{ pull_retries | default(5) | int }}"
     pull_delay: "{{ pull_delay | default(20) | int }}"
-    max_backups: "{{ max_backups | default(3) | int }}"
     validate_compose: "{{ validate_compose | default(true) | bool }}"
     cleanup_resources: "{{ cleanup_resources | default(true) | bool }}"
 
@@ -96,34 +94,6 @@
 - name: Execute Docker operations
   when: should_update
   block:
-    # Backup management
-    - name: Manage backup files
-      when: remote_file.stat.exists and contents_different
-      block:
-        - name: Find existing backup files
-          ansible.builtin.find:
-            paths: "{{ update_compose_remote_path | dirname }}"
-            patterns: "{{ update_compose_remote_path | basename }}.*~"
-            file_type: file
-          register: existing_backups
-
-        - name: Sort backups by modification time (oldest first)
-          ansible.builtin.set_fact:
-            sorted_backups: "{{ existing_backups.files | sort(attribute='mtime') }}"
-
-        - name: Calculate backups to remove
-          ansible.builtin.set_fact:
-            backups_to_remove_count: "{{ [0, (sorted_backups | length) - (max_backups | int) + 1] | max }}"
-
-        - name: Remove excess backup files
-          ansible.builtin.file:
-            path: "{{ item.path }}"
-            state: absent
-          loop: "{{ sorted_backups[:backups_to_remove_count | int] }}"
-          when: backups_to_remove_count | int > 0
-          loop_control:
-            label: "{{ item.path }}"
-
     # Validation step
     - name: Create temporary docker-compose file for validation
       when: contents_different and validate_compose

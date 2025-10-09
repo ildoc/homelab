@@ -42,10 +42,14 @@
 - name: Check if configuration changed
   ansible.builtin.set_fact:
     redis_config_changed: "{{ redis_conf_result.changed or users_acl_result.changed }}"
+    redis_acl_only_changed: "{{ users_acl_result.changed and not redis_conf_result.changed }}"
 
 - name: Display configuration status
   ansible.builtin.debug:
-    msg: "Redis configuration changed: {{ redis_config_changed }}"
+    msg:
+      - "Redis config changed: {{ redis_conf_result.changed }}"
+      - "Redis ACL changed: {{ users_acl_result.changed }}"
+      - "ACL only changed: {{ redis_acl_only_changed }}"
 
 - name: Set variables for docker-compose deployment
   ansible.builtin.set_fact:
@@ -59,7 +63,7 @@
     update_compose_remote_path: "{{ remote_path }}"
     template_file_name: "{{ local_path }}"
     update_compose_project_path: "{{ project_path }}"
-    force_update: "{{ redis_config_changed }}"
+    force_update: "{{ redis_conf_result.changed }}"  # Force restart only if redis.conf changed
 
 - name: Wait for Redis to be ready
   ansible.builtin.wait_for:
@@ -73,6 +77,21 @@
   ansible.builtin.set_fact:
     redis_admin_password: "{{ lookup('community.hashi_vault.hashi_vault', 'ansible/data/redis:admin_password') }}"
   no_log: true
+
+# Reload ACL without restart if only ACL file changed
+- name: Reload ACL configuration without restart
+  ansible.builtin.shell:
+    cmd: |
+      docker exec redis redis-cli -h {{ redis.bind_address | default('127.0.0.1') }} -p {{ redis.port | default(6379) }} --user admin --pass "{{ redis_admin_password }}" --no-auth-warning ACL LOAD
+  when: redis_acl_only_changed
+  register: acl_reload
+  failed_when: acl_reload.rc != 0
+  no_log: true
+
+- name: Display ACL reload result
+  ansible.builtin.debug:
+    msg: "✓ ACL reloaded without restart: {{ acl_reload.stdout }}"
+  when: redis_acl_only_changed and acl_reload is succeeded
 
 - name: Verify Redis is responding
   ansible.builtin.shell:
@@ -97,3 +116,4 @@
       - "✓ Redis is up and running ({{ redis_ping.stdout }})"
       - "✓ Listening on {{ redis.bind_address | default('127.0.0.1') }}:{{ redis.port | default(6379) }}"
       - "✓ ACL users configured: {{ redis_acl_list.stdout_lines | length }}"
+      - "✓ Config update method: {{ 'ACL LOAD (no restart)' if redis_acl_only_changed else 'Container restart' if redis_conf_result.changed else 'No changes' }}"
