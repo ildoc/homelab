@@ -7,21 +7,26 @@
     ":semanticCommits",
     ":timezone(Europe/Rome)"
   ],
-  "assignees": ["ildoc"],
+  "assignees": [
+    "ildoc"
+  ],
   "automerge": false,
   "platformAutomerge": false,
   "prConcurrentLimit": 50,
   "prHourlyLimit": 0,
   "prCreation": "not-pending",
   "internalChecksFilter": "flexible",
-  "ignorePaths": ["**/archived/**", "docs/**"],
+  "ignorePaths": [
+    "**/archived/**",
+    "docs/**"
+  ],
   "customManagers": [
     {
       "customType": "regex",
       "description": "Aggiorna immagini Docker nei template Jinja2/Ansible",
-      "fileMatch": [
-        "(^|/)docker-compose[^/]*\\.ya?ml\\.j2$",
-        "(^|/)compose[^/]*\\.ya?ml\\.j2$"
+      "managerFilePatterns": [
+        "/(^|/)docker-compose[^/]*\\.ya?ml\\.j2$/",
+        "/(^|/)compose[^/]*\\.ya?ml\\.j2$/"
       ],
       "matchStrings": [
         "image:\\s+[\"']?(?<depName>[a-zA-Z0-9._\\-/]+):(?<currentValue>[a-zA-Z0-9._\\-]+)(?:@(?<currentDigest>sha256:[a-f0-9]+))?[\"']?"
@@ -33,38 +38,55 @@
   "packageRules": [
     {
       "description": "Aggiornamenti Docker",
-      "matchDatasources": ["docker"],
+      "matchDatasources": [
+        "docker"
+      ],
       "enabled": true,
       "recreateWhen": "auto",
       "rebaseWhen": "auto"
     },
     {
       "description": "Pin digests per immagini Docker",
-      "matchDatasources": ["docker"],
+      "matchDatasources": [
+        "docker"
+      ],
       "pinDigests": true,
-      "matchUpdateTypes": ["pin", "digest"],
+      "matchUpdateTypes": [
+        "pin",
+        "digest"
+      ],
       "groupName": "Docker SHA256 digest pins",
       "groupSlug": "docker-digests"
     },
     {
       "description": "Aggiornamenti Helm",
-      "matchDatasources": ["helm", "helm-values"],
+      "matchDatasources": [
+        "helm",
+        "helm-values"
+      ],
       "enabled": true
     },
     {
       "description": "Aggiornamenti GitHub Actions e GitLab CI",
-      "matchDatasources": ["github-actions", "gitlabci"],
+      "matchDatasources": [
+        "github-actions",
+        "gitlabci"
+      ],
       "enabled": true
     },
     {
       "description": "Aggiornamenti Terraform / OpenTofu",
-      "matchDatasources": ["terraform"],
+      "matchDatasources": [
+        "terraform"
+      ],
       "enabled": true,
       "rangeStrategy": "bump"
     },
     {
       "description": "Aggiornamenti Ansible Galaxy",
-      "matchDatasources": ["ansible-galaxy"],
+      "matchDatasources": [
+        "ansible-galaxy"
+      ],
       "enabled": true
     }
   ]
