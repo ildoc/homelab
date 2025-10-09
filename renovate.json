@@ -53,7 +53,7 @@
         "/(^|/)compose[^/]*\\.ya?ml\\.j2$/"
       ],
       "matchStrings": [
-        "^(?!.*#\\s*renovate:).*image:\\s+[\"']?(?<depName>[a-zA-Z0-9._\\-/]+):(?<currentValue>[a-zA-Z0-9._\\-]+)(?:@(?<currentDigest>sha256:[a-f0-9]+))?[\"']?"
+        "image:\\s+[\"']?(?<depName>[a-zA-Z0-9._\\-/]+):(?<currentValue>[a-zA-Z0-9._\\-]+)(?:@(?<currentDigest>sha256:[a-f0-9]+))?[\"']?"
       ],
       "datasourceTemplate": "docker"
     }
@@ -64,9 +64,7 @@
       "matchDatasources": ["docker"],
       "matchUpdateTypes": ["digest"],
       "groupName": "Docker digest pins",
-      "groupSlug": "docker-digests",
-      "separateMajorMinor": false,
-      "separateMinorPatch": false
+      "groupSlug": "docker-digests"
     },
     {
       "description": "Invidious - usa loose versioning per tag non-standard",
