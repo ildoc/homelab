@@ -22,8 +22,6 @@
   "separateMinorPatch": false,
   "separateMultipleMajor": false,
   
-  "rollupType": "highest",
-  
   "ignorePaths": [
     "**/archived/**",
     "docs/**"
@@ -90,7 +88,6 @@
       "enabled": true,
       "recreateWhen": "always",
       "rebaseWhen": "auto",
-      "rollupType": "highest",
       "groupName": null
     },
     
@@ -102,9 +99,7 @@
       "groupName": "Docker SHA256 digest pins",
       "groupSlug": "docker-digests",
       "commitMessageTopic": "Docker digest updates",
-      "commitMessageExtra": "(grouped)",
-      "separateMultipleMajor": false,
-      "separateMinorPatch": false
+      "commitMessageExtra": "(grouped)"
     },
     
     {
