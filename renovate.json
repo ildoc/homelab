@@ -7,32 +7,32 @@
     ":semanticCommits",
     ":timezone(Europe/Rome)"
   ],
-  
+
   "assignees": ["ildoc"],
-  
+
   "automerge": false,
   "platformAutomerge": false,
-  
+
   "prConcurrentLimit": 50,
   "prHourlyLimit": 0,
   "prCreation": "not-pending",
   "internalChecksFilter": "flexible",
-  
+
   "separateMajorMinor": false,
   "separateMinorPatch": false,
   "separateMultipleMajor": false,
-  
+
   "ignorePaths": [
     "**/archived/**",
     "docs/**"
   ],
-  
+
   "schedule": [
     "after 10pm every weekday",
     "every weekend",
     "before 5am every weekday"
   ],
-  
+
   "docker-compose": {
     "managerFilePatterns": [
       "(^|/)docker-compose[^/]*\\.ya?ml$",
@@ -41,13 +41,12 @@
       "(^|/)compose[^/]*\\.ya?ml\\.j2$"
     ]
   },
-  
   "kubernetes": {
     "managerFilePatterns": [
       "kubernetes/.+\\.ya?ml$"
     ]
   },
-  
+
   "customManagers": [
     {
       "customType": "regex",
@@ -74,25 +73,32 @@
       ]
     }
   ],
-  
+
   "packageRules": [
     {
-      "description": "Disabilita tutti gli aggiornamenti di default",
+      "description": "Disabilita pacchetti non rilevanti (solo Docker, Helm, GitHub Actions, GitLab CI, Terraform, Ansible)",
       "matchPackagePatterns": ["*"],
+      "excludeDatasources": [
+        "docker",
+        "helm",
+        "helm-values",
+        "gitlabci",
+        "github-actions",
+        "terraform",
+        "ansible-galaxy"
+      ],
       "enabled": false
     },
-    
+
     {
-      "description": "Abilita solo aggiornamenti Docker per singola immagine",
+      "description": "Aggiornamenti Docker",
       "matchDatasources": ["docker"],
       "enabled": true,
-      "recreateWhen": "always",
-      "rebaseWhen": "auto",
-      "groupName": null
+      "recreateWhen": "auto",
+      "rebaseWhen": "auto"
     },
-    
     {
-      "description": "Pin digests per tutte le immagini Docker - una MR unica",
+      "description": "Pin digests Docker (MR unica)",
       "matchDatasources": ["docker"],
       "pinDigests": true,
       "matchUpdateTypes": ["pin", "digest"],
@@ -101,21 +107,34 @@
       "commitMessageTopic": "Docker digest updates",
       "commitMessageExtra": "(grouped)"
     },
-    
+
     {
-      "description": "Invidious - versioning loose per tag inconsistenti",
-      "matchPackageNames": ["quay.io/invidious/invidious"],
-      "versioning": "loose",
-      "followTag": "master"
+      "description": "Aggiornamenti Helm chart e values",
+      "matchDatasources": ["helm", "helm-values"],
+      "enabled": true,
+      "rebaseWhen": "auto"
     },
-    
+
     {
-      "description": "Invidious Companion - versioning loose per tag inconsistenti", 
-      "matchPackageNames": ["quay.io/invidious/invidious-companion"],
-      "versioning": "loose",
-      "followTag": "latest"
+      "description": "Aggiornamenti GitLab CI e GitHub Actions",
+      "matchDatasources": ["gitlabci", "github-actions"],
+      "enabled": true
     },
-    
+
+    {
+      "description": "Aggiornamenti Terraform / OpenTofu",
+      "matchDatasources": ["terraform"],
+      "enabled": true,
+      "rebaseWhen": "auto",
+      "rangeStrategy": "bump"
+    },
+
+    {
+      "description": "Aggiornamenti Ansible Galaxy roles/collections",
+      "matchDatasources": ["ansible-galaxy"],
+      "enabled": true
+    },
+
     {
       "description": "Security patches - priorità immediata",
       "matchUpdateTypes": ["patch"],
@@ -124,17 +143,15 @@
       "prCreation": "immediate",
       "prPriority": 5
     },
-    
     {
-      "description": "Major updates - stability period esteso",
+      "description": "Major updates - stabilità estesa",
       "matchUpdateTypes": ["major"],
       "matchDatasources": ["docker"],
       "minimumReleaseAge": "7 days",
       "prPriority": 1
     },
-    
     {
-      "description": "Minor updates - stability period standard",
+      "description": "Minor updates - stabilità standard",
       "matchUpdateTypes": ["minor"],
       "matchDatasources": ["docker"],
       "minimumReleaseAge": "3 days",
