@@ -14,7 +14,6 @@
   "platformAutomerge": false,
   "prConcurrentLimit": 50,
   "prHourlyLimit": 0,
-  "prCreation": "not-pending",
   "internalChecksFilter": "flexible",
   "ignorePaths": [
     "**/archived/**",
