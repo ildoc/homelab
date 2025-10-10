@@ -4,6 +4,8 @@ kind: Deployment
 metadata:
   name: matrix-synapse
   namespace: apps
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
 spec:
   selector:
     matchLabels:
