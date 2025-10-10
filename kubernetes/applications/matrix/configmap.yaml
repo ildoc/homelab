@@ -54,6 +54,13 @@ data:
     enable_registration: false
     enable_registration_without_verification: false
     registration_requires_token: false
+
+    password_config:
+      enabled: false
+      localdb_enabled: true
+      pepper: ""
+      policy:
+        enabled: false
     
     # Configurazione OIDC
     oidc_providers:
@@ -66,6 +73,8 @@ data:
         client_secret: ${OIDC_CLIENT_SECRET}
         scopes: ["openid", "profile", "email"]
         
+        enable_device_authorization: true
+
         # Mapping attributi da Authentik a Matrix
         user_mapping_provider:
           config:

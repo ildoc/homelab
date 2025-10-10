@@ -63,11 +63,7 @@ spec:
               # Debug: verifica la configurazione OIDC
               echo "OIDC configuration:"
               grep -A20 "oidc_providers:" /data/homeserver.yaml || echo "No OIDC config found"
-              
-              # Debug: verifica la configurazione del database
-              echo "Database configuration:"
-              grep -A10 "database:" /data/homeserver.yaml | head -15
-              
+          
               # Step 2: Generazione chiavi
               echo ""
               echo "Step 2: Checking signing keys..."
