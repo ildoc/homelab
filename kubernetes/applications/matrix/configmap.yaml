@@ -64,7 +64,7 @@ data:
     
     # Configurazione OIDC
     oidc_providers:
-      - idp_id: authentik
+      - idp_id: oidc-authentik
         idp_name: "Authentik"
         idp_icon: "mxc://matrix.ildoc.it/authentik-icon"  # Opzionale
         discover: true
