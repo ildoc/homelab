@@ -1,7 +1,7 @@
 ---
 services:
   gitlab:
-    image: gitlab/gitlab-ce:18.4.1-ce.0
+    image: gitlab/gitlab-ce:18.4.1-ce.0@sha256:d24a77b3743174e055646c523b65862587e4fd44ed8aec8fa8a7dd2321299ebd
     container_name: gitlab
     hostname: 'gitlab'
     ports:
@@ -27,7 +27,7 @@ services:
   #     - DOCKER_HOST=unix:///var/run/docker.sock
 
   nginx:
-    image: nginx:stable
+    image: nginx:stable@sha256:3b4019335070fb6445987c8dd72cf18dec2cbc63b3575581eb66469c8173cd4f
     container_name: nginx
     depends_on:
       - gitlab
@@ -40,7 +40,7 @@ services:
     restart: always
 
   docker-cleanup:
-    image: docker:latest
+    image: docker:latest@sha256:24173119fa6d1b5b4a27ab164fa7863deb66574ee5b90fef3b85dc888ef1a7e6
     container_name: docker-cleanup
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock

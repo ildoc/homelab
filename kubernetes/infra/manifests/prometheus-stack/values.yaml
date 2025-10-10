@@ -377,7 +377,7 @@ monitoring:
   # Proxmox VE Exporter (opzionale)
   pveExporter:
     enabled: true
-    image: "prompve/prometheus-pve-exporter:3.5.5"
+    image: "prompve/prometheus-pve-exporter:3.5.5@sha256:79a5598906697b1a5a006d09f0200528a77c6ff1568faf018539ac65824454df"
     replicas: 1
     verifySsl: false
     scrapeInterval: "30s"

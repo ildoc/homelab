@@ -2,7 +2,7 @@
 .update_service_template:
   stage: update_services
   image:
-    name: registry.gitlab.local.ildoc.it/devops/ansible-vault:92eaccbb67b7fa59dce7de1a69887132bee8fe51
+    name: registry.gitlab.local.ildoc.it/devops/ansible-vault:92eaccbb67b7fa59dce7de1a69887132bee8fe51@sha256:c5116540bee56dc7925948fbc69fc9a027ae519197419d48e41f5abccab440f4
     entrypoint: [""]
   extends:
     - .ssh_setup
