@@ -21,23 +21,23 @@ data:
           - names: [client, federation]
             compress: false
 
-    # Database - usa env vars
+    # Database - valori hardcoded tranne la password
     database:
       name: psycopg2
       args:
-        user: ${POSTGRES_USER}
+        user: synapse
         password: ${POSTGRES_PASSWORD}
-        database: ${POSTGRES_DB}
-        host: ${POSTGRES_HOST}
-        port: ${POSTGRES_PORT}
+        database: synapse
+        host: 192.168.0.30
+        port: 5432
         cp_min: 5
         cp_max: 10
 
-    # Redis - usa env vars con username
+    # Redis - valori hardcoded tranne la password
     redis:
       enabled: true
-      host: ${SYNAPSE_REDIS_HOST}
-      port: ${SYNAPSE_REDIS_PORT}
+      host: matrix-redis.apps.svc.cluster.local
+      port: 6379
       password: ${SYNAPSE_REDIS_PASSWORD}
 
     log_config: "/data/log.config"
