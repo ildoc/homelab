@@ -18,7 +18,10 @@ spec:
       labels:
         app: matrix-synapse
     spec:
-      # Init container per generare le chiavi di firma
+      securityContext:
+        fsGroup: 991
+        runAsUser: 991
+        runAsGroup: 991
       initContainers:
         - name: generate-keys
           image: ghcr.io/element-hq/synapse:v1.123.0
