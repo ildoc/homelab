@@ -8,7 +8,6 @@ metadata:
     argocd.argoproj.io/sync-wave: "5"
 data:
   config.yaml: |
-    tunnel: YOUR-TUNNEL-ID
     credentials-file: /etc/cloudflared/credentials/credentials.json
     
     # Metrics endpoint
