@@ -36,7 +36,7 @@ authentik:
     use_tls: false
     use_ssl: false
     timeout: 30
-    from: "authentik@local.ildoc.it"
+    from: "authentik@ildoc.it"
 
 # =============================================================================
 # GLOBAL CONFIGURATION - APPLICA A SERVER E WORKER
@@ -98,11 +98,18 @@ global:
     
     # Host configuration - NOTA IL TRAILING SLASH
     - name: AUTHENTIK_HOST
-      value: "https://auth.local.ildoc.it/"
+      value: "https://auth.ildoc.it/"
     
     # Browser host (se diverso da AUTHENTIK_HOST)
     - name: AUTHENTIK_HOST_BROWSER
-      value: "https://auth.local.ildoc.it/"
+      value: "https://auth.ildoc.it/"
+
+    # Trusted proxies per Cloudflare
+    - name: AUTHENTIK_LISTEN__TRUSTED_PROXY_IP
+      value: "10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
+
+    - name: AUTHENTIK_WEB__WORKERS
+      value: "2"
 
 # =============================================================================
 # SERVER DEPLOYMENT
@@ -268,7 +275,7 @@ geoip:
 
 # Hostname per HTTPRoute custom
 ingress:
-  hostname: auth.local.ildoc.it
+  hostname: auth.ildoc.it
 
 # SMTP (se necessario in futuro)
 smtp:

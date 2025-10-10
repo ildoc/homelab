@@ -1,0 +1,50 @@
+---
+# kubernetes/infra/manifests/cloudflared/configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cloudflared-config
+  namespace: cloudflared
+data:
+  config.yaml: |
+    tunnel: dcfc87de-eefc-4543-9b52-44c7a4ecae32
+    credentials-file: /etc/cloudflared/credentials/credentials.json
+    
+    # Metrics endpoint
+    metrics: 0.0.0.0:2000
+    
+    # Ingress rules - ordinate per priorità
+    ingress:
+      # =========================================================================
+      # AUTHENTIK - Servizio di autenticazione
+      # =========================================================================
+      - hostname: auth.ildoc.it
+        service: http://authentik-server.authentik.svc.cluster.local:80
+        originRequest:
+          noTLSVerify: false
+          connectTimeout: 30s
+          tlsTimeout: 10s
+      
+      # =========================================================================
+      # MATRIX STACK
+      # =========================================================================
+      
+      # Element Web
+      - hostname: element.ildoc.it
+        service: http://element-web.apps.svc.cluster.local:80
+        originRequest:
+          noTLSVerify: false
+          connectTimeout: 30s
+      
+      # Matrix Synapse
+      - hostname: matrix.ildoc.it
+        service: http://matrix-synapse.apps.svc.cluster.local:8008
+        originRequest:
+          noTLSVerify: false
+          connectTimeout: 30s
+          tlsTimeout: 10s
+      
+      # =========================================================================
+      # CATCH-ALL (obbligatorio)
+      # =========================================================================
+      - service: http_status:404

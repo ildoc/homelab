@@ -1,56 +1,56 @@
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: cloudflared-matrix-stack
-  namespace: apps
-  annotations:
-    argocd.argoproj.io/sync-wave: "5"
-spec:
-  selector:
-    matchLabels:
-      app: cloudflared-matrix-stack
-  replicas: 2
-  strategy:
-    type: RollingUpdate
-  revisionHistoryLimit: 3
-  template:
-    metadata:
-      labels:
-        app: cloudflared-matrix-stack
-    spec:
-      containers:
-        - name: cloudflared
-          image: cloudflare/cloudflared:2024.12.2
-          args:
-            - tunnel
-            - --config
-            - /etc/cloudflared/config.yaml
-            - run
-          volumeMounts:
-            - name: config
-              mountPath: /etc/cloudflared
-              readOnly: true
-            - name: credentials
-              mountPath: /etc/cloudflared/credentials
-              readOnly: true
-          resources:
-            limits:
-              cpu: 200m
-              memory: 256Mi
-            requests:
-              cpu: 100m
-              memory: 128Mi
-          livenessProbe:
-            httpGet:
-              path: /ready
-              port: 2000
-            initialDelaySeconds: 30
-            periodSeconds: 30
-      volumes:
-        - name: config
-          configMap:
-            name: cloudflared-matrix-stack-config
-        - name: credentials
-          secret:
-            secretName: cloudflared-matrix-stack-credentials
+# ---
+# apiVersion: apps/v1
+# kind: Deployment
+# metadata:
+#   name: cloudflared-matrix-stack
+#   namespace: apps
+#   annotations:
+#     argocd.argoproj.io/sync-wave: "5"
+# spec:
+#   selector:
+#     matchLabels:
+#       app: cloudflared-matrix-stack
+#   replicas: 2
+#   strategy:
+#     type: RollingUpdate
+#   revisionHistoryLimit: 3
+#   template:
+#     metadata:
+#       labels:
+#         app: cloudflared-matrix-stack
+#     spec:
+#       containers:
+#         - name: cloudflared
+#           image: cloudflare/cloudflared:2024.12.2
+#           args:
+#             - tunnel
+#             - --config
+#             - /etc/cloudflared/config.yaml
+#             - run
+#           volumeMounts:
+#             - name: config
+#               mountPath: /etc/cloudflared
+#               readOnly: true
+#             - name: credentials
+#               mountPath: /etc/cloudflared/credentials
+#               readOnly: true
+#           resources:
+#             limits:
+#               cpu: 200m
+#               memory: 256Mi
+#             requests:
+#               cpu: 100m
+#               memory: 128Mi
+#           livenessProbe:
+#             httpGet:
+#               path: /ready
+#               port: 2000
+#             initialDelaySeconds: 30
+#             periodSeconds: 30
+#       volumes:
+#         - name: config
+#           configMap:
+#             name: cloudflared-matrix-stack-config
+#         - name: credentials
+#           secret:
+#             secretName: cloudflared-matrix-stack-credentials
