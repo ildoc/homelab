@@ -96,10 +96,6 @@ data:
         # User attributes (opzionale, per attributi custom)
         # user_profile_method: "userinfo_endpoint"
     
-    enable_registration: false
-    enable_registration_without_verification: false
-    registration_requires_token: false
-    
     # Usa env vars per i secret
     registration_shared_secret: ${REGISTRATION_SHARED_SECRET}
     macaroon_secret_key: ${MACAROON_SECRET_KEY}
