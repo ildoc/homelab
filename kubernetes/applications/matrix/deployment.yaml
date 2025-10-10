@@ -128,7 +128,7 @@ spec:
             - name: SYNAPSE_REDIS_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: matrix-cross-secrets
+                  name: matrix-redis-secrets
                   key: redis-password
           ports:
             - containerPort: 8008
