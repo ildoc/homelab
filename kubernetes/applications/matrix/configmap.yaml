@@ -25,9 +25,9 @@ data:
     database:
       name: psycopg2
       args:
-        user: synapse
+        user: matrix_user
         password: ${POSTGRES_PASSWORD}
-        database: synapse
+        database: matrix_db
         host: 192.168.0.30
         port: 5432
         cp_min: 5
