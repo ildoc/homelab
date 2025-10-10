@@ -4,6 +4,8 @@ kind: Deployment
 metadata:
   name: cloudflared-matrix-stack
   namespace: apps
+  annotations:
+    argocd.argoproj.io/sync-wave: "5"
 spec:
   selector:
     matchLabels:

@@ -1,41 +1,47 @@
 ---
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: batch/v1
+kind: Job
 metadata:
-  name: matrix-synapse
+  name: matrix-synapse-init
   namespace: apps
   annotations:
-    argocd.argoproj.io/sync-wave: "4"
+    argocd.argoproj.io/sync-wave: "3"
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
 spec:
-  selector:
-    matchLabels:
-      app: matrix-synapse
-  strategy:
-    type: Recreate
-  revisionHistoryLimit: 3
+  ttlSecondsAfterFinished: 600
   template:
     metadata:
       labels:
-        app: matrix-synapse
+        app: matrix-synapse-init
     spec:
+      restartPolicy: OnFailure
       containers:
-        - name: synapse
+        - name: synapse-init
           image: ghcr.io/element-hq/synapse:v1.123.0
+          command:
+            - /bin/sh
+            - -c
+            - |
+              echo "Checking for signing key..."
+              if [ ! -f /data/keys/signing.key ]; then
+                echo "Generating signing key..."
+                mkdir -p /data/keys
+                python -m synapse.app.homeserver \
+                  --server-name=matrix.ildoc.it \
+                  --config-path=/data/homeserver.yaml \
+                  --generate-keys
+                echo "Signing key generated successfully"
+              else
+                echo "Signing key already exists"
+              fi
           env:
             - name: SYNAPSE_SERVER_NAME
               value: "matrix.ildoc.it"
             - name: SYNAPSE_REPORT_STATS
               value: "no"
-            - name: UID
-              value: "991"
-            - name: GID
-              value: "991"
-            - name: TZ
-              value: "Europe/Rome"
-            
-            # PostgreSQL configuration (da cross-secrets)
             - name: POSTGRES_HOST
-              value: "192.168.0.40"
+              value: "192.168.0.30"
             - name: POSTGRES_PORT
               value: "5432"
             - name: POSTGRES_DB
@@ -45,11 +51,10 @@ spec:
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: matrix-cross-secrets  # DA CROSS
+                  name: matrix-cross-secrets
                   key: postgres-password
-            
             - name: SYNAPSE_REDIS_HOST
-              value: "matrix-redis.apps.svc.cluster.local"  # Service interno
+              value: "matrix-redis.apps.svc.cluster.local"
             - name: SYNAPSE_REDIS_PORT
               value: "6379"
             - name: SYNAPSE_REDIS_PASSWORD
@@ -57,32 +62,21 @@ spec:
                 secretKeyRef:
                   name: matrix-redis-secret
                   key: password
-            
-            # Synapse secrets (da k8s-secrets)
             - name: REGISTRATION_SHARED_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: matrix-k8s-secrets  # DA KUBERNETES
+                  name: matrix-k8s-secrets
                   key: registration-shared-secret
             - name: MACAROON_SECRET_KEY
               valueFrom:
                 secretKeyRef:
-                  name: matrix-k8s-secrets  # DA KUBERNETES
+                  name: matrix-k8s-secrets
                   key: macaroon-secret-key
             - name: FORM_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: matrix-k8s-secrets  # DA KUBERNETES
+                  name: matrix-k8s-secrets
                   key: form-secret
-          
-          ports:
-            - containerPort: 8008
-              name: http
-              protocol: TCP
-            - containerPort: 8448
-              name: federation
-              protocol: TCP
-          
           volumeMounts:
             - name: data
               mountPath: /data
@@ -92,33 +86,6 @@ spec:
             - name: config
               mountPath: /data/log.config
               subPath: log.config
-          
-          resources:
-            limits:
-              cpu: 2000m
-              memory: 4Gi
-            requests:
-              cpu: 500m
-              memory: 1Gi
-          
-          livenessProbe:
-            httpGet:
-              path: /health
-              port: http
-            initialDelaySeconds: 60
-            periodSeconds: 30
-            timeoutSeconds: 5
-            failureThreshold: 3
-          
-          readinessProbe:
-            httpGet:
-              path: /health
-              port: http
-            initialDelaySeconds: 30
-            periodSeconds: 10
-            timeoutSeconds: 5
-            failureThreshold: 3
-      
       volumes:
         - name: data
           persistentVolumeClaim:

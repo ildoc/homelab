@@ -4,6 +4,8 @@ kind: ConfigMap
 metadata:
   name: cloudflared-matrix-stack-config
   namespace: apps
+  annotations:
+    argocd.argoproj.io/sync-wave: "5"
 data:
   config.yaml: |
     tunnel: YOUR-TUNNEL-ID
