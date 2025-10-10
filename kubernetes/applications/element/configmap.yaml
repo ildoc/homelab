@@ -1,0 +1,52 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: element-config
+  namespace: apps
+data:
+  config.json: |
+    {
+      "default_server_config": {
+        "m.homeserver": {
+          "base_url": "https://matrix.ildoc.it",
+          "server_name": "matrix.ildoc.it"
+        }
+      },
+      "brand": "Element",
+      "default_country_code": "IT",
+      "default_federate": true,
+      "default_theme": "dark",
+      "disable_custom_urls": false,
+      "disable_guests": true,
+      "disable_login_language_selector": false,
+      "disable_3pid_login": false,
+      "enable_presence_by_hs_url": {
+        "https://matrix.ildoc.it": true
+      },
+      "setting_defaults": {
+        "breadcrumbs": true,
+        "UIFeature.urlPreviews": true,
+        "UIFeature.feedback": false,
+        "UIFeature.voip": true,
+        "UIFeature.widgets": true,
+        "UIFeature.flair": false,
+        "UIFeature.communities": false,
+        "UIFeature.advanced": true
+      },
+      "show_labs_settings": true,
+      "features": {
+        "feature_video_rooms": true,
+        "feature_element_call_video_rooms": true,
+        "feature_group_calls": true
+      },
+      "room_directory": {
+        "servers": [
+          "matrix.ildoc.it"
+        ]
+      },
+      "enable_encryption_by_default_for_dms": true,
+      "permalink_prefix": "https://matrix.to",
+      "update_base_url": "https://packages.element.io/desktop/update/",
+      "map_style_url": "https://api.maptiler.com/maps/streets/style.json?key=fU3vlMsMn4Jb6dnEIFsx"
+    }

@@ -1,0 +1,40 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cloudflared-matrix-stack-config
+  namespace: apps
+data:
+  config.yaml: |
+    tunnel: YOUR-TUNNEL-ID
+    credentials-file: /etc/cloudflared/credentials/credentials.json
+    
+    # Metrics endpoint
+    metrics: 0.0.0.0:2000
+    
+    # Ingress rules per Matrix + Element
+    ingress:
+      # Element Web - deve essere PRIMA per evitare conflitti
+      - hostname: element.ildoc.it
+        service: http://element-web.apps.svc.cluster.local:80
+        originRequest:
+          noTLSVerify: false
+          connectTimeout: 30s
+      
+      # Matrix Client API
+      - hostname: matrix.ildoc.it
+        service: http://matrix-synapse.apps.svc.cluster.local:8008
+        originRequest:
+          noTLSVerify: false
+          connectTimeout: 30s
+          tlsTimeout: 10s
+      
+      # Matrix Federation API (path-based routing)
+      - hostname: matrix.ildoc.it
+        path: /_matrix/federation/*
+        service: http://matrix-synapse.apps.svc.cluster.local:8448
+        originRequest:
+          noTLSVerify: false
+      
+      # Catch-all (obbligatorio)
+      - service: http_status:404
