@@ -21,7 +21,7 @@ data:
           - names: [client, federation]
             compress: false
 
-    # Database - valori hardcoded tranne la password
+    # Database
     database:
       name: psycopg2
       args:
@@ -33,7 +33,7 @@ data:
         cp_min: 5
         cp_max: 10
 
-    # Redis - valori hardcoded tranne la password
+    # Redis
     redis:
       enabled: true
       host: matrix-redis.apps.svc.cluster.local
@@ -45,16 +45,14 @@ data:
     max_upload_size: "50M"
     max_image_pixels: "32M"
     url_preview_enabled: false
-
-    # =========================================================================
-    # 🆕 CONFIGURAZIONE OIDC CON AUTHENTIK
-    # =========================================================================
     
-    # Disabilita registrazione diretta (gli utenti arrivano via OIDC)
+    # =========================================================================
+    # REGISTRAZIONE E PASSWORD
+    # =========================================================================
     enable_registration: false
     enable_registration_without_verification: false
     registration_requires_token: false
-
+    
     password_config:
       enabled: false
       localdb_enabled: true
@@ -62,41 +60,35 @@ data:
       policy:
         enabled: false
     
-    # Configurazione OIDC
+    # =========================================================================
+    # CONFIGURAZIONE OIDC CON AUTHENTIK
+    # =========================================================================
     oidc_providers:
       - idp_id: oidc-authentik
         idp_name: "Authentik"
-        idp_icon: "mxc://matrix.ildoc.it/authentik-icon"  # Opzionale
         discover: true
         issuer: "https://auth.ildoc.it/application/o/matrix-synapse/"
         client_id: "matrix-synapse"
         client_secret: ${OIDC_CLIENT_SECRET}
         scopes: ["openid", "profile", "email"]
         
+        # Abilita device authorization per QR code
         enable_device_authorization: true
-
-        # Mapping attributi da Authentik a Matrix
+        
+        # Mapping attributi
         user_mapping_provider:
           config:
-            # Campo che contiene lo username (parte prima di :matrix.ildoc.it)
             localpart_template: "{{ user.preferred_username }}"
-            
-            # Display name dell'utente
             display_name_template: "{{ user.name|default(user.preferred_username) }}"
-            
-            # Email dell'utente
             email_template: "{{ user.email }}"
-            
-            # Subject claim (identificatore univoco)
             subject_claim: "sub"
         
         # Comportamento autenticazione
-        allow_existing_users: true  # Permetti a utenti esistenti di linkare OIDC
-        
-        # User attributes (opzionale, per attributi custom)
-        # user_profile_method: "userinfo_endpoint"
+        allow_existing_users: true
     
-    # Usa env vars per i secret
+    # =========================================================================
+    # SECRET E CONFIGURAZIONI
+    # =========================================================================
     registration_shared_secret: ${REGISTRATION_SHARED_SECRET}
     macaroon_secret_key: ${MACAROON_SECRET_KEY}
     form_secret: ${FORM_SECRET}
@@ -105,6 +97,7 @@ data:
     allow_public_rooms_without_auth: false
     allow_public_rooms_over_federation: false
     
+    # Rate limiting
     rc_message:
       per_second: 0.2
       burst_count: 10
@@ -124,7 +117,7 @@ data:
         per_second: 0.17
         burst_count: 3
     
-    # federation_domain_whitelist: []
+    # Chiavi e federation
     signing_key_path: "/data/keys/signing.key"
     
     trusted_key_servers:
@@ -134,24 +127,21 @@ data:
     enable_metrics: true
     metrics_port: 9000
 
+    # Retention policy
     retention:
       enabled: true
       default_policy:
         min_lifetime: 1d
         max_lifetime: 365d
-      
-      # Consenti agli admin di sovrascrivere
       allow_lifetime_updates: true
-      
-      # Policy specifiche per tipo di stanza
       policies:
         - min_lifetime: 7d
           max_lifetime: 365d
-      
       purge_jobs:
         - interval: 24h
           threshold: 365d
-      
+    
+    # Federation
     federation:
       backfill_on_join: false
 
@@ -173,7 +163,9 @@ data:
         synapse.storage.SQL:
             level: INFO
         synapse.handlers.oidc:
-            level: INFO
+            level: DEBUG
+        synapse.handlers.sso:
+            level: DEBUG
     
     root:
       level: INFO
