@@ -122,7 +122,7 @@ spec:
                   key: postgres-password
             # Redis configuration
             - name: SYNAPSE_REDIS_HOST
-              value: "192.168.0.40"
+              value: "matrix-redis.apps.svc.cluster.local"
             - name: SYNAPSE_REDIS_PORT
               value: "6379"
             - name: SYNAPSE_REDIS_PASSWORD
