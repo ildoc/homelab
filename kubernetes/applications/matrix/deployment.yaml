@@ -20,46 +20,86 @@ spec:
     spec:
       securityContext:
         fsGroup: 991
+      
       initContainers:
-        - name: generate-keys
+        # Init container unificato: templating config + generazione chiavi
+        - name: prepare-synapse
           image: ghcr.io/element-hq/synapse:v1.123.0
           command:
             - /bin/sh
             - -c
             - |
-              echo "=== Matrix Synapse Key Generation ==="
+              set -e
+              
+              echo "=== Matrix Synapse Preparation ==="
+              
+              # Step 1: Template della configurazione
+              echo "Step 1: Templating configuration files..."
+              
+              # Sostituisci le variabili nel homeserver.yaml
+              sed "s|\${POSTGRES_PASSWORD}|${POSTGRES_PASSWORD}|g" \
+                  /config-template/homeserver.yaml > /data/homeserver.yaml
+              
+              sed "s|\${SYNAPSE_REDIS_PASSWORD}|${SYNAPSE_REDIS_PASSWORD}|g" \
+                  -i /data/homeserver.yaml
+              
+              sed "s|\${REGISTRATION_SHARED_SECRET}|${REGISTRATION_SHARED_SECRET}|g" \
+                  -i /data/homeserver.yaml
+              
+              sed "s|\${MACAROON_SECRET_KEY}|${MACAROON_SECRET_KEY}|g" \
+                  -i /data/homeserver.yaml
+              
+              sed "s|\${FORM_SECRET}|${FORM_SECRET}|g" \
+                  -i /data/homeserver.yaml
+              
+              # Copia log.config
+              cp /config-template/log.config /data/log.config
+              
+              echo "✓ Configuration templating complete"
+              
+              # Debug: verifica la configurazione del database
+              echo "Database configuration:"
+              grep -A10 "database:" /data/homeserver.yaml | head -15
+              
+              # Step 2: Generazione chiavi
+              echo ""
+              echo "Step 2: Checking signing keys..."
+              
               if [ -f /data/keys/signing.key ]; then
-                echo "✓ Signing key exists"
-                exit 0
+                echo "✓ Signing key already exists"
+              else
+                echo "Generating signing key..."
+                mkdir -p /data/keys
+                python -m synapse.app.homeserver \
+                  --server-name=matrix.ildoc.it \
+                  --config-path=/data/homeserver.yaml \
+                  --generate-keys
+                echo "✓ Signing key generated successfully"
               fi
               
-              echo "Generating signing key..."
-              mkdir -p /data/keys
-              python -m synapse.app.homeserver \
-                --server-name=matrix.ildoc.it \
-                --config-path=/data/homeserver.yaml \
-                --generate-keys
-              
-              echo "✓ Key generated successfully"
+              echo ""
+              echo "=== Preparation Complete ==="
           env:
             - name: SYNAPSE_SERVER_NAME
               value: "matrix.ildoc.it"
             - name: SYNAPSE_REPORT_STATS
               value: "no"
+            
+            # Database password
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: matrix-cross-secrets
                   key: postgres-password
-            - name: SYNAPSE_REDIS_HOST
-              value: "matrix-redis.apps.svc.cluster.local"
-            - name: SYNAPSE_REDIS_PORT
-              value: "6379"
+            
+            # Redis password
             - name: SYNAPSE_REDIS_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: matrix-redis-secret
                   key: password
+            
+            # Synapse secrets
             - name: REGISTRATION_SHARED_SECRET
               valueFrom:
                 secretKeyRef:
@@ -78,12 +118,9 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /data
-            - name: config
-              mountPath: /data/homeserver.yaml
-              subPath: homeserver.yaml
-            - name: config
-              mountPath: /data/log.config
-              subPath: log.config
+            - name: config-template
+              mountPath: /config-template
+              readOnly: true
       
       containers:
         - name: synapse
@@ -99,40 +136,6 @@ spec:
               value: "991"
             - name: TZ
               value: "Europe/Rome"
-            # PostgreSQL configuration
-            - name: POSTGRES_HOST
-              value: "192.168.0.30"
-            - name: POSTGRES_PORT
-              value: "5432"
-            - name: POSTGRES_DB
-              value: "synapse"
-            - name: POSTGRES_USER
-              value: "synapse"
-            - name: POSTGRES_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: matrix-cross-secrets
-                  key: postgres-password
-            - name: SYNAPSE_REDIS_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: matrix-redis-secret
-                  key: password
-            - name: REGISTRATION_SHARED_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: matrix-k8s-secrets
-                  key: registration-shared-secret
-            - name: MACAROON_SECRET_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: matrix-k8s-secrets
-                  key: macaroon-secret-key
-            - name: FORM_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: matrix-k8s-secrets
-                  key: form-secret
           ports:
             - containerPort: 8008
               name: http
@@ -143,12 +146,6 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /data
-            - name: config
-              mountPath: /data/homeserver.yaml
-              subPath: homeserver.yaml
-            - name: config
-              mountPath: /data/log.config
-              subPath: log.config
           resources:
             limits:
               cpu: 2000m
@@ -172,10 +169,11 @@ spec:
             periodSeconds: 10
             timeoutSeconds: 5
             failureThreshold: 3
+      
       volumes:
         - name: data
           persistentVolumeClaim:
             claimName: matrix-synapse
-        - name: config
+        - name: config-template
           configMap:
             name: matrix-config
