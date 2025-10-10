@@ -9,7 +9,7 @@
     project_path: .
 
 - name: Include update docker-compose
-  ansible.builtin.include_tasks: "{{ tasks_dir }}/docker/update-compose.yaml"
+  ansible.builtin.include_tasks: "{{ tasks_dir }}/docker/update-compose-unified.yaml"
   vars:
     update_compose_remote_path: "{{ remote_path }}"
     update_compose_local_path: "{{ local_path }}"
@@ -60,9 +60,51 @@
       community.docker.docker_compose_v2:
         project_src: .
         state: absent
-      when: remote_file.stat.exists
+      when: remote_config.stat.exists
 
     - name: Exec docker-compose up
       community.docker.docker_compose_v2:
         project_src: .
         state: present
+
+- name: Wait for Vault to be ready
+  ansible.builtin.uri:
+    url: http://127.0.0.1:8200/v1/sys/health
+    method: GET
+    status_code: [200, 429, 472, 473, 501, 503]
+  register: vault_health
+  until: vault_health.status in [200, 429, 473, 501]
+  retries: 10
+  delay: 3
+
+- name: Check if Vault is initialized
+  ansible.builtin.shell: docker exec vault vault status -format=json
+  register: vault_status
+  ignore_errors: true
+  changed_when: false
+
+- name: Display Vault initialization instructions
+  ansible.builtin.debug:
+    msg: |
+      Vault is not initialized. Please run:
+      
+      docker exec -it vault sh
+      vault operator init
+      
+      Save the unseal keys and root token securely!
+      Then unseal Vault with:
+      
+      vault operator unseal <key1>
+      vault operator unseal <key2>
+      vault operator unseal <key3>
+      
+      After unsealing, configure OIDC by running init-vault.sh with:
+      
+      export VAULT_ADDR=http://127.0.0.1:8200
+      export VAULT_TOKEN=<your-root-token>
+      export OIDC_DISCOVERY_URL="https://auth.ildoc.it/application/o/vault/"
+      export OIDC_CLIENT_ID="<client-id-from-authentik>"
+      export OIDC_CLIENT_SECRET="<client-secret-from-authentik>"
+      
+      ./init-vault.sh
+  when: vault_status.rc != 0 or (vault_status.stdout | from_json).initialized == false

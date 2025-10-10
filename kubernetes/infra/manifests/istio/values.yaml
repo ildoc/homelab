@@ -96,7 +96,7 @@ externalServices:
     enabled: true
     hostname: "vault.local.ildoc.it"
     protocol: HTTPS
-    port: 443
+    port: 8200
     skipVerify: true
     
     endpoints:

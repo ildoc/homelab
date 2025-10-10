@@ -1,7 +1,7 @@
 {
     "ui": true,
     "disable_mlock": true,
-    "api_addr":"http://127.0.0.1:8200",
+    "api_addr": "https://vault.local.ildoc.it",
 
     "storage": {
       "file": {
@@ -12,7 +12,9 @@
     "listener": {
       "tcp": {
         "address": "0.0.0.0:8200",
-        "tls_disable": true
+        "tls_disable": true,
+        "x_forwarded_for_authorized_addrs": ["192.168.0.0/24", "10.0.0.0/8"],
+        "x_forwarded_for_reject_not_authorized": false
       }
     }
-  }
+}
