@@ -21,7 +21,6 @@ gateway:
     - cattle-system
     - apps
     - monitoring
-    - harbor
     - authentik
 
 # Cilium Helm Chart Values

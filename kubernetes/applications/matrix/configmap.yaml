@@ -45,6 +45,47 @@ data:
     max_upload_size: "50M"
     max_image_pixels: "32M"
     url_preview_enabled: false
+
+    # =========================================================================
+    # 🆕 CONFIGURAZIONE OIDC CON AUTHENTIK
+    # =========================================================================
+    
+    # Disabilita registrazione diretta (gli utenti arrivano via OIDC)
+    enable_registration: false
+    enable_registration_without_verification: false
+    registration_requires_token: false
+    
+    # Configurazione OIDC
+    oidc_providers:
+      - idp_id: authentik
+        idp_name: "Authentik"
+        idp_icon: "mxc://matrix.ildoc.it/authentik-icon"  # Opzionale
+        discover: true
+        issuer: "https://auth.ildoc.it/application/o/matrix-synapse/"
+        client_id: "matrix-synapse"
+        client_secret: ${OIDC_CLIENT_SECRET}
+        scopes: ["openid", "profile", "email"]
+        
+        # Mapping attributi da Authentik a Matrix
+        user_mapping_provider:
+          config:
+            # Campo che contiene lo username (parte prima di :matrix.ildoc.it)
+            localpart_template: "{{ user.preferred_username }}"
+            
+            # Display name dell'utente
+            display_name_template: "{{ user.name|default(user.preferred_username) }}"
+            
+            # Email dell'utente
+            email_template: "{{ user.email }}"
+            
+            # Subject claim (identificatore univoco)
+            subject_claim: "sub"
+        
+        # Comportamento autenticazione
+        allow_existing_users: true  # Permetti a utenti esistenti di linkare OIDC
+        
+        # User attributes (opzionale, per attributi custom)
+        # user_profile_method: "userinfo_endpoint"
     
     enable_registration: false
     enable_registration_without_verification: false
@@ -125,6 +166,8 @@ data:
     
     loggers:
         synapse.storage.SQL:
+            level: INFO
+        synapse.handlers.oidc:
             level: INFO
     
     root:

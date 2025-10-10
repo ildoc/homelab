@@ -91,6 +91,21 @@ externalServices:
       maxPendingRequests: 512
       maxRequestsPerConnection: 10
 
+  # vault
+  vault:
+    enabled: true
+    hostname: "vault.local.ildoc.it"
+    protocol: HTTPS
+    port: 443
+    skipVerify: true
+    
+    endpoints:
+      - address: "192.168.0.50"
+    
+    connectionPool:
+      maxPendingRequests: 512
+      maxRequestsPerConnection: 10
+
 # =====================================================
 # Esempi di configurazioni avanzate (commentati)
 # =====================================================

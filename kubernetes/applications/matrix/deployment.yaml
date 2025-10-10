@@ -52,10 +52,17 @@ spec:
               sed "s|\${FORM_SECRET}|${FORM_SECRET}|g" \
                   -i /data/homeserver.yaml
               
+              sed "s|\${OIDC_CLIENT_SECRET}|${OIDC_CLIENT_SECRET}|g" \
+                  -i /data/homeserver.yaml
+              
               # Copia log.config
               cp /config-template/log.config /data/log.config
               
               echo "✓ Configuration templating complete"
+              
+              # Debug: verifica la configurazione OIDC
+              echo "OIDC configuration:"
+              grep -A20 "oidc_providers:" /data/homeserver.yaml || echo "No OIDC config found"
               
               # Debug: verifica la configurazione del database
               echo "Database configuration:"
@@ -115,6 +122,11 @@ spec:
                 secretKeyRef:
                   name: matrix-k8s-secrets
                   key: form-secret
+            - name: OIDC_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: matrix-k8s-secrets
+                  key: oidc-client-secret
           volumeMounts:
             - name: data
               mountPath: /data
