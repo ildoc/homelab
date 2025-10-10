@@ -8,6 +8,7 @@ metadata:
     argocd.argoproj.io/sync-wave: "5"
 data:
   config.yaml: |
+    tunnel: dcfc87de-eefc-4543-9b52-44c7a4ecae32
     credentials-file: /etc/cloudflared/credentials/credentials.json
     
     # Metrics endpoint
@@ -29,6 +30,6 @@ data:
           noTLSVerify: false
           connectTimeout: 30s
           tlsTimeout: 10s
-           
+      
       # Catch-all (obbligatorio)
       - service: http_status:404
