@@ -88,6 +88,28 @@ data:
     enable_metrics: true
     metrics_port: 9000
 
+    retention:
+      enabled: true
+      default_policy:
+        min_lifetime: 1d
+        max_lifetime: 365d
+      
+      # Consenti agli admin di sovrascrivere
+      allow_lifetime_updates: true
+      
+      # Policy specifiche per tipo di stanza
+      policies:
+        - min_lifetime: 7d
+          max_lifetime: 365d
+      
+      purge_jobs:
+        - interval: 24h
+          threshold: 365d
+      
+    federation:
+      backfill_on_join: false
+
+
   log.config: |
     version: 1
     
