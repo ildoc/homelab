@@ -29,13 +29,6 @@ data:
           noTLSVerify: false
           connectTimeout: 30s
           tlsTimeout: 10s
-      
-      # Matrix Federation API (path-based routing)
-      - hostname: matrix.ildoc.it
-        path: /_matrix/federation/*
-        service: http://matrix-synapse.apps.svc.cluster.local:8448
-        originRequest:
-          noTLSVerify: false
-      
+           
       # Catch-all (obbligatorio)
       - service: http_status:404
