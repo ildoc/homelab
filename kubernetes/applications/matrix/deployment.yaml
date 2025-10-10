@@ -4,8 +4,6 @@ kind: Deployment
 metadata:
   name: matrix-synapse
   namespace: apps
-  annotations:
-    argocd.argoproj.io/sync-wave: "4"
 spec:
   selector:
     matchLabels:
@@ -18,6 +16,80 @@ spec:
       labels:
         app: matrix-synapse
     spec:
+      # Init container per generare le chiavi di firma
+      initContainers:
+        - name: generate-keys
+          image: ghcr.io/element-hq/synapse:v1.123.0
+          command:
+            - /bin/sh
+            - -c
+            - |
+              echo "=== Matrix Synapse Key Generation ==="
+              if [ -f /data/keys/signing.key ]; then
+                echo "✓ Signing key exists"
+                exit 0
+              fi
+              
+              echo "Generating signing key..."
+              mkdir -p /data/keys
+              python -m synapse.app.homeserver \
+                --server-name=matrix.ildoc.it \
+                --config-path=/data/homeserver.yaml \
+                --generate-keys
+              
+              echo "✓ Key generated successfully"
+          env:
+            - name: SYNAPSE_SERVER_NAME
+              value: "matrix.ildoc.it"
+            - name: SYNAPSE_REPORT_STATS
+              value: "no"
+            - name: POSTGRES_HOST
+              value: "192.168.0.30"
+            - name: POSTGRES_PORT
+              value: "5432"
+            - name: POSTGRES_DB
+              value: "matrix_db"
+            - name: POSTGRES_USER
+              value: "matrix_user"
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: matrix-cross-secrets
+                  key: postgres-password
+            - name: SYNAPSE_REDIS_HOST
+              value: "matrix-redis.apps.svc.cluster.local"
+            - name: SYNAPSE_REDIS_PORT
+              value: "6379"
+            - name: SYNAPSE_REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: matrix-redis-secret
+                  key: password
+            - name: REGISTRATION_SHARED_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: matrix-k8s-secrets
+                  key: registration-shared-secret
+            - name: MACAROON_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: matrix-k8s-secrets
+                  key: macaroon-secret-key
+            - name: FORM_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: matrix-k8s-secrets
+                  key: form-secret
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: config
+              mountPath: /data/homeserver.yaml
+              subPath: homeserver.yaml
+            - name: config
+              mountPath: /data/log.config
+              subPath: log.config
+      
       containers:
         - name: synapse
           image: ghcr.io/element-hq/synapse:v1.123.0
@@ -32,49 +104,30 @@ spec:
               value: "991"
             - name: TZ
               value: "Europe/Rome"
-            
-            # PostgreSQL configuration (da cross-secrets)
+            # PostgreSQL configuration
             - name: POSTGRES_HOST
-              value: "192.168.0.40"
+              value: "192.168.0.30"
             - name: POSTGRES_PORT
               value: "5432"
             - name: POSTGRES_DB
-              value: "matrix_db"
+              value: "synapse"
             - name: POSTGRES_USER
-              value: "matrix_user"
+              value: "synapse"
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: matrix-cross-secrets  # DA CROSS
+                  name: matrix-secrets
                   key: postgres-password
-            
+            # Redis configuration
             - name: SYNAPSE_REDIS_HOST
-              value: "matrix-redis.apps.svc.cluster.local"  # Service interno
+              value: "192.168.0.40"
             - name: SYNAPSE_REDIS_PORT
               value: "6379"
             - name: SYNAPSE_REDIS_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: matrix-redis-secret
-                  key: password
-            
-            # Synapse secrets (da k8s-secrets)
-            - name: REGISTRATION_SHARED_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: matrix-k8s-secrets  # DA KUBERNETES
-                  key: registration-shared-secret
-            - name: MACAROON_SECRET_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: matrix-k8s-secrets  # DA KUBERNETES
-                  key: macaroon-secret-key
-            - name: FORM_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: matrix-k8s-secrets  # DA KUBERNETES
-                  key: form-secret
-          
+                  name: matrix-secrets
+                  key: redis-password
           ports:
             - containerPort: 8008
               name: http
@@ -82,7 +135,6 @@ spec:
             - containerPort: 8448
               name: federation
               protocol: TCP
-          
           volumeMounts:
             - name: data
               mountPath: /data
@@ -92,7 +144,6 @@ spec:
             - name: config
               mountPath: /data/log.config
               subPath: log.config
-          
           resources:
             limits:
               cpu: 2000m
@@ -100,7 +151,6 @@ spec:
             requests:
               cpu: 500m
               memory: 1Gi
-          
           livenessProbe:
             httpGet:
               path: /health
@@ -109,7 +159,6 @@ spec:
             periodSeconds: 30
             timeoutSeconds: 5
             failureThreshold: 3
-          
           readinessProbe:
             httpGet:
               path: /health
@@ -118,7 +167,6 @@ spec:
             periodSeconds: 10
             timeoutSeconds: 5
             failureThreshold: 3
-      
       volumes:
         - name: data
           persistentVolumeClaim:
