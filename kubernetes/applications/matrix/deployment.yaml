@@ -129,7 +129,7 @@ spec:
               valueFrom:
                 secretKeyRef:
                   name: matrix-redis-secret
-                  key: redis-password
+                  key: password
           ports:
             - containerPort: 8008
               name: http
