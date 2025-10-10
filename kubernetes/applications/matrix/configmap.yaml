@@ -78,7 +78,7 @@ data:
         per_second: 0.17
         burst_count: 3
     
-    federation_domain_whitelist: []
+    # federation_domain_whitelist: []
     signing_key_path: "/data/keys/signing.key"
     
     trusted_key_servers:
