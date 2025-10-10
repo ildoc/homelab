@@ -95,9 +95,8 @@ externalServices:
   vault:
     enabled: true
     hostname: "vault.local.ildoc.it"
-    protocol: HTTPS
+    protocol: HTTP
     port: 8200
-    skipVerify: true
     
     endpoints:
       - address: "192.168.0.50"
