@@ -1,0 +1,76 @@
+---
+# =============================================================================
+# RANCHER CORE CONFIGURATION
+# =============================================================================
+rancher:
+  # Hostname per Rancher
+  hostname: rancher.local.ildoc.it
+  
+  # Numero di repliche
+  replicas: 2
+  
+  # TLS configuration - external perché gestiamo TLS al gateway
+  tls: external
+  
+  # Private CA - se usi certificati self-signed
+  privateCA: false
+  
+  # Ingress - disabilitato, usiamo HTTPRoute in ingresses/
+  ingress:
+    enabled: false
+  
+  # Resources
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+  
+  # Anti-affinity per distribuire i pod
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          podAffinityTerm:
+            labelSelector:
+              matchLabels:
+                app: rancher
+            topologyKey: kubernetes.io/hostname
+  
+  # Liveness e Readiness probes
+  livenessProbe:
+    initialDelaySeconds: 60
+    periodSeconds: 30
+    timeoutSeconds: 5
+    failureThreshold: 3
+  
+  readinessProbe:
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  
+  # Bootstrap password - IMPORTANTE: cambialo al primo accesso
+  bootstrapPassword: "admin"
+  
+  # Features
+  extraEnv:
+    # Proxy configuration per headers
+    - name: HTTP_PROXY
+      value: ""
+    - name: HTTPS_PROXY
+      value: ""
+    - name: NO_PROXY
+      value: "127.0.0.0/8,10.0.0.0/8,cattle-system.svc,172.16.0.0/12,192.168.0.0/16,.svc,.cluster.local"
+  
+  # Audit log
+  auditLog:
+    level: 0
+    maxAge: 10
+    maxBackup: 10
+    maxSize: 100
+  
+  # Additional trusted CAs (se necessario)
+  additionalTrustedCAs: false

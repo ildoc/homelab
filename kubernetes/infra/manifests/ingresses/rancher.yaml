@@ -4,6 +4,8 @@ kind: HTTPRoute
 metadata:
   name: rancher
   namespace: cattle-system
+  labels:
+    app.kubernetes.io/name: rancher
 spec:
   parentRefs:
     - name: cilium-gateway
@@ -18,4 +20,4 @@ spec:
             value: /
       backendRefs:
         - name: rancher
-          port: 80 
+          port: 80

@@ -6,32 +6,21 @@ metadata:
   namespace: argocd
   finalizers:
     - resources-finalizer.argocd.argoproj.io
-    - post-delete-finalizer.argocd.argoproj.io
-    - post-delete-finalizer.argocd.argoproj.io/cleanup
   annotations:
     argocd.argoproj.io/sync-wave: "-70"
-    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
-    argocd.argoproj.io/wait: "true"
 spec:
   project: default
   source:
-    repoURL: https://releases.rancher.com/server-charts/stable
-    chart: rancher
-    targetRevision: 2.12.1
-    helm:
-      parameters:
-        - name: "ingress.enabled"
-          value: "false"
-        - name: "tls"
-          value: "external"  # IMPORTANTE: Disabilita TLS interno
-        - name: "hostname"
-          value: "rancher.local.ildoc.it"
+    repoURL: https://gitlab.local.ildoc.it/ildoc/homelab.git
+    targetRevision: HEAD
+    path: kubernetes/infra/manifests/rancher
   destination:
     server: https://kubernetes.default.svc
     namespace: cattle-system
   syncPolicy:
     syncOptions:
       - CreateNamespace=true
+      - ServerSideApply=true
     automated:
       prune: true
       selfHeal: true
