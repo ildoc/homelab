@@ -19,18 +19,6 @@
     "**/archived/**",
     "docs/**"
   ],
-  "enabledManagers": [
-    "docker-compose",
-    "dockerfile",
-    "helm-values",
-    "helmfile",
-    "kubernetes",
-    "terraform",
-    "github-actions",
-    "gitlabci",
-    "ansible-galaxy",
-    "custom.regex"
-  ],
   "packageRules": [
     {
       "description": "Raggruppa tutti gli aggiornamenti digest Docker in una singola PR",
