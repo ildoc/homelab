@@ -4,7 +4,7 @@ set -euo pipefail
 # CONFIGURATIONS
 POLICY_NAME="ci-policy"
 ROLE_NAME="ci-role"
-SECRET_PATHS="ansible terraform"
+SECRET_PATHS="ansible cross kubernetes opentofu terraform"
 VAULT_ADDR="${VAULT_ADDR:-http://127.0.0.1:8200}"
 VAULT_TOKEN="${VAULT_TOKEN:?VAULT_TOKEN missing}"
 
@@ -12,6 +12,7 @@ VAULT_TOKEN="${VAULT_TOKEN:?VAULT_TOKEN missing}"
 OIDC_DISCOVERY_URL="${OIDC_DISCOVERY_URL:-}"
 OIDC_CLIENT_ID="${OIDC_CLIENT_ID:-}"
 OIDC_CLIENT_SECRET="${OIDC_CLIENT_SECRET:-}"
+OIDC_APP_SLUG="${OIDC_APP_SLUG:-vault}"
 
 # Install dependencies
 apk add jq curl
@@ -95,85 +96,219 @@ if [ -n "$OIDC_DISCOVERY_URL" ] && [ -n "$OIDC_CLIENT_ID" ] && [ -n "$OIDC_CLIEN
     vault auth enable oidc
   fi
   
-  # Configure OIDC
+  # Configure OIDC with correct discovery URL format
   echo "[+] Configuring OIDC settings..."
   vault write auth/oidc/config \
-    oidc_discovery_url="$OIDC_DISCOVERY_URL" \
+    oidc_discovery_url="${OIDC_DISCOVERY_URL}/application/o/${OIDC_APP_SLUG}/" \
     oidc_client_id="$OIDC_CLIENT_ID" \
     oidc_client_secret="$OIDC_CLIENT_SECRET" \
     default_role="reader"
   
-  # Create reader policy
+  # Create reader policy dynamically
   echo "[+] Creating reader policy..."
-  vault policy write reader - <<EOF
-path "ansible/data/*" {
-  capabilities = ["read", "list"]
+  READER_POLICY=""
+  for SECRET_PATH in $SECRET_PATHS; do
+    READER_POLICY="$READER_POLICY
+path \"$SECRET_PATH/data/*\" {
+  capabilities = [\"read\", \"list\"]
 }
 
-path "terraform/data/*" {
-  capabilities = ["read", "list"]
-}
-
-path "cross/data/*" {
-  capabilities = ["read", "list"]
-}
-EOF
+path \"$SECRET_PATH/metadata/*\" {
+  capabilities = [\"read\", \"list\"]
+}"
+  done
   
-  # Create admin policy
+  echo "$READER_POLICY" | vault policy write reader -
+  
+  # Create admin policy with full access to everything
   echo "[+] Creating admin policy..."
   vault policy write admin - <<EOF
-path "ansible/*" {
-  capabilities = ["create", "read", "update", "delete", "list"]
+# Full access to all secret engines (current and future)
+path "*" {
+  capabilities = ["create", "read", "update", "delete", "list", "sudo"]
 }
 
-path "terraform/*" {
-  capabilities = ["create", "read", "update", "delete", "list"]
-}
-
-path "cross/*" {
-  capabilities = ["create", "read", "update", "delete", "list"]
-}
-
-path "sys/*" {
-  capabilities = ["read", "list"]
-}
-
-path "auth/*" {
-  capabilities = ["read", "list"]
-}
+# Explicit deny on sensitive operations if needed
+# path "sys/raw/*" {
+#   capabilities = ["deny"]
+# }
 EOF
   
-  # Create OIDC reader role
+  # Create OIDC reader role with all required redirect URIs
   echo "[+] Creating OIDC reader role..."
   vault write auth/oidc/role/reader \
     bound_audiences="$OIDC_CLIENT_ID" \
     allowed_redirect_uris="https://vault.local.ildoc.it/ui/vault/auth/oidc/oidc/callback" \
+    allowed_redirect_uris="https://vault.local.ildoc.it/oidc/callback" \
+    allowed_redirect_uris="http://localhost:8250/oidc/callback" \
     user_claim="sub" \
     policies="default,reader" \
     groups_claim="groups" \
+    oidc_scopes="openid,profile,email" \
     ttl="1h"
   
   # Create OIDC admin role
   echo "[+] Creating OIDC admin role..."
+  vault write auth/oidc/role/admin \
+    bound_audiences="$OIDC_CLIENT_ID" \
+    allowed_redirect_uris="https://vault.local.ildoc.it/ui/vault/auth/oidc/oidc/callback" \
+    allowed_redirect_uris="https://vault.local.ildoc.it/oidc/callback" \
+    allowed_redirect_uris="http://localhost:8250/oidc/callback" \
+    user_claim="sub" \
+    policies="default,admin" \
+    groups_claim="groups" \
+    oidc_scopes="openid,profile,email" \
+    ttl="8h"
   
-  # Use wget (already available in Alpine)
-  wget --post-data='{
-    "bound_audiences": "'"$OIDC_CLIENT_ID"'",
-    "allowed_redirect_uris": ["https://vault.local.ildoc.it/ui/vault/auth/oidc/oidc/callback"],
-    "user_claim": "sub",
-    "policies": ["default", "admin"],
-    "groups_claim": "groups",
-    "bound_claims": {
-      "groups": ["vault-admins"]
-    },
-    "ttl": "8h"
-  }' \
-    --header="X-Vault-Token: $VAULT_TOKEN" \
-    --header="Content-Type: application/json" \
-    -O - \
-    "${VAULT_ADDR}/v1/auth/oidc/role/admin" 2>&1 || true
+  # Get OIDC accessor for group aliases
+  echo "[+] Getting OIDC accessor..."
+  OIDC_ACCESSOR=$(vault auth list -format=json | jq -r '.["oidc/"].accessor')
+  echo "[+] OIDC Accessor: $OIDC_ACCESSOR"
+  
+  # Create external group for vault-admins
+  echo "[+] Creating external group 'vault-admins'..."
+  if vault read identity/group/name/vault-admins > /dev/null 2>&1; then
+    # Check if it's external type
+    GROUP_TYPE=$(vault read -field=type identity/group/name/vault-admins)
+    if [ "$GROUP_TYPE" = "internal" ]; then
+      echo "[!] Group 'vault-admins' exists but is 'internal' type. Deleting and recreating as 'external'..."
+      vault delete identity/group/name/vault-admins
+      ADMINS_GROUP_ID=$(vault write -format=json identity/group \
+        name="vault-admins" \
+        policies="admin" \
+        type="external" | jq -r '.data.id')
+      echo "[+] Created group 'vault-admins' with ID: $ADMINS_GROUP_ID"
+    else
+      echo "[+] Group 'vault-admins' already exists as external type"
+      ADMINS_GROUP_ID=$(vault read -field=id identity/group/name/vault-admins)
+      # Update policies in case they changed
+      vault write identity/group/id/$ADMINS_GROUP_ID policies="admin"
+    fi
+  else
+    ADMINS_GROUP_ID=$(vault write -format=json identity/group \
+      name="vault-admins" \
+      policies="admin" \
+      type="external" | jq -r '.data.id')
+    echo "[+] Created group 'vault-admins' with ID: $ADMINS_GROUP_ID"
+  fi
+  
+  # Create group alias for vault-admins
+  echo "[+] Creating group alias for 'vault-admins'..."
+  if vault list identity/group-alias/id 2>/dev/null | grep -q .; then
+    # Check if alias already exists
+    EXISTING_ALIAS=$(vault list -format=json identity/group-alias/id 2>/dev/null | jq -r '.[]' | while read alias_id; do
+      ALIAS_INFO=$(vault read -format=json "identity/group-alias/id/$alias_id")
+      ALIAS_NAME=$(echo "$ALIAS_INFO" | jq -r '.data.name')
+      ALIAS_CANONICAL=$(echo "$ALIAS_INFO" | jq -r '.data.canonical_id')
+      if [ "$ALIAS_NAME" = "vault-admins" ] && [ "$ALIAS_CANONICAL" = "$ADMINS_GROUP_ID" ]; then
+        echo "$alias_id"
+        break
+      fi
+    done)
+    
+    if [ -n "$EXISTING_ALIAS" ]; then
+      echo "[+] Group alias for 'vault-admins' already exists"
+    else
+      vault write identity/group-alias \
+        name="vault-admins" \
+        mount_accessor="$OIDC_ACCESSOR" \
+        canonical_id="$ADMINS_GROUP_ID"
+      echo "[+] Created group alias for 'vault-admins'"
+    fi
+  else
+    vault write identity/group-alias \
+      name="vault-admins" \
+      mount_accessor="$OIDC_ACCESSOR" \
+      canonical_id="$ADMINS_GROUP_ID"
+    echo "[+] Created group alias for 'vault-admins'"
+  fi
+  
+  # Create external group for vault-readers
+  echo "[+] Creating external group 'vault-readers'..."
+  if vault read identity/group/name/vault-readers > /dev/null 2>&1; then
+    # Check if it's external type
+    GROUP_TYPE=$(vault read -field=type identity/group/name/vault-readers)
+    if [ "$GROUP_TYPE" = "internal" ]; then
+      echo "[!] Group 'vault-readers' exists but is 'internal' type. Deleting and recreating as 'external'..."
+      vault delete identity/group/name/vault-readers
+      READERS_GROUP_ID=$(vault write -format=json identity/group \
+        name="vault-readers" \
+        policies="reader" \
+        type="external" | jq -r '.data.id')
+      echo "[+] Created group 'vault-readers' with ID: $READERS_GROUP_ID"
+    else
+      echo "[+] Group 'vault-readers' already exists as external type"
+      READERS_GROUP_ID=$(vault read -field=id identity/group/name/vault-readers)
+      # Update policies in case they changed
+      vault write identity/group/id/$READERS_GROUP_ID policies="reader"
+    fi
+  else
+    READERS_GROUP_ID=$(vault write -format=json identity/group \
+      name="vault-readers" \
+      policies="reader" \
+      type="external" | jq -r '.data.id')
+    echo "[+] Created group 'vault-readers' with ID: $READERS_GROUP_ID"
+  fi
+  
+  # Create group alias for vault-readers
+  echo "[+] Creating group alias for 'vault-readers'..."
+  if vault list identity/group-alias/id 2>/dev/null | grep -q .; then
+    # Check if alias already exists
+    EXISTING_ALIAS=$(vault list -format=json identity/group-alias/id 2>/dev/null | jq -r '.[]' | while read alias_id; do
+      ALIAS_INFO=$(vault read -format=json "identity/group-alias/id/$alias_id")
+      ALIAS_NAME=$(echo "$ALIAS_INFO" | jq -r '.data.name')
+      ALIAS_CANONICAL=$(echo "$ALIAS_INFO" | jq -r '.data.canonical_id')
+      if [ "$ALIAS_NAME" = "vault-readers" ] && [ "$ALIAS_CANONICAL" = "$READERS_GROUP_ID" ]; then
+        echo "$alias_id"
+        break
+      fi
+    done)
+    
+    if [ -n "$EXISTING_ALIAS" ]; then
+      echo "[+] Group alias for 'vault-readers' already exists"
+    else
+      vault write identity/group-alias \
+        name="vault-readers" \
+        mount_accessor="$OIDC_ACCESSOR" \
+        canonical_id="$READERS_GROUP_ID"
+      echo "[+] Created group alias for 'vault-readers'"
+    fi
+  else
+    vault write identity/group-alias \
+      name="vault-readers" \
+      mount_accessor="$OIDC_ACCESSOR" \
+      canonical_id="$READERS_GROUP_ID"
+    echo "[+] Created group alias for 'vault-readers'"
+  fi
   
   echo ""
   echo "[+] OIDC configuration completed!"
-  echo "[+] Create groups in Authentik: 'vault-admins' and 'vault-readers'"
+  echo ""
+  echo "=== CONFIGURATION SUMMARY ==="
+  echo "OIDC Accessor: $OIDC_ACCESSOR"
+  echo "vault-admins Group ID: $ADMINS_GROUP_ID"
+  echo "vault-readers Group ID: $READERS_GROUP_ID"
+  echo ""
+  echo "=== NEXT STEPS IN AUTHENTIK ==="
+  echo "1. Go to your Vault provider in Authentik (https://auth.ildoc.it)"
+  echo "2. Verify these STRICT Redirect URIs are configured:"
+  echo "   - https://vault.local.ildoc.it/ui/vault/auth/oidc/oidc/callback"
+  echo "   - https://vault.local.ildoc.it/oidc/callback"
+  echo "   - http://localhost:8250/oidc/callback"
+  echo ""
+  echo "3. Under 'Advanced protocol settings', verify the scope mapping:"
+  echo "   - authentik default OAuth Mapping: OpenID 'profile'"
+  echo ""
+  echo "4. Verify these groups exist in Authentik:"
+  echo "   - vault-admins (for admin access)"
+  echo "   - vault-readers (for read-only access)"
+  echo ""
+  echo "5. Add your user to the 'vault-admins' group"
+  echo ""
+  echo "=== TESTING ==="
+  echo "Test login with: vault login -method=oidc role=\"reader\""
+  echo ""
+  echo "After login, verify your groups with:"
+  echo "vault token lookup | grep policies"
+  echo "vault read auth/token/lookup-self"
 fi
