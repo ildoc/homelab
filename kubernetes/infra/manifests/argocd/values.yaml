@@ -14,12 +14,23 @@ argo-cd:
       enabled: true
 
   controller:
-    replicas: 1  # StatefulSet mode
+    replicas: 1
 
   server:
-    replicas: 2  # HA recommended
+    replicas: 2
     ingress:
       enabled: false
+    
+    # Monta il secret delle credenziali OIDC
+    volumes:
+      - name: oidc-credentials
+        secret:
+          secretName: argocd-oidc-credentials
+    
+    volumeMounts:
+      - name: oidc-credentials
+        mountPath: /app/config/oidc
+        readOnly: true
 
   repoServer:
     replicas: 2
@@ -30,16 +41,61 @@ argo-cd:
   configs:
     cm:
       timeout.reconciliation: 180s
+      
+      # Configurazione OIDC per Authentik
+      url: https://argocd.local.ildoc.it
+      oidc.config: |
+        name: Authentik
+        issuer: https://auth.ildoc.it/application/o/argocd/
+        clientID: $oidc.authentik.clientId
+        clientSecret: $oidc.authentik.clientSecret
+        requestedScopes:
+          - openid
+          - profile
+          - email
+          - groups
+        requestedIDTokenClaims:
+          groups:
+            essential: true
+      
       # Health check per le EndpointSlices
       resource.customizations.health.discovery.k8s.io_EndpointSlice: |
         hs = {}
         hs.status = "Healthy"
         hs.message = "EndpointSlice is present"
         return hs
-      
+    
     params:
       server.insecure: "true"
       application.resourceTrackingMethod: "annotation"
+    
+    # RBAC policy per mappare i gruppi di Authentik
+    rbac:
+      policy.default: ''
+      policy.csv: |
+        # Mappatura gruppi Authentik -> Ruoli ArgoCD
+        g, argocd-admins, role:admin
+        g, argocd-developers, role:developer
+        g, argocd-readonly, role:readonly
+        
+        # Definizione ruolo developer
+        p, role:developer, applications, *, */*, allow
+        p, role:developer, applicationsets, *, */*, allow
+        p, role:developer, repositories, *, *, allow
+        p, role:developer, clusters, get, *, allow
+        p, role:developer, projects, get, *, allow
+        p, role:developer, logs, get, */*, allow
+        p, role:developer, exec, create, */*, deny
+      
+      # Scopes per OIDC
+      scopes: '[groups, email, profile]'
+    
+    # Secret contenente le credenziali OIDC
+    secret:
+      createSecret: false
+      extra:
+        oidc.authentik.clientId: ""
+        oidc.authentik.clientSecret: ""
     
     # Inclusione ristretta solo al namespace external-routes
     resource.inclusions: |
