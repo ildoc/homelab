@@ -11,6 +11,9 @@ data:
     server_name: "matrix.ildoc.it"
     public_baseurl: "https://matrix.ildoc.it"
     
+    presence:
+      enabled: false
+
     listeners:
       - port: 8008
         tls: false
@@ -32,6 +35,9 @@ data:
         port: 5432
         cp_min: 5
         cp_max: 10
+        keepalives_idle: 10
+        keepalives_interval: 10
+        keepalives_count: 3
 
     # Redis
     redis:
@@ -97,25 +103,34 @@ data:
     allow_public_rooms_without_auth: false
     allow_public_rooms_over_federation: false
     
-    # Rate limiting
+    # === RATE LIMITING (RELAXED) ===
     rc_message:
-      per_second: 0.2
-      burst_count: 10
-    
-    rc_registration:
-      per_second: 0.17
-      burst_count: 3
-    
+      per_second: 100
+      burst_count: 100
+
     rc_login:
       address:
-        per_second: 0.17
-        burst_count: 3
+        per_second: 10
+        burst_count: 10
       account:
-        per_second: 0.17
-        burst_count: 3
-      failed_attempts:
-        per_second: 0.17
-        burst_count: 3
+        per_second: 10
+        burst_count: 10
+
+    rc_joins:
+      local:
+        per_second: 1
+        burst_count: 10
+      remote:
+        per_second: 1
+        burst_count: 10
+
+    rc_invites:
+      per_room:
+        per_second: 10
+        burst_count: 100
+      per_user:
+        per_second: 10
+        burst_count: 100
     
     # Chiavi e federation
     signing_key_path: "/data/keys/signing.key"
@@ -127,20 +142,50 @@ data:
     enable_metrics: true
     metrics_port: 9000
 
-    # Retention policy
+    # === ROOM SYNC OPTIMIZATION ===
+    filter_timeline_limit: 50
+
+    limit_remote_rooms:
+      enabled: true
+      complexity: 3.0
+      admins_can_join: true
+
     retention:
       enabled: true
       default_policy:
-        min_lifetime: 1d
-        max_lifetime: 365d
-      allow_lifetime_updates: true
-      policies:
-        - min_lifetime: 7d
-          max_lifetime: 365d
+        max_lifetime: 90d
+      allowed_lifetime_max: 90d
       purge_jobs:
-        - interval: 24h
-          threshold: 365d
-    
+        - interval: 1d
+
+    # === MEMORY OPTIMIZATION ===
+    event_cache_size: 20K
+
+    caches:
+      global_factor: 1.0
+      expire_caches: true
+      cache_entry_ttl: 30m
+      sync_response_cache_duration: 2m
+      
+      per_cache_factors:
+        stateGroupCache: 0.5
+        stateGroupMembersCache: 0.5
+        get_rooms_for_user: 2.0
+        get_user_by_access_token: 2.0
+
+    gc_thresholds: [550, 10, 10]
+    gc_min_interval: [1s, 1m, 2m]
+
+    # === FEATURE OPTIMIZATION ===
+    # url_preview_enabled: false
+    enable_metrics: false
+    max_upload_size: 50M
+    max_image_pixels: 32M
+
+    media_retention:
+      local_media_lifetime: 90d
+      remote_media_lifetime: 30d
+
     # Federation
     federation:
       backfill_on_join: false
