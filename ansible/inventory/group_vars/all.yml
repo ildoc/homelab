@@ -165,6 +165,12 @@ db:
         lc_collate: C
         lc_ctype: C
 
+      - name: sonarqube_db
+        owner: sonarqube_user
+        encoding: UTF8
+        lc_collate: en_US.UTF-8
+        lc_ctype: en_US.UTF-8
+
     users:
       # Utenti applicativi con accesso completo al loro database
       - name: invidious_user
@@ -187,6 +193,14 @@ db:
         password: "{{ lookup('community.hashi_vault.hashi_vault', 'cross/data/apps/matrix:postgres_password') }}"
         databases:
           - matrix_db
+        privileges: ALL
+        table_privs: ALL
+        sequence_privs: ALL
+      
+      - name: sonarqube_user
+        password: "{{ lookup('community.hashi_vault.hashi_vault', 'cross/data/apps/sonarqube:postgres_password') }}"
+        databases:
+          - sonarqube_db
         privileges: ALL
         table_privs: ALL
         sequence_privs: ALL

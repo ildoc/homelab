@@ -64,7 +64,7 @@ sonarqube:
     gateway: "cilium-gateway"
     gatewayNamespace: "kube-system"
     hostnames:
-      - "sonarqube.local.ildoc.it"
+      - "sonar.local.ildoc.it"
 
   # Disabilita ingress tradizionale
   ingress:
