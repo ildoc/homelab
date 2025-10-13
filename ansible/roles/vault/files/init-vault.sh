@@ -96,13 +96,13 @@ if [ -n "$OIDC_DISCOVERY_URL" ] && [ -n "$OIDC_CLIENT_ID" ] && [ -n "$OIDC_CLIEN
     vault auth enable oidc
   fi
   
-  # Configure OIDC with correct discovery URL format
+  # Configure OIDC with correct discovery URL format and dynamic as default role
   echo "[+] Configuring OIDC settings..."
   vault write auth/oidc/config \
     oidc_discovery_url="${OIDC_DISCOVERY_URL}/application/o/${OIDC_APP_SLUG}/" \
     oidc_client_id="$OIDC_CLIENT_ID" \
     oidc_client_secret="$OIDC_CLIENT_SECRET" \
-    default_role="reader"
+    default_role="dynamic"
   
   # Create reader policy dynamically
   echo "[+] Creating reader policy..."
@@ -133,6 +133,19 @@ path "*" {
 #   capabilities = ["deny"]
 # }
 EOF
+  
+  # Create OIDC dynamic role (group-based policies only)
+  echo "[+] Creating OIDC dynamic role..."
+  vault write auth/oidc/role/dynamic \
+    bound_audiences="$OIDC_CLIENT_ID" \
+    allowed_redirect_uris="https://vault.local.ildoc.it/ui/vault/auth/oidc/oidc/callback" \
+    allowed_redirect_uris="https://vault.local.ildoc.it/oidc/callback" \
+    allowed_redirect_uris="http://localhost:8250/oidc/callback" \
+    user_claim="sub" \
+    policies="default" \
+    groups_claim="groups" \
+    oidc_scopes="openid,profile,email" \
+    ttl="8h"
   
   # Create OIDC reader role with all required redirect URIs
   echo "[+] Creating OIDC reader role..."
@@ -194,33 +207,27 @@ EOF
   
   # Create group alias for vault-admins
   echo "[+] Creating group alias for 'vault-admins'..."
+  ALIAS_EXISTS=false
   if vault list identity/group-alias/id 2>/dev/null | grep -q .; then
     # Check if alias already exists
-    EXISTING_ALIAS=$(vault list -format=json identity/group-alias/id 2>/dev/null | jq -r '.[]' | while read alias_id; do
-      ALIAS_INFO=$(vault read -format=json "identity/group-alias/id/$alias_id")
-      ALIAS_NAME=$(echo "$ALIAS_INFO" | jq -r '.data.name')
-      ALIAS_CANONICAL=$(echo "$ALIAS_INFO" | jq -r '.data.canonical_id')
-      if [ "$ALIAS_NAME" = "vault-admins" ] && [ "$ALIAS_CANONICAL" = "$ADMINS_GROUP_ID" ]; then
-        echo "$alias_id"
+    for alias_id in $(vault list -format=json identity/group-alias/id 2>/dev/null | jq -r '.[]'); do
+      ALIAS_INFO=$(vault read -format=json "identity/group-alias/id/$alias_id" 2>/dev/null || echo "{}")
+      ALIAS_NAME=$(echo "$ALIAS_INFO" | jq -r '.data.name // empty')
+      ALIAS_MOUNT=$(echo "$ALIAS_INFO" | jq -r '.data.mount_accessor // empty')
+      if [ "$ALIAS_NAME" = "vault-admins" ] && [ "$ALIAS_MOUNT" = "$OIDC_ACCESSOR" ]; then
+        ALIAS_EXISTS=true
+        echo "[+] Group alias for 'vault-admins' already exists"
         break
       fi
-    done)
-    
-    if [ -n "$EXISTING_ALIAS" ]; then
-      echo "[+] Group alias for 'vault-admins' already exists"
-    else
-      vault write identity/group-alias \
-        name="vault-admins" \
-        mount_accessor="$OIDC_ACCESSOR" \
-        canonical_id="$ADMINS_GROUP_ID"
-      echo "[+] Created group alias for 'vault-admins'"
-    fi
-  else
+    done
+  fi
+  
+  if [ "$ALIAS_EXISTS" = "false" ]; then
     vault write identity/group-alias \
       name="vault-admins" \
       mount_accessor="$OIDC_ACCESSOR" \
-      canonical_id="$ADMINS_GROUP_ID"
-    echo "[+] Created group alias for 'vault-admins'"
+      canonical_id="$ADMINS_GROUP_ID" 2>/dev/null || echo "[!] Group alias for 'vault-admins' already exists (error ignored)"
+    echo "[+] Group alias for 'vault-admins' configured"
   fi
   
   # Create external group for vault-readers
@@ -252,33 +259,27 @@ EOF
   
   # Create group alias for vault-readers
   echo "[+] Creating group alias for 'vault-readers'..."
+  ALIAS_EXISTS=false
   if vault list identity/group-alias/id 2>/dev/null | grep -q .; then
     # Check if alias already exists
-    EXISTING_ALIAS=$(vault list -format=json identity/group-alias/id 2>/dev/null | jq -r '.[]' | while read alias_id; do
-      ALIAS_INFO=$(vault read -format=json "identity/group-alias/id/$alias_id")
-      ALIAS_NAME=$(echo "$ALIAS_INFO" | jq -r '.data.name')
-      ALIAS_CANONICAL=$(echo "$ALIAS_INFO" | jq -r '.data.canonical_id')
-      if [ "$ALIAS_NAME" = "vault-readers" ] && [ "$ALIAS_CANONICAL" = "$READERS_GROUP_ID" ]; then
-        echo "$alias_id"
+    for alias_id in $(vault list -format=json identity/group-alias/id 2>/dev/null | jq -r '.[]'); do
+      ALIAS_INFO=$(vault read -format=json "identity/group-alias/id/$alias_id" 2>/dev/null || echo "{}")
+      ALIAS_NAME=$(echo "$ALIAS_INFO" | jq -r '.data.name // empty')
+      ALIAS_MOUNT=$(echo "$ALIAS_INFO" | jq -r '.data.mount_accessor // empty')
+      if [ "$ALIAS_NAME" = "vault-readers" ] && [ "$ALIAS_MOUNT" = "$OIDC_ACCESSOR" ]; then
+        ALIAS_EXISTS=true
+        echo "[+] Group alias for 'vault-readers' already exists"
         break
       fi
-    done)
-    
-    if [ -n "$EXISTING_ALIAS" ]; then
-      echo "[+] Group alias for 'vault-readers' already exists"
-    else
-      vault write identity/group-alias \
-        name="vault-readers" \
-        mount_accessor="$OIDC_ACCESSOR" \
-        canonical_id="$READERS_GROUP_ID"
-      echo "[+] Created group alias for 'vault-readers'"
-    fi
-  else
+    done
+  fi
+  
+  if [ "$ALIAS_EXISTS" = "false" ]; then
     vault write identity/group-alias \
       name="vault-readers" \
       mount_accessor="$OIDC_ACCESSOR" \
-      canonical_id="$READERS_GROUP_ID"
-    echo "[+] Created group alias for 'vault-readers'"
+      canonical_id="$READERS_GROUP_ID" 2>/dev/null || echo "[!] Group alias for 'vault-readers' already exists (error ignored)"
+    echo "[+] Group alias for 'vault-readers' configured"
   fi
   
   echo ""
@@ -288,6 +289,11 @@ EOF
   echo "OIDC Accessor: $OIDC_ACCESSOR"
   echo "vault-admins Group ID: $ADMINS_GROUP_ID"
   echo "vault-readers Group ID: $READERS_GROUP_ID"
+  echo ""
+  echo "=== ROLES CONFIGURED ==="
+  echo "- dynamic (default): Uses only group-based policies from Authentik"
+  echo "- reader: Hardcoded reader policy (for backward compatibility)"
+  echo "- admin: Hardcoded admin policy (for backward compatibility)"
   echo ""
   echo "=== NEXT STEPS IN AUTHENTIK ==="
   echo "1. Go to your Vault provider in Authentik (https://auth.ildoc.it)"
@@ -306,7 +312,12 @@ EOF
   echo "5. Add your user to the 'vault-admins' group"
   echo ""
   echo "=== TESTING ==="
-  echo "Test login with: vault login -method=oidc role=\"reader\""
+  echo "Test login with: vault login -method=oidc"
+  echo "(will use 'dynamic' role by default - policies from your groups)"
+  echo ""
+  echo "Or specify a role explicitly:"
+  echo "vault login -method=oidc role=reader"
+  echo "vault login -method=oidc role=admin"
   echo ""
   echo "After login, verify your groups with:"
   echo "vault token lookup | grep policies"

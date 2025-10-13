@@ -1,0 +1,92 @@
+sonarqube:
+  # Community Build edition
+  community:
+    enabled: true
+    # Se vuoi una versione specifica, decommenta e specifica:
+    # buildNumber: "25.9.0.112764"
+
+  # Disabilita il PostgreSQL interno
+  postgresql:
+    enabled: false
+
+  # Configurazione database esterno PostgreSQL
+  jdbcOverwrite:
+    enabled: true
+    jdbcUrl: "jdbc:postgresql://192.168.0.30:5432/sonarqube_db"
+    jdbcUsername: "sonarqube_user"
+    # La password verrà iniettata tramite secret
+    jdbcSecretName: "sonarqube-db-secret"
+    jdbcSecretPasswordKey: "postgres-password"
+
+  # Monitoring passcode (richiesto per le probes)
+  monitoringPasscodeSecretName: "sonarqube-secrets"
+  monitoringPasscodeSecretKey: "monitoring-passcode"
+
+  # Timezone
+  env:
+    - name: TZ
+      value: "Europe/Rome"
+
+  # Persistence per dati e logs
+  persistence:
+    enabled: true
+    storageClass: "nfs-csi"
+    accessMode: ReadWriteOnce
+    size: 20Gi
+    uid: 1000
+    guid: 0
+
+  # Resources (valori di default del chart per production)
+  resources:
+    limits:
+      cpu: 2000m
+      memory: 6144M
+      ephemeral-storage: 512000M
+    requests:
+      cpu: 500m
+      memory: 2048M
+      ephemeral-storage: 1536M
+
+  # Service
+  service:
+    type: ClusterIP
+    externalPort: 9000
+    internalPort: 9000
+
+  # Deployment strategy (usa il default del chart)
+  deploymentStrategy: {}
+  
+  replicaCount: 1
+
+  # HTTPRoute tramite Gateway API (nativo del chart!)
+  httproute:
+    enabled: true
+    gateway: "cilium-gateway"
+    gatewayNamespace: "kube-system"
+    hostnames:
+      - "sonarqube.local.ildoc.it"
+
+  # Disabilita ingress tradizionale
+  ingress:
+    enabled: false
+
+  # Disabilita nginx bundled
+  ingress-nginx:
+    enabled: false
+
+  # Init containers per sysctl (necessari per Elasticsearch)
+  # Se il tuo cluster non li permette, impostali a false
+  initSysctl:
+    enabled: true
+    securityContext:
+      privileged: true
+
+  initFs:
+    enabled: true
+    securityContext:
+      privileged: false
+
+  # Service Account
+  serviceAccount:
+    create: true
+    automountToken: false
