@@ -26,6 +26,8 @@ sonarqube:
   env:
     - name: TZ
       value: "Europe/Rome"
+    - name: SONAR_CORE_SERVERBASEURL
+      value: "https://sonar.local.ildoc.it"
 
   # Persistence per dati e logs
   persistence:
