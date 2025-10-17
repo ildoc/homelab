@@ -11,10 +11,12 @@
 # DNS Records (gestione speciale, non ha ID)
 - name: Manage DNS records via API
   ansible.builtin.include_tasks: manage_dns_records.yml
+  tags: ['dns']
 
 # DHCP Reservations (gestione speciale per MAC address)
 - name: Manage DHCP reservations via API
   ansible.builtin.include_tasks: manage_dhcp_reservations.yml
+  tags: ['dhcp']
 
 # Adlists
 - name: Manage Adlists via API
@@ -26,14 +28,8 @@
     key_attribute: "address"
     desired_resources: "{{ pihole.adlists }}"
     trigger_gravity: true
-    update_condition: >-
-      existing_dict[item].enabled != (desired_dict[item].enabled | default(true) | int) or
-      existing_dict[item].comment != (desired_dict[item].comment | default(''))
-    body_template:
-      address: "{{ desired_dict[item].url }}"
-      enabled: "{{ desired_dict[item].enabled | default(true) }}"
-      comment: "{{ desired_dict[item].comment | default('') }}"
   when: pihole.adlists is defined
+  tags: ['adlists', 'lists']
 
 # Whitelist Domains
 - name: Manage Whitelist domains via API
@@ -44,14 +40,8 @@
     response_key: "whitelist"
     key_attribute: "domain"
     desired_resources: "{{ pihole.whitelist.domains }}"
-    update_condition: >-
-      existing_dict[item].enabled != (desired_dict[item].enabled | default(true) | int) or
-      existing_dict[item].comment != (desired_dict[item].comment | default(''))
-    body_template:
-      domain: "{{ desired_dict[item].domain }}"
-      enabled: "{{ desired_dict[item].enabled | default(true) }}"
-      comment: "{{ desired_dict[item].comment | default('') }}"
   when: pihole.whitelist.domains is defined
+  tags: ['whitelist', 'lists']
 
 # Whitelist Regex
 - name: Manage Whitelist regex via API
@@ -62,14 +52,8 @@
     response_key: "regex"
     key_attribute: "domain"
     desired_resources: "{{ pihole.whitelist.regex }}"
-    update_condition: >-
-      existing_dict[item].enabled != (desired_dict[item].enabled | default(true) | int) or
-      existing_dict[item].comment != (desired_dict[item].comment | default(''))
-    body_template:
-      domain: "{{ desired_dict[item].domain }}"
-      enabled: "{{ desired_dict[item].enabled | default(true) }}"
-      comment: "{{ desired_dict[item].comment | default('') }}"
   when: pihole.whitelist.regex is defined
+  tags: ['whitelist', 'lists']
 
 # Blacklist Domains
 - name: Manage Blacklist domains via API
@@ -80,14 +64,8 @@
     response_key: "blacklist"
     key_attribute: "domain"
     desired_resources: "{{ pihole.blacklist.domains }}"
-    update_condition: >-
-      existing_dict[item].enabled != (desired_dict[item].enabled | default(true) | int) or
-      existing_dict[item].comment != (desired_dict[item].comment | default(''))
-    body_template:
-      domain: "{{ desired_dict[item].domain }}"
-      enabled: "{{ desired_dict[item].enabled | default(true) }}"
-      comment: "{{ desired_dict[item].comment | default('') }}"
   when: pihole.blacklist.domains is defined
+  tags: ['blacklist', 'lists']
 
 # Blacklist Regex
 - name: Manage Blacklist regex via API
@@ -98,19 +76,15 @@
     response_key: "regex"
     key_attribute: "domain"
     desired_resources: "{{ pihole.blacklist.regex }}"
-    update_condition: >-
-      existing_dict[item].enabled != (desired_dict[item].enabled | default(true) | int) or
-      existing_dict[item].comment != (desired_dict[item].comment | default(''))
-    body_template:
-      domain: "{{ desired_dict[item].domain }}"
-      enabled: "{{ desired_dict[item].enabled | default(true) }}"
-      comment: "{{ desired_dict[item].comment | default('') }}"
   when: pihole.blacklist.regex is defined
+  tags: ['blacklist', 'lists']
 
 - name: Update gravity if lists changed
   ansible.builtin.include_tasks: update_gravity.yml
   when: adlists_changed is defined and adlists_changed
+  tags: ['gravity', 'lists']
 
 - name: Check and update Pi-hole
   ansible.builtin.include_tasks: update_pihole.yml
   when: pihole.check_updates | default(true)
+  tags: ['updates']

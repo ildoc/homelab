@@ -47,7 +47,9 @@
   ansible.builtin.set_fact:
     to_update: "{{ to_update + [item] }}"
   loop: "{{ desired_keys | intersect(existing_keys) }}"
-  when: update_condition
+  when: >-
+    existing_dict[item].enabled != (desired_dict[item].enabled | default(true) | int) or
+    existing_dict[item].comment != (desired_dict[item].comment | default(''))
 
 - name: "Add new {{ resource_name }}"
   ansible.builtin.uri:
@@ -62,7 +64,20 @@
   loop: "{{ to_add }}"
   when: to_add | length > 0
   vars:
-    add_body: "{{ body_template | combine({'item': item}) }}"
+    add_body: >-
+      {%- if resource_name == 'adlists' -%}
+        {
+          "address": "{{ desired_dict[item].url }}",
+          "enabled": {{ desired_dict[item].enabled | default(true) }},
+          "comment": "{{ desired_dict[item].comment | default('') }}"
+        }
+      {%- else -%}
+        {
+          "domain": "{{ desired_dict[item].domain }}",
+          "enabled": {{ desired_dict[item].enabled | default(true) }},
+          "comment": "{{ desired_dict[item].comment | default('') }}"
+        }
+      {%- endif -%}
 
 - name: "Update existing {{ resource_name }}"
   ansible.builtin.uri:
@@ -72,7 +87,9 @@
       X-FTL-SID: "{{ pihole.api_key }}"
       Content-Type: "application/json"
     body_format: json
-    body: "{{ update_body }}"
+    body:
+      enabled: "{{ desired_dict[item].enabled | default(true) }}"
+      comment: "{{ desired_dict[item].comment | default('') }}"
     status_code: [200, 204]
   loop: "{{ to_update }}"
   when: to_update | length > 0
