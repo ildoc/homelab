@@ -6,8 +6,9 @@
     url: "{{ pihole.api_url }}/api/info/version"
     method: GET
     headers:
-      X-FTL-SID: "{{ pihole.api_key }}"
+      X-FTL-SID: "{{ pihole_session_id }}"
     return_content: true
+    validate_certs: "{{ pihole.validate_certs | default(false) }}"
   register: pihole_version_info
   failed_when: false
 

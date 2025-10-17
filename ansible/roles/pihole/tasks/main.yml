@@ -1,26 +1,105 @@
 ---
-- name: Create DNS records file from template
-  ansible.builtin.template:
-    src: custom.list.j2
-    dest: /etc/pihole/custom.list
-    owner: root
-    group: root
-    mode: '0644'
-  register: dns_records_result
+# ansible/roles/pihole6/tasks/main.yml
 
-- name: Restart pihole dns
-  ansible.builtin.shell: pihole restartdns
-  when: dns_records_result.changed
+- name: Ensure required variables are defined
+  ansible.builtin.assert:
+    that:
+      - pihole.api_key is defined
+      - pihole.api_url is defined
+    fail_msg: "pihole.api_key and pihole.api_url must be defined"
 
-- name: Create DHCP leases file from template
-  ansible.builtin.template:
-    src: 04-pihole-static-dhcp.conf.j2
-    dest: /etc/dnsmasq.d/04-pihole-static-dhcp.conf
-    owner: root
-    group: root
-    mode: '0644'
-  register: dhcp_conf_result
+# Authenticate and get session ID
+- name: Authenticate to Pi-hole API
+  ansible.builtin.include_tasks: authenticate.yml
+  tags: ['always']
 
-- name: Update DHCP leases if necessary
-  ansible.builtin.include_tasks: update_dhcp_leases.yml
-  when: dhcp_conf_result.changed
+# DNS Records (managed via /api/config - dns.hosts)
+- name: Manage DNS records via API
+  ansible.builtin.include_tasks: manage_dns_records.yml
+  when: pihole.dns_records is defined
+  tags: ['dns']
+
+# # DHCP Reservations (managed via /api/config - dhcp.hosts)
+# - name: Manage DHCP reservations via API
+#   ansible.builtin.include_tasks: manage_dhcp_reservations.yml
+#   when: pihole.dhcp_reservations is defined
+#   tags: ['dhcp']
+
+# Adlists (managed via /api/lists)
+- name: Manage Adlists via API
+  ansible.builtin.include_tasks: manage_pihole_resource.yml
+  vars:
+    resource_name: "adlists"
+    api_endpoint: "lists"
+    key_attribute: "address"
+    desired_resources: "{{ pihole.adlists }}"
+    is_list: true
+    trigger_gravity: true
+  when: pihole.adlists is defined
+  tags: ['adlists', 'lists']
+
+# Whitelist Domains (managed via /api/domains/allow/exact)
+- name: Manage Whitelist domains via API
+  ansible.builtin.include_tasks: manage_pihole_resource.yml
+  vars:
+    resource_name: "whitelist domains"
+    api_endpoint: "domains/allow/exact"
+    key_attribute: "domain"
+    desired_resources: "{{ pihole.whitelist.domains }}"
+    is_list: false
+    domain_type: "allow"
+    domain_kind: "exact"
+  when: pihole.whitelist.domains is defined
+  tags: ['whitelist', 'domains']
+
+# Whitelist Regex (managed via /api/domains/allow/regex)
+- name: Manage Whitelist regex via API
+  ansible.builtin.include_tasks: manage_pihole_resource.yml
+  vars:
+    resource_name: "whitelist regex"
+    api_endpoint: "domains/allow/regex"
+    key_attribute: "domain"
+    desired_resources: "{{ pihole.whitelist.regex }}"
+    is_list: false
+    domain_type: "allow"
+    domain_kind: "regex"
+  when: pihole.whitelist.regex is defined
+  tags: ['whitelist', 'domains']
+
+# Blacklist Domains (managed via /api/domains/deny/exact)
+- name: Manage Blacklist domains via API
+  ansible.builtin.include_tasks: manage_pihole_resource.yml
+  vars:
+    resource_name: "blacklist domains"
+    api_endpoint: "domains/deny/exact"
+    key_attribute: "domain"
+    desired_resources: "{{ pihole.blacklist.domains }}"
+    is_list: false
+    domain_type: "deny"
+    domain_kind: "exact"
+  when: pihole.blacklist.domains is defined
+  tags: ['blacklist', 'domains']
+
+# Blacklist Regex (managed via /api/domains/deny/regex)
+- name: Manage Blacklist regex via API
+  ansible.builtin.include_tasks: manage_pihole_resource.yml
+  vars:
+    resource_name: "blacklist regex"
+    api_endpoint: "domains/deny/regex"
+    key_attribute: "domain"
+    desired_resources: "{{ pihole.blacklist.regex }}"
+    is_list: false
+    domain_type: "deny"
+    domain_kind: "regex"
+  when: pihole.blacklist.regex is defined
+  tags: ['blacklist', 'domains']
+
+- name: Update gravity if lists changed
+  ansible.builtin.include_tasks: update_gravity.yml
+  when: adlists_changed is defined and adlists_changed
+  tags: ['gravity', 'lists']
+
+- name: Check and update Pi-hole
+  ansible.builtin.include_tasks: update_pihole.yml
+  when: pihole.check_updates | default(true)
+  tags: ['updates']

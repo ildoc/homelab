@@ -1,0 +1,59 @@
+---
+# DHCP static leases are managed via /api/config as dhcp.hosts array
+# Format: "MAC,IP" or "MAC,IP,hostname"
+# Example: "11:22:33:44:55:66,192.168.1.123" or "11:22:33:44:55:67,192.168.1.124,myhost"
+
+- name: Get current Pi-hole configuration
+  ansible.builtin.uri:
+    url: "{{ pihole.api_url }}/api/config"
+    method: GET
+    headers:
+      X-FTL-SID: "{{ pihole_session_id }}"
+    return_content: true
+    validate_certs: "{{ pihole.validate_certs | default(false) }}"
+  register: pihole_config
+
+- name: Parse existing DHCP hosts
+  ansible.builtin.set_fact:
+    existing_dhcp_hosts: "{{ pihole_config.json.config.dhcp.hosts | default([]) }}"
+
+- name: Build desired DHCP hosts list
+  ansible.builtin.set_fact:
+    desired_dhcp_hosts: []
+
+- name: Populate desired DHCP hosts (with hostname)
+  ansible.builtin.set_fact:
+    desired_dhcp_hosts: "{{ desired_dhcp_hosts + [item.mac + ',' + item.ip + ',' + item.hostname] }}"
+  loop: "{{ pihole.dhcp_reservations }}"
+  when: item.hostname is defined and item.hostname | length > 0
+
+- name: Populate desired DHCP hosts (without hostname)
+  ansible.builtin.set_fact:
+    desired_dhcp_hosts: "{{ desired_dhcp_hosts + [item.mac + ',' + item.ip] }}"
+  loop: "{{ pihole.dhcp_reservations }}"
+  when: item.hostname is not defined or item.hostname | length == 0
+
+- name: Update DHCP hosts if changed
+  ansible.builtin.uri:
+    url: "{{ pihole.api_url }}/api/config"
+    method: PATCH
+    headers:
+      X-FTL-SID: "{{ pihole_session_id }}"
+      Content-Type: "application/json"
+    body_format: json
+    body:
+      config:
+        dhcp:
+          hosts: "{{ desired_dhcp_hosts }}"
+    status_code: [200]
+    validate_certs: "{{ pihole.validate_certs | default(false) }}"
+  when: existing_dhcp_hosts | sort != desired_dhcp_hosts | sort
+  register: dhcp_update_result
+
+- name: Display DHCP changes summary
+  ansible.builtin.debug:
+    msg:
+      - "DHCP hosts updated from {{ existing_dhcp_hosts | length }} to {{ desired_dhcp_hosts | length }} records"
+      - "Old: {{ existing_dhcp_hosts }}"
+      - "New: {{ desired_dhcp_hosts }}"
+  when: dhcp_update_result is changed

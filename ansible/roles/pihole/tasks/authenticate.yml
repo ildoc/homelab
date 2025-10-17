@@ -1,0 +1,26 @@
+---
+# ansible/roles/pihole6/tasks/authenticate.yml
+# Authenticate to Pi-hole API and obtain a session ID (SID)
+
+- name: Authenticate to Pi-hole API
+  ansible.builtin.uri:
+    url: "{{ pihole.api_url }}/api/auth"
+    method: POST
+    body_format: json
+    body:
+      password: "{{ pihole.api_key }}"
+    status_code: [200]
+    validate_certs: "{{ pihole.validate_certs | default(false) }}"
+    return_content: true
+  register: pihole_auth_response
+  no_log: true  # Don't log the password
+
+- name: Extract session ID from authentication response
+  ansible.builtin.set_fact:
+    pihole_session_id: "{{ pihole_auth_response.json.session.sid }}"
+    pihole_session_validity: "{{ pihole_auth_response.json.session.validity }}"
+  no_log: true  # Don't log the session ID
+
+- name: Display session validity
+  ansible.builtin.debug:
+    msg: "Authenticated successfully. Session valid for {{ pihole_session_validity }} seconds"

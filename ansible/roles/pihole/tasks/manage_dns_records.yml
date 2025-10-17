@@ -1,0 +1,51 @@
+---
+# DNS custom records are managed via /api/config as dns.hosts array
+# Format: "IP hostname" (e.g., "192.168.1.10 myserver.local")
+
+- name: Get current Pi-hole configuration
+  ansible.builtin.uri:
+    url: "{{ pihole.api_url }}/api/config"
+    method: GET
+    headers:
+      X-FTL-SID: "{{ pihole_session_id }}"
+    return_content: true
+    validate_certs: "{{ pihole.validate_certs | default(false) }}"
+  register: pihole_config
+
+- name: Parse existing DNS custom hosts
+  ansible.builtin.set_fact:
+    existing_dns_hosts: "{{ pihole_config.json.config.dns.hosts | default([]) }}"
+
+- name: Initialize desired DNS hosts list
+  ansible.builtin.set_fact:
+    desired_dns_hosts: []
+
+- name: Build desired DNS hosts list
+  ansible.builtin.set_fact:
+    desired_dns_hosts: "{{ desired_dns_hosts + [item.ip + ' ' + item.domain] }}"
+  loop: "{{ pihole.dns_records }}"
+
+- name: Update DNS hosts if changed
+  ansible.builtin.uri:
+    url: "{{ pihole.api_url }}/api/config"
+    method: PATCH
+    headers:
+      X-FTL-SID: "{{ pihole_session_id }}"
+      Content-Type: "application/json"
+    body_format: json
+    body:
+      config:
+        dns:
+          hosts: "{{ desired_dns_hosts }}"
+    status_code: [200]
+    validate_certs: "{{ pihole.validate_certs | default(false) }}"
+  when: existing_dns_hosts | sort != desired_dns_hosts | sort
+  register: dns_update_result
+
+- name: Display DNS changes summary
+  ansible.builtin.debug:
+    msg:
+      - "DNS hosts updated from {{ existing_dns_hosts | length }} to {{ desired_dns_hosts | length }} records"
+      - "Old: {{ existing_dns_hosts }}"
+      - "New: {{ desired_dns_hosts }}"
+  when: dns_update_result is changed

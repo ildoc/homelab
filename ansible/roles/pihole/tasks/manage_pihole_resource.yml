@@ -1,0 +1,176 @@
+---
+# ansible/roles/pihole6/tasks/manage_pihole_resource.yml
+# Task generico per gestire domains (/api/domains) e lists (/api/lists)
+
+- name: Get existing resources from Pi-hole API
+  ansible.builtin.uri:
+    url: "{{ pihole.api_url }}/api/{{ api_endpoint }}"
+    method: GET
+    headers:
+      X-FTL-SID: "{{ pihole_session_id }}"
+    validate_certs: "{{ pihole.validate_certs | default(false) }}"
+    return_content: true
+  register: existing_resources
+
+- name: Parse response for lists or domains
+  ansible.builtin.set_fact:
+    parsed_resources: "{{ existing_resources.json.lists | default(existing_resources.json.domains | default([])) }}"
+
+- name: Create lookup dict for existing resources
+  ansible.builtin.set_fact:
+    existing_dict: "{{ dict(parsed_resources | map(attribute=key_attribute) | zip(parsed_resources)) }}"
+
+- name: Create lookup dict for desired resources
+  ansible.builtin.set_fact:
+    desired_dict: "{{ dict(desired_resources | map(attribute=key_attribute) | zip(desired_resources)) }}"
+
+- name: Get list of existing resource keys
+  ansible.builtin.set_fact:
+    existing_keys: "{{ parsed_resources | map(attribute=key_attribute) | list }}"
+
+- name: Get list of desired resource keys
+  ansible.builtin.set_fact:
+    desired_keys: "{{ desired_resources | map(attribute=key_attribute) | list }}"
+
+- name: Identify resources to add
+  ansible.builtin.set_fact:
+    to_add: "{{ desired_keys | difference(existing_keys) }}"
+
+- name: Identify resources to remove
+  ansible.builtin.set_fact:
+    to_remove: "{{ existing_keys | difference(desired_keys) }}"
+
+- name: Initialize update list
+  ansible.builtin.set_fact:
+    to_update: []
+
+- name: Check for resources needing updates
+  ansible.builtin.set_fact:
+    to_update: "{{ to_update + [item] }}"
+  loop: "{{ desired_keys | intersect(existing_keys) }}"
+  when: existing_dict[item].enabled != (desired_dict[item].enabled | default(true) | bool) or existing_dict[item].comment != (desired_dict[item].comment | default(''))
+
+- name: Add new resources (lists)
+  ansible.builtin.uri:
+    url: "{{ pihole.api_url }}/api/lists"
+    method: POST
+    headers:
+      X-FTL-SID: "{{ pihole_session_id }}"
+      Content-Type: "application/json"
+    body_format: json
+    body:
+      address: "{{ desired_dict[item].address | default(desired_dict[item].url) }}"
+      type: "{{ desired_dict[item].type | default('block') }}"
+      enabled: "{{ desired_dict[item].enabled | default(true) }}"
+      comment: "{{ desired_dict[item].comment | default('') }}"
+    status_code: [200, 201]
+    validate_certs: "{{ pihole.validate_certs | default(false) }}"
+  loop: "{{ to_add }}"
+  when:
+    - to_add | length > 0
+    - is_list | default(false)
+  register: lists_add_result
+
+- name: Add new resources (domains)
+  ansible.builtin.uri:
+    url: "{{ pihole.api_url }}/api/domains/{{ domain_type }}/{{ domain_kind }}"
+    method: POST
+    headers:
+      X-FTL-SID: "{{ pihole_session_id }}"
+      Content-Type: "application/json"
+    body_format: json
+    body:
+      domain: "{{ item }}"
+      enabled: "{{ desired_dict[item].enabled | default(true) }}"
+      comment: "{{ desired_dict[item].comment | default('') }}"
+      groups: "{{ desired_dict[item].groups | default([0]) }}"
+    status_code: [200, 201]
+    validate_certs: "{{ pihole.validate_certs | default(false) }}"
+  loop: "{{ to_add }}"
+  when:
+    - to_add | length > 0
+    - not (is_list | default(false))
+  register: domains_add_result
+
+- name: Update existing resources (lists)
+  ansible.builtin.uri:
+    url: "{{ pihole.api_url }}/api/lists/{{ item }}"
+    method: PUT
+    headers:
+      X-FTL-SID: "{{ pihole_session_id }}"
+      Content-Type: "application/json"
+    body_format: json
+    body:
+      type: "{{ desired_dict[item].type | default('block') }}"
+      enabled: "{{ desired_dict[item].enabled | default(true) }}"
+      comment: "{{ desired_dict[item].comment | default('') }}"
+    status_code: [200, 204]
+    validate_certs: "{{ pihole.validate_certs | default(false) }}"
+  loop: "{{ to_update }}"
+  when:
+    - to_update | length > 0
+    - is_list | default(false)
+  register: lists_update_result
+
+- name: Update existing resources (domains)
+  ansible.builtin.uri:
+    url: "{{ pihole.api_url }}/api/domains/{{ domain_type }}/{{ domain_kind }}/{{ item | urlencode }}"
+    method: PUT
+    headers:
+      X-FTL-SID: "{{ pihole_session_id }}"
+      Content-Type: "application/json"
+    body_format: json
+    body:
+      enabled: "{{ desired_dict[item].enabled | default(true) }}"
+      comment: "{{ desired_dict[item].comment | default('') }}"
+      groups: "{{ desired_dict[item].groups | default([0]) }}"
+    status_code: [200, 204]
+    validate_certs: "{{ pihole.validate_certs | default(false) }}"
+  loop: "{{ to_update }}"
+  when:
+    - to_update | length > 0
+    - not (is_list | default(false))
+  register: domains_update_result
+
+- name: Remove obsolete resources (lists)
+  ansible.builtin.uri:
+    url: "{{ pihole.api_url }}/api/lists/{{ item }}"
+    method: DELETE
+    headers:
+      X-FTL-SID: "{{ pihole_session_id }}"
+    status_code: [200, 204]
+    validate_certs: "{{ pihole.validate_certs | default(false) }}"
+  loop: "{{ to_remove }}"
+  when:
+    - to_remove | length > 0
+    - is_list | default(false)
+  register: lists_remove_result
+
+- name: Remove obsolete resources (domains)
+  ansible.builtin.uri:
+    url: "{{ pihole.api_url }}/api/domains/{{ domain_type }}/{{ domain_kind }}/{{ item | urlencode }}"
+    method: DELETE
+    headers:
+      X-FTL-SID: "{{ pihole_session_id }}"
+    status_code: [200, 204]
+    validate_certs: "{{ pihole.validate_certs | default(false) }}"
+  loop: "{{ to_remove }}"
+  when:
+    - to_remove | length > 0
+    - not (is_list | default(false))
+  register: domains_remove_result
+
+- name: Display changes summary
+  ansible.builtin.debug:
+    msg:
+      - "{{ resource_name }} added: {{ to_add | length }}"
+      - "{{ resource_name }} updated: {{ to_update | length }}"
+      - "{{ resource_name }} removed: {{ to_remove | length }}"
+  when: (to_add | length > 0) or (to_update | length > 0) or (to_remove | length > 0)
+
+- name: Set gravity update flag if needed
+  ansible.builtin.set_fact:
+    adlists_changed: true
+  when:
+    - trigger_gravity | default(false)
+    - (to_add | length > 0) or (to_update | length > 0) or (to_remove | length > 0)
