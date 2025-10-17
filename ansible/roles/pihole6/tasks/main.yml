@@ -1,37 +1,116 @@
 ---
+# ansible/roles/pihole6/tasks/main.yml
+
 - name: Ensure required variables are defined
   ansible.builtin.assert:
     that:
-      - pihole_api_key is defined
-      - pihole_api_url is defined
-    fail_msg: "pihole_api_key and pihole_api_url must be defined"
+      - pihole.api_key is defined
+      - pihole.api_url is defined
+    fail_msg: "pihole.api_key and pihole.api_url must be defined"
 
+# DNS Records (gestione speciale, non ha ID)
 - name: Manage DNS records via API
   ansible.builtin.include_tasks: manage_dns_records.yml
 
+# DHCP Reservations (gestione speciale per MAC address)
 - name: Manage DHCP reservations via API
   ansible.builtin.include_tasks: manage_dhcp_reservations.yml
 
+# Adlists
 - name: Manage Adlists via API
-  ansible.builtin.include_tasks: manage_adlists.yml
+  ansible.builtin.include_tasks: manage_pihole_resource.yml
+  vars:
+    resource_name: "adlists"
+    api_endpoint: "lists/adlist"
+    response_key: "adlists"
+    key_attribute: "address"
+    desired_resources: "{{ pihole.adlists }}"
+    trigger_gravity: true
+    update_condition: >-
+      existing_dict[item].enabled != (desired_dict[item].enabled | default(true) | int) or
+      existing_dict[item].comment != (desired_dict[item].comment | default(''))
+    body_template:
+      address: "{{ desired_dict[item].url }}"
+      enabled: "{{ desired_dict[item].enabled | default(true) }}"
+      comment: "{{ desired_dict[item].comment | default('') }}"
   when: pihole.adlists is defined
 
+# Whitelist Domains
 - name: Manage Whitelist domains via API
-  ansible.builtin.include_tasks: manage_whitelist_domains.yml
+  ansible.builtin.include_tasks: manage_pihole_resource.yml
+  vars:
+    resource_name: "whitelist domains"
+    api_endpoint: "lists/whitelist"
+    response_key: "whitelist"
+    key_attribute: "domain"
+    desired_resources: "{{ pihole.whitelist.domains }}"
+    update_condition: >-
+      existing_dict[item].enabled != (desired_dict[item].enabled | default(true) | int) or
+      existing_dict[item].comment != (desired_dict[item].comment | default(''))
+    body_template:
+      domain: "{{ desired_dict[item].domain }}"
+      enabled: "{{ desired_dict[item].enabled | default(true) }}"
+      comment: "{{ desired_dict[item].comment | default('') }}"
   when: pihole.whitelist.domains is defined
 
+# Whitelist Regex
 - name: Manage Whitelist regex via API
-  ansible.builtin.include_tasks: manage_whitelist_regex.yml
+  ansible.builtin.include_tasks: manage_pihole_resource.yml
+  vars:
+    resource_name: "whitelist regex"
+    api_endpoint: "lists/regex/white"
+    response_key: "regex"
+    key_attribute: "domain"
+    desired_resources: "{{ pihole.whitelist.regex }}"
+    update_condition: >-
+      existing_dict[item].enabled != (desired_dict[item].enabled | default(true) | int) or
+      existing_dict[item].comment != (desired_dict[item].comment | default(''))
+    body_template:
+      domain: "{{ desired_dict[item].domain }}"
+      enabled: "{{ desired_dict[item].enabled | default(true) }}"
+      comment: "{{ desired_dict[item].comment | default('') }}"
   when: pihole.whitelist.regex is defined
 
+# Blacklist Domains
 - name: Manage Blacklist domains via API
-  ansible.builtin.include_tasks: manage_blacklist_domains.yml
+  ansible.builtin.include_tasks: manage_pihole_resource.yml
+  vars:
+    resource_name: "blacklist domains"
+    api_endpoint: "lists/blacklist"
+    response_key: "blacklist"
+    key_attribute: "domain"
+    desired_resources: "{{ pihole.blacklist.domains }}"
+    update_condition: >-
+      existing_dict[item].enabled != (desired_dict[item].enabled | default(true) | int) or
+      existing_dict[item].comment != (desired_dict[item].comment | default(''))
+    body_template:
+      domain: "{{ desired_dict[item].domain }}"
+      enabled: "{{ desired_dict[item].enabled | default(true) }}"
+      comment: "{{ desired_dict[item].comment | default('') }}"
   when: pihole.blacklist.domains is defined
 
+# Blacklist Regex
 - name: Manage Blacklist regex via API
-  ansible.builtin.include_tasks: manage_blacklist_regex.yml
+  ansible.builtin.include_tasks: manage_pihole_resource.yml
+  vars:
+    resource_name: "blacklist regex"
+    api_endpoint: "lists/regex/black"
+    response_key: "regex"
+    key_attribute: "domain"
+    desired_resources: "{{ pihole.blacklist.regex }}"
+    update_condition: >-
+      existing_dict[item].enabled != (desired_dict[item].enabled | default(true) | int) or
+      existing_dict[item].comment != (desired_dict[item].comment | default(''))
+    body_template:
+      domain: "{{ desired_dict[item].domain }}"
+      enabled: "{{ desired_dict[item].enabled | default(true) }}"
+      comment: "{{ desired_dict[item].comment | default('') }}"
   when: pihole.blacklist.regex is defined
 
 - name: Update gravity if lists changed
   ansible.builtin.include_tasks: update_gravity.yml
   when: adlists_changed is defined and adlists_changed
+
+- name: Check and update Pi-hole
+  ansible.builtin.include_tasks: update_pihole.yml
+  when: pihole.check_updates | default(true)

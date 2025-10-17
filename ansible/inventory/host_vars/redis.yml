@@ -1,0 +1,89 @@
+redis:
+  config:
+    appendonly: true
+    maxmemory: 2gb
+    maxmemory_policy: allkeys-lru
+    # Aggiungi altre configurazioni Redis se necessario
+  
+  # ACL Users - gestione dichiarativa
+  users:
+    - name: default
+      enabled: false  # Disabilita l'utente default per sicurezza
+    
+    - name: admin
+      enabled: true
+      password: "{{ lookup('community.hashi_vault.hashi_vault', 'ansible/data/redis:admin_password') }}"
+      permissions:
+        - "+@all"
+        - "~*"
+      description: "Admin user con accesso completo"
+    
+    # - name: harbor
+    #   enabled: true
+    #   password: "{{ lookup('community.hashi_vault.hashi_vault', 'cross/data/apps/harbor:redis_password') }}"
+    #   permissions:
+    #     - "+@read"
+    #     - "+@write"
+    #     - "+@connection"
+    #     - "-@dangerous"
+    #     - "~app:*"
+    #   description: "Utente read-write per applicazioni"
+
+    - name: authentik
+      enabled: true
+      password: "{{ lookup('community.hashi_vault.hashi_vault', 'cross/data/apps/authentik:redis_password') }}"
+      permissions:
+        - "allchannels"
+        - "~*"
+        - "+@read"
+        - "+@write"
+        - "+@keyspace"
+        - "+@connection"
+        - "+@pubsub"
+        - "+@scripting"
+        - "-@dangerous"
+        - "+select"
+        - "+keys"
+      description: "Utente read-write per applicazioni"
+
+    # - name: app_readonly
+    #   enabled: true
+    #   password: "{{ lookup('community.hashi_vault.hashi_vault', 'ansible/data/redis:app_readonly_password') }}"
+    #   permissions:
+    #     - "+@read"
+    #     - "+@connection"
+    #     - "~app:*"
+    #   description: "Utente read-only per applicazioni"
+    
+    # - name: app_readwrite
+    #   enabled: true
+    #   password: "{{ lookup('community.hashi_vault.hashi_vault', 'ansible/data/redis:app_readwrite_password') }}"
+    #   permissions:
+    #     - "+@read"
+    #     - "+@write"
+    #     - "+@connection"
+    #     - "-@dangerous"
+    #     - "~app:*"
+    #   description: "Utente read-write per applicazioni"
+    
+    # - name: cache_service
+    #   enabled: true
+    #   password: "{{ lookup('community.hashi_vault.hashi_vault', 'ansible/data/redis:cache_password') }}"
+    #   permissions:
+    #     - "+get"
+    #     - "+set"
+    #     - "+del"
+    #     - "+expire"
+    #     - "+ttl"
+    #     - "+exists"
+    #     - "~cache:*"
+    #   description: "Utente dedicato per servizio cache"
+
+  # Network e binding
+  bind_address: "0.0.0.0"
+  port: 6379
+  
+  # RedisInsight
+  redisinsight:
+    enabled: true
+    port: 8080

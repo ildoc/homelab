@@ -1,0 +1,72 @@
+---
+# ansible/roles/pihole6/tasks/update_pihole.yml
+
+- name: Check for Pi-hole updates
+  ansible.builtin.uri:
+    url: "{{ pihole.api_url }}/api/info/version"
+    method: GET
+    headers:
+      X-FTL-SID: "{{ pihole.api_key }}"
+    return_content: true
+  register: pihole_version_info
+  failed_when: false
+
+- name: Parse version information
+  ansible.builtin.set_fact:
+    current_core_version: "{{ pihole_version_info.json.core.current | default('unknown') }}"
+    latest_core_version: "{{ pihole_version_info.json.core.latest | default('unknown') }}"
+    current_web_version: "{{ pihole_version_info.json.web.current | default('unknown') }}"
+    latest_web_version: "{{ pihole_version_info.json.web.latest | default('unknown') }}"
+    current_ftl_version: "{{ pihole_version_info.json.FTL.current | default('unknown') }}"
+    latest_ftl_version: "{{ pihole_version_info.json.FTL.latest | default('unknown') }}"
+  when: pihole_version_info.status == 200
+
+- name: Display current versions
+  ansible.builtin.debug:
+    msg:
+      - "Pi-hole Core: {{ current_core_version }} (Latest: {{ latest_core_version }})"
+      - "Web Interface: {{ current_web_version }} (Latest: {{ latest_web_version }})"
+      - "FTL: {{ current_ftl_version }} (Latest: {{ latest_ftl_version }})"
+  when: pihole_version_info.status == 200
+
+- name: Check if updates are available
+  ansible.builtin.set_fact:
+    updates_available: >-
+      {{
+        (current_core_version != latest_core_version and latest_core_version != 'unknown') or
+        (current_web_version != latest_web_version and latest_web_version != 'unknown') or
+        (current_ftl_version != latest_ftl_version and latest_ftl_version != 'unknown')
+      }}
+  when: pihole_version_info.status == 200
+
+- name: Notify if updates are available
+  ansible.builtin.debug:
+    msg: "⚠️  Updates available for Pi-hole!"
+  when:
+    - pihole_version_info.status == 200
+    - updates_available
+
+- name: Notify if Pi-hole is up to date
+  ansible.builtin.debug:
+    msg: "✅ Pi-hole is up to date"
+  when:
+    - pihole_version_info.status == 200
+    - not updates_available
+
+- name: Update Pi-hole
+  ansible.builtin.command:
+    cmd: pihole -up
+  register: pihole_update_result
+  changed_when: "'Everything is up to date!' not in pihole_update_result.stdout"
+  when:
+    - pihole_version_info.status == 200
+    - updates_available
+    - pihole.auto_update | default(false)
+
+- name: Display update result
+  ansible.builtin.debug:
+    var: pihole_update_result.stdout_lines
+  when:
+    - pihole.auto_update | default(false)
+    - pihole_update_result is defined
+    - pihole_update_result.changed
