@@ -1,0 +1,37 @@
+---
+- name: Ensure required variables are defined
+  ansible.builtin.assert:
+    that:
+      - pihole_api_key is defined
+      - pihole_api_url is defined
+    fail_msg: "pihole_api_key and pihole_api_url must be defined"
+
+- name: Manage DNS records via API
+  ansible.builtin.include_tasks: manage_dns_records.yml
+
+- name: Manage DHCP reservations via API
+  ansible.builtin.include_tasks: manage_dhcp_reservations.yml
+
+- name: Manage Adlists via API
+  ansible.builtin.include_tasks: manage_adlists.yml
+  when: pihole.adlists is defined
+
+- name: Manage Whitelist domains via API
+  ansible.builtin.include_tasks: manage_whitelist_domains.yml
+  when: pihole.whitelist.domains is defined
+
+- name: Manage Whitelist regex via API
+  ansible.builtin.include_tasks: manage_whitelist_regex.yml
+  when: pihole.whitelist.regex is defined
+
+- name: Manage Blacklist domains via API
+  ansible.builtin.include_tasks: manage_blacklist_domains.yml
+  when: pihole.blacklist.domains is defined
+
+- name: Manage Blacklist regex via API
+  ansible.builtin.include_tasks: manage_blacklist_regex.yml
+  when: pihole.blacklist.regex is defined
+
+- name: Update gravity if lists changed
+  ansible.builtin.include_tasks: update_gravity.yml
+  when: adlists_changed is defined and adlists_changed

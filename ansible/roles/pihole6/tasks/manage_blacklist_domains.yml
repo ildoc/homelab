@@ -1,0 +1,98 @@
+---
+- name: Get existing blacklist domains
+  ansible.builtin.uri:
+    url: "{{ pihole.api_url }}/api/lists/blacklist"
+    method: GET
+    headers:
+      X-FTL-SID: "{{ pihole.api_key }}"
+    return_content: true
+  register: existing_blacklist
+
+- name: Create lookup dict for existing blacklist
+  ansible.builtin.set_fact:
+    existing_blacklist_dict: "{{ dict(existing_blacklist.json.blacklist | default([]) | 
+                                 map(attribute='domain') | 
+                                 zip(existing_blacklist.json.blacklist | default([]))) }}"
+
+- name: Create lookup dict for desired blacklist
+  ansible.builtin.set_fact:
+    desired_blacklist_dict: "{{ dict(pihole.blacklist.domains | 
+                                map(attribute='domain') | 
+                                zip(pihole.blacklist.domains)) }}"
+
+- name: Get list of existing blacklist domains
+  ansible.builtin.set_fact:
+    existing_blacklist_domains: "{{ existing_blacklist.json.blacklist | default([]) | map(attribute='domain') | list }}"
+
+- name: Get list of desired blacklist domains
+  ansible.builtin.set_fact:
+    desired_blacklist_domains: "{{ pihole.blacklist.domains | map(attribute='domain') | list }}"
+
+- name: Identify blacklist domains to add
+  ansible.builtin.set_fact:
+    blacklist_to_add: "{{ desired_blacklist_domains | difference(existing_blacklist_domains) }}"
+
+- name: Identify blacklist domains to remove
+  ansible.builtin.set_fact:
+    blacklist_to_remove: "{{ existing_blacklist_domains | difference(desired_blacklist_domains) }}"
+
+- name: Identify blacklist domains to update
+  ansible.builtin.set_fact:
+    blacklist_to_update: []
+
+- name: Check for blacklist domains needing updates
+  ansible.builtin.set_fact:
+    blacklist_to_update: "{{ blacklist_to_update + [item] }}"
+  loop: "{{ desired_blacklist_domains | intersect(existing_blacklist_domains) }}"
+  when:
+    - existing_blacklist_dict[item].enabled != (desired_blacklist_dict[item].enabled | default(true) | int) or
+      existing_blacklist_dict[item].comment != (desired_blacklist_dict[item].comment | default(''))
+
+- name: Add new blacklist domains
+  ansible.builtin.uri:
+    url: "{{ pihole.api_url }}/api/lists/blacklist"
+    method: POST
+    headers:
+      X-FTL-SID: "{{ pihole.api_key }}"
+      Content-Type: "application/json"
+    body_format: json
+    body:
+      domain: "{{ desired_blacklist_dict[item].domain }}"
+      enabled: "{{ desired_blacklist_dict[item].enabled | default(true) }}"
+      comment: "{{ desired_blacklist_dict[item].comment | default('') }}"
+    status_code: [200, 201]
+  loop: "{{ blacklist_to_add }}"
+  when: blacklist_to_add | length > 0
+
+- name: Update existing blacklist domains
+  ansible.builtin.uri:
+    url: "{{ pihole.api_url }}/api/lists/blacklist/{{ existing_blacklist_dict[item].id }}"
+    method: PUT
+    headers:
+      X-FTL-SID: "{{ pihole.api_key }}"
+      Content-Type: "application/json"
+    body_format: json
+    body:
+      enabled: "{{ desired_blacklist_dict[item].enabled | default(true) }}"
+      comment: "{{ desired_blacklist_dict[item].comment | default('') }}"
+    status_code: [200, 204]
+  loop: "{{ blacklist_to_update }}"
+  when: blacklist_to_update | length > 0
+
+- name: Remove obsolete blacklist domains
+  ansible.builtin.uri:
+    url: "{{ pihole.api_url }}/api/lists/blacklist/{{ existing_blacklist_dict[item].id }}"
+    method: DELETE
+    headers:
+      X-FTL-SID: "{{ pihole.api_key }}"
+    status_code: [200, 204]
+  loop: "{{ blacklist_to_remove }}"
+  when: blacklist_to_remove | length > 0
+
+- name: Display blacklist domains changes summary
+  ansible.builtin.debug:
+    msg:
+      - "Blacklist domains added: {{ blacklist_to_add | length }}"
+      - "Blacklist domains updated: {{ blacklist_to_update | length }}"
+      - "Blacklist domains removed: {{ blacklist_to_remove | length }}"
+  when: (blacklist_to_add | length > 0) or (blacklist_to_update | length > 0) or (blacklist_to_remove | length > 0)

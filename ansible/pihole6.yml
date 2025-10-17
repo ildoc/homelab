@@ -1,0 +1,7 @@
+---
+- name: Manage dns and dhcp reservations
+  hosts: pihole
+  become: true
+  gather_facts: true
+  roles:
+    - role: pihole6
