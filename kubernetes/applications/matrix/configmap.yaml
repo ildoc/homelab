@@ -102,6 +102,8 @@ data:
     enable_3pid_lookup: false
     allow_public_rooms_without_auth: true
     allow_public_rooms_over_federation: true
+    room_prejoin_state:
+      disable_default_event_types: false
     
     # === RATE LIMITING (RELAXED) ===
     rc_message:
