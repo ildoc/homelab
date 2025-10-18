@@ -102,6 +102,7 @@ data:
     enable_3pid_lookup: false
     allow_public_rooms_without_auth: true
     allow_public_rooms_over_federation: true
+    allow_guest_access: true
     room_prejoin_state:
       disable_default_event_types: false
     
