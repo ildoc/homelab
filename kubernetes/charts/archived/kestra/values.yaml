@@ -1,0 +1,155 @@
+kestra:
+  # L'immagine viene presa automaticamente dalla versione del chart
+  # Non serve specificarla a meno di override necessari
+  
+  # Deploy standalone (tutti i componenti in un unico pod)
+  # Per un homelab questo è perfetto
+  deployments:
+    standalone:
+      enabled: true
+      replicaCount: 1
+      
+      # Resources (adatta in base al tuo cluster)
+      resources:
+        limits:
+          cpu: 2000m
+          memory: 4Gi
+        requests:
+          cpu: 500m
+          memory: 2Gi
+      
+      # Strategy per evitare split-brain con SQLite/H2
+      strategy:
+        type: Recreate
+    
+    # Disabilita deployment separati (non servono per homelab)
+    webserver:
+      enabled: false
+    executor:
+      enabled: false
+    indexer:
+      enabled: false
+    scheduler:
+      enabled: false
+    worker:
+      enabled: false
+
+  # Configurazione comune a tutti i deployment
+  common:
+    # Node selector se hai nodi specifici
+    nodeSelector: {}
+    
+    tolerations: []
+    
+    affinity: {}
+    
+    # Secrets come environment variables
+    # I secrets verranno caricati da External Secrets / Vault
+    extraEnvFrom:
+      - secretRef:
+          name: kestra-secrets
+    
+    # Environment variables aggiuntive
+    extraEnv:
+      - name: TZ
+        value: "Europe/Rome"
+
+  # Configurazione Kestra (ConfigMap)
+  # Questo configura PostgreSQL esterno
+  configuration:
+    kestra:
+      server:
+        base-url: "https://kestra.local.ildoc.it"
+      
+      # Repository (metadati workflow, executions, etc.)
+      repository:
+        type: postgres
+      
+      # Queue (task scheduling)
+      queue:
+        type: postgres
+      
+      # Storage per file, logs, outputs
+      storage:
+        type: local
+        local:
+          base-path: "/app/storage"
+      
+      # Tasks configuration
+      tasks:
+        tmp-dir:
+          path: "/tmp/kestra-wd/tmp"
+
+  # Secrets Kestra (database credentials)
+  # Questi verranno sovrascritti da External Secrets
+  secrets:
+    kestra:
+      datasources:
+        postgres:
+          # Placeholder - verranno sovrascritti da External Secrets
+          url: jdbc:postgresql://192.168.0.30:5432/kestra_db
+          username: kestra_user
+          password: placeholder
+
+  # Service Account
+  serviceAccount:
+    create: true
+    automountToken: false
+
+  # Service
+  service:
+    type: ClusterIP
+    port: 8080
+
+  # Persistence per storage locale
+  persistence:
+    enabled: true
+    storageClassName: "nfs-csi"
+    accessModes:
+      - ReadWriteOnce
+    size: 20Gi  # Storage per workflow files, logs, outputs
+
+  # Docker-in-Docker per eseguire container
+  # Necessario per task come Script con Docker runner
+  dind:
+    enabled: true
+    # Modalità rootless (più sicura)
+    mode: 'rootless'
+    
+    image:
+      repository: docker
+      tag: dind-rootless
+      pullPolicy: IfNotPresent
+    
+    securityContext:
+      privileged: true
+      runAsUser: 1000
+      runAsGroup: 1000
+    
+    args:
+      - --log-level=fatal
+      - --group=1000
+    
+    resources:
+      limits:
+        cpu: 1000m
+        memory: 2Gi
+      requests:
+        cpu: 100m
+        memory: 512Mi
+
+  # Disabilita servizi non necessari
+  # (PostgreSQL e MinIO sono esterni)
+  kafka:
+    enabled: false
+  
+  elasticsearch:
+    enabled: false
+  
+  # Operator (solo Enterprise Edition)
+  operator:
+    enabled: false
+
+  # Ingress disabilitato (usiamo HTTPRoute)
+  ingress:
+    enabled: false
