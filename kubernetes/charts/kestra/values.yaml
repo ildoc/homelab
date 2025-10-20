@@ -1,9 +1,6 @@
 kestra:
   # Common settings applicati a tutti i deployment
   common:
-    strategy:
-      type: Recreate
-    
     resources:
       limits:
         cpu: 2000m
