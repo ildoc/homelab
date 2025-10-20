@@ -14,6 +14,7 @@ pihole:
     - { ip: 192.168.0.124, domain: "web" }
     - { ip: 192.168.0.133, domain: "homeassistant" }
     - { ip: 192.168.0.183, domain: "ubuntu" }
+    - { ip: 192.168.0.111, domain: "invidious" }
 
     - { ip: 192.168.0.30, domain: "db" }
     - { ip: 192.168.0.40, domain: "redis" }
@@ -32,6 +33,7 @@ pihole:
     - { ip: 192.168.0.81, domain: "bazarr.local.ildoc.it"}
     - { ip: 192.168.0.81, domain: "flaresolverr.local.ildoc.it"}
     - { ip: 192.168.0.81, domain: "grafana.local.ildoc.it"}
+    - { ip: 192.168.0.81, domain: "kestra.local.ildoc.it"}
     - { ip: 192.168.0.81, domain: "n8n.local.ildoc.it"}
     - { ip: 192.168.0.81, domain: "nut.local.ildoc.it"}
     - { ip: 192.168.0.81, domain: "prometheus.local.ildoc.it"}
