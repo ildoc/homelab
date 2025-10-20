@@ -14,21 +14,21 @@ kestra:
         cpu: 500m
         memory: 2Gi
     
-    # Node selector, tolerations, affinity (se necessario)
     nodeSelector: {}
     tolerations: []
     affinity: {}
     
-    # Environment variables da secrets
+    # Environment variables da secrets per i workflow
     extraEnvFrom:
       - secretRef:
           name: kestra-workflow-secrets
     
-    # Environment variables aggiuntive
+    # Environment variables per database PostgreSQL
     extraEnv:
       - name: TZ
         value: "Europe/Rome"
-      # Database connection (usando il secret)
+      
+      # Configurazione datasource PostgreSQL
       - name: DATASOURCES_POSTGRES_URL
         value: "jdbc:postgresql://192.168.0.30:5432/kestra_db"
       - name: DATASOURCES_POSTGRES_USERNAME
@@ -38,38 +38,63 @@ kestra:
           secretKeyRef:
             name: kestra-db-secret
             key: postgres_password
+      - name: DATASOURCES_POSTGRES_DRIVER_CLASS_NAME
+        value: "org.postgresql.Driver"
+    
+    # Monta il secret basic-auth come file di configurazione
+    extraVolumes:
+      - name: basic-auth-config
+        secret:
+          secretName: kestra-basic-auth
+      - name: storage
+        persistentVolumeClaim:
+          claimName: kestra-storage
+    
+    extraVolumeMounts:
+      - name: basic-auth-config
+        mountPath: /app/confs/basic-auth.yml
+        subPath: basic-auth.yml
+        readOnly: true
+      - name: storage
+        mountPath: /app/storage
 
-  # Configurazione Kestra
+  # Configurazione Kestra - questa è la configurazione principale!
   configurations:
-    # Configurazione principale dell'applicazione
     application:
+      datasources:
+        postgres:
+          url: jdbc:postgresql://192.168.0.30:5432/kestra_db
+          username: kestra_user
+          password: ${DATASOURCES_POSTGRES_PASSWORD}
+          driver-class-name: org.postgresql.Driver
+      
       kestra:
         server:
           base-url: "https://kestra.local.ildoc.it"
         
-        # Repository (metadati workflow, executions, etc.)
+        # Repository usando PostgreSQL
         repository:
           type: postgres
         
-        # Queue (task scheduling)
+        # Queue usando PostgreSQL  
         queue:
           type: postgres
         
-        # Storage per file, logs, outputs
+        # Storage locale (montato da PVC)
         storage:
           type: local
           local:
             base-path: "/app/storage"
         
-        # Tasks configuration
+        # Configurazione tasks
         tasks:
           tmp-dir:
             path: "/tmp/kestra-wd/tmp"
         
-        # URL configuration
+        # URL pubblico
         url: "https://kestra.local.ildoc.it"
     
-    # Secret montato come file per basic auth
+    # Monta il secret come file addizionale
     secrets:
       - name: kestra-basic-auth
         key: basic-auth.yml
@@ -79,14 +104,13 @@ kestra:
     create: true
     automount: false
 
-  # Deployment modes
+  # Deployment standalone
   deployments:
-    # Standalone mode (tutto in un pod - perfetto per homelab)
     standalone:
       enabled: true
-      workerThreads: 0  # Auto-detect based on CPU
+      workerThreads: 0
     
-    # Disabilita deployment distribuiti
+    # Disabilita tutti gli altri
     webserver:
       enabled: false
     executor:
@@ -113,7 +137,7 @@ kestra:
         targetPort: management
         protocol: TCP
 
-  # Docker-in-Docker per eseguire container
+  # Docker-in-Docker
   dind:
     enabled: true
     mode: 'rootless'
@@ -139,21 +163,6 @@ kestra:
             cpu: 100m
             memory: 512Mi
 
-  # Ingress disabilitato (usiamo HTTPRoute)
+  # Ingress disabilitato
   ingress:
     enabled: false
-
-  # # Manifesti extra per PVC
-  # extraManifests:
-  #   - apiVersion: v1
-  #     kind: PersistentVolumeClaim
-  #     metadata:
-  #       name: kestra-storage
-  #       namespace: apps
-  #     spec:
-  #       accessModes:
-  #         - ReadWriteOnce
-  #       storageClassName: nfs-csi
-  #       resources:
-  #         requests:
-  #           storage: 20Gi
