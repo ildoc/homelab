@@ -154,7 +154,7 @@ deploy_kestra_flows:
       echo "✅ All flows deployed successfully!"
   only:
     refs:
-      - main
+      - master
     changes:
       - kestra-flows/_flows/**/*.yml
   environment:

@@ -1,6 +1,6 @@
 id: db_backup_daily
 namespace: database
-description: Backup giornaliero database usando Ansible
+description: Backup giornaliero usando Ansible
 
 tasks:
   # Pre-check: verifica spazio disco

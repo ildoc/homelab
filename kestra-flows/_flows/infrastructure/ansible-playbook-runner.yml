@@ -15,7 +15,7 @@ inputs:
   - id: inventory
     type: STRING
     defaults: "inventory/hosts.ini"
-    description: "File inventory da usare"
+    description: "File inventory"
   
   - id: limit_hosts
     type: STRING
