@@ -1,20 +1,64 @@
 kestra:
-  # Deploy standalone per homelab
+  # Common settings applicati a tutti i deployment
+  common:
+    strategy:
+      type: Recreate
+    
+    resources:
+      limits:
+        cpu: 2000m
+        memory: 4Gi
+      requests:
+        cpu: 500m
+        memory: 2Gi
+    
+    extraEnv:
+      - name: TZ
+        value: "Europe/Rome"
+    
+    # Carica secrets per i workflow (accessibili con secret() function)
+    extraEnvFrom:
+      - secretRef:
+          name: kestra-secrets
+          prefix: SECRET_
+    
+    # Monta il PVC per storage persistente
+    extraVolumes:
+      - name: storage
+        persistentVolumeClaim:
+          claimName: kestra-storage
+    
+    extraVolumeMounts:
+      - name: storage
+        mountPath: /app/storage
+
+  # Configurazione Kestra - DEVE essere definita sotto configurations.application
+  configurations:
+    application:
+      kestra:
+        server:
+          base-url: "https://kestra.local.ildoc.it"
+        
+        repository:
+          type: postgres
+        
+        queue:
+          type: postgres
+        
+        storage:
+          type: local
+          local:
+            base-path: "/app/storage"
+    
+    # Carica le credenziali DB da secret esterno
+    secrets:
+      - name: kestra-db-secret
+        key: application-secrets.yml
+
+  # Deployments
   deployments:
     standalone:
       enabled: true
-      replicaCount: 1
-      
-      resources:
-        limits:
-          cpu: 2000m
-          memory: 4Gi
-        requests:
-          cpu: 500m
-          memory: 2Gi
-      
-      strategy:
-        type: Recreate
     
     # Disabilita deployment separati
     webserver:
@@ -28,54 +72,19 @@ kestra:
     worker:
       enabled: false
 
-  # Configurazione comune
-  common:
-    extraEnv:
-      - name: TZ
-        value: "Europe/Rome"
-    
-    # Carica secrets per i workflow (accessibili con secret() function)
-    extraSecretEnvFrom:
-      - name: kestra-secrets
-        prefix: SECRET_
-
-  configurations:
-    kestra:
-      server:
-        base-url: "https://kestra.local.ildoc.it"
-      
-      repository:
-        type: postgres
-      
-      queue:
-        type: postgres
-      
-      storage:
-        type: local
-        local:
-          base-path: "/app/storage"
-
-  # Carica database credentials da External Secret
-  externalSecret:
-    secretName: kestra-db-secret
-    key: application-secrets.yml
-
   # Service Account
   serviceAccount:
     create: true
-    automountToken: false
+    automount: false
 
-  # Persistence per storage locale
-  persistence:
-    enabled: true
-    storageClassName: "nfs-csi"
-    accessModes:
-      - ReadWriteOnce
-    size: 20Gi
+  # Service (usa i default del chart)
+  service:
+    type: ClusterIP
 
   # Docker-in-Docker
   dind:
     enabled: true
+    mode: rootless
     
     resources:
       limits:
@@ -85,15 +94,6 @@ kestra:
         cpu: 100m
         memory: 512Mi
 
-  # Disabilita servizi non necessari
-  kafka:
-    enabled: false
-  
-  elasticsearch:
-    enabled: false
-  
-  operator:
-    enabled: false
-
+  # Ingress disabilitato (usiamo HTTPRoute)
   ingress:
     enabled: false
