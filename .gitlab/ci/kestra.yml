@@ -9,6 +9,9 @@ variables:
   KESTRA_URL: "https://kestra.local.ildoc.it"
   KESTRA_NAMESPACE: "homelab.infrastructure"
   KESTRA_DIR: "kestra-flows"
+  # Vault configuration
+  VAULT_ADDR: "https://vault.local.ildoc.it"
+  VAULT_AUTH_PATH: "approle"
 
 # Valida sintassi YAML dei flow (usa lo stage lint_quality esistente)
 validate_kestra_flows:
@@ -48,8 +51,41 @@ validate_kestra_flows:
 # Deploy Namespace Files (usa lo stage sync esistente)
 deploy_kestra_namespace_files:
   stage: sync
-  image: curlimages/curl:latest
+  image: hashicorp/vault:latest
   needs: []
+  before_script:
+    - |
+      echo "🔐 Authenticating with Vault..."
+      
+      # Login to Vault usando AppRole
+      VAULT_TOKEN=$(vault write -field=token auth/${VAULT_AUTH_PATH}/login \
+        role_id="${VAULT_ROLE_ID}" \
+        secret_id="${VAULT_SECRET_ID}")
+      
+      if [ -z "$VAULT_TOKEN" ]; then
+        echo "❌ Failed to authenticate with Vault"
+        exit 1
+      fi
+      
+      export VAULT_TOKEN
+      echo "✅ Vault authentication successful"
+      
+      # Recupera credenziali Kestra
+      echo "📥 Fetching Kestra credentials..."
+      KESTRA_USER=$(vault kv get -field=username kubernetes/apps/kestra)
+      KESTRA_PASS=$(vault kv get -field=password kubernetes/apps/kestra)
+      
+      if [ -z "$KESTRA_USER" ] || [ -z "$KESTRA_PASS" ]; then
+        echo "❌ Failed to retrieve Kestra credentials from Vault"
+        exit 1
+      fi
+      
+      export KESTRA_USER
+      export KESTRA_PASS
+      echo "✅ Kestra credentials retrieved"
+      
+      # Installa curl se necessario (l'immagine vault non lo ha di default)
+      apk add --no-cache curl
   script:
     - cd ${KESTRA_DIR}
     - |
@@ -69,6 +105,7 @@ deploy_kestra_namespace_files:
         echo "📤 Uploading: $clean_path"
         
         response=$(curl -s -w "\n%{http_code}" -X PUT \
+          -u "${KESTRA_USER}:${KESTRA_PASS}" \
           -H "Content-Type: application/octet-stream" \
           --data-binary @"$file" \
           "${KESTRA_URL}/api/v1/namespaces/${KESTRA_NAMESPACE}/files?path=${clean_path}")
@@ -78,7 +115,9 @@ deploy_kestra_namespace_files:
         if [ "$http_code" -ge 200 ] && [ "$http_code" -lt 300 ]; then
           echo "✓ Uploaded: $clean_path"
         else
+          body=$(echo "$response" | head -n-1)
           echo "✗ Failed: $clean_path (HTTP $http_code)"
+          echo "Response: $body"
         fi
       done
       
@@ -98,10 +137,43 @@ deploy_kestra_namespace_files:
 # Deploy Flows (usa lo stage sync esistente, dopo namespace files)
 deploy_kestra_flows:
   stage: sync
-  image: curlimages/curl:latest
+  image: hashicorp/vault:latest
   needs:
     - job: deploy_kestra_namespace_files
       optional: true
+  before_script:
+    - |
+      echo "🔐 Authenticating with Vault..."
+      
+      # Login to Vault usando AppRole
+      VAULT_TOKEN=$(vault write -field=token auth/${VAULT_AUTH_PATH}/login \
+        role_id="${VAULT_ROLE_ID}" \
+        secret_id="${VAULT_SECRET_ID}")
+      
+      if [ -z "$VAULT_TOKEN" ]; then
+        echo "❌ Failed to authenticate with Vault"
+        exit 1
+      fi
+      
+      export VAULT_TOKEN
+      echo "✅ Vault authentication successful"
+      
+      # Recupera credenziali Kestra
+      echo "📥 Fetching Kestra credentials..."
+      KESTRA_USER=$(vault kv get -field=username kubernetes/apps/kestra)
+      KESTRA_PASS=$(vault kv get -field=password kubernetes/apps/kestra)
+      
+      if [ -z "$KESTRA_USER" ] || [ -z "$KESTRA_PASS" ]; then
+        echo "❌ Failed to retrieve Kestra credentials from Vault"
+        exit 1
+      fi
+      
+      export KESTRA_USER
+      export KESTRA_PASS
+      echo "✅ Kestra credentials retrieved"
+      
+      # Installa curl
+      apk add --no-cache curl
   script:
     - cd ${KESTRA_DIR}
     - |
@@ -117,6 +189,7 @@ deploy_kestra_flows:
           echo "========================================="
           
           response=$(curl -s -w "\n%{http_code}" -X POST \
+            -u "${KESTRA_USER}:${KESTRA_PASS}" \
             -H "Content-Type: application/x-yaml" \
             --data-binary @"$flow" \
             "${KESTRA_URL}/api/v1/flows/import")
@@ -154,7 +227,7 @@ deploy_kestra_flows:
       echo "✅ All flows deployed successfully!"
   only:
     refs:
-      - master
+      - main
     changes:
       - kestra-flows/_flows/**/*.yml
   environment:
