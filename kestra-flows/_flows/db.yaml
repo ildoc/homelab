@@ -62,7 +62,7 @@ tasks:
 triggers:
   - id: daily_schedule
     type: io.kestra.plugin.core.trigger.Schedule
-    cron: "0 2 * * *"  # Ogni giorno alle 2 AM
+    cron: "0 2 * * *"  # Ogni giorno alle 2
 
 errors:
   - id: notify_failure
