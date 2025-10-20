@@ -4,11 +4,7 @@ kestra:
   common:
     kind: Deployment
     replicas: 1
-    
-    # Strategia di deployment (Recreate per evitare problemi con storage)
-    strategy:
-      type: Recreate
-    
+
     # Resources
     resources:
       limits:
