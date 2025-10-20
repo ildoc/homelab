@@ -46,8 +46,15 @@ kestra:
           type: local
           local:
             base-path: "/app/storage"
+      
+      # Configurazione datasource (senza credenziali)
+      datasources:
+        postgres:
+          url: jdbc:postgresql://192.168.0.30:5432/kestra_db
+          driver-class-name: org.postgresql.Driver
+          dialect: POSTGRES
     
-    # Carica le credenziali DB da secret esterno
+    # Carica le credenziali DB da secret esterno (username + password)
     secrets:
       - name: kestra-db-secret
         key: application-secrets.yml
