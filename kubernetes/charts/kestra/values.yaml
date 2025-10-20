@@ -39,8 +39,7 @@ kestra:
       - name: kestra-secrets
         prefix: SECRET_
 
-  # Configurazione Kestra
-  configuration:
+  configurations:
     kestra:
       server:
         base-url: "https://kestra.local.ildoc.it"
