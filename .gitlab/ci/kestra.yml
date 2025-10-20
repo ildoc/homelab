@@ -1,0 +1,162 @@
+---
+# ======================================
+# KESTRA FLOWS CI/CD
+# ======================================
+# Questo file viene incluso nella pipeline principale
+# Gli stage devono essere dichiarati nel file padre
+
+variables:
+  KESTRA_URL: "https://kestra.local.ildoc.it"
+  KESTRA_NAMESPACE: "homelab.infrastructure"
+  KESTRA_DIR: "kestra-flows"
+
+# Valida sintassi YAML dei flow (usa lo stage lint_quality esistente)
+validate_kestra_flows:
+  stage: lint_quality
+  image: mikefarah/yq:latest
+  needs: []
+  script:
+    - cd ${KESTRA_DIR}
+    - |
+      echo "Validating Kestra flow YAML syntax in ${KESTRA_DIR}..."
+      ERROR=0
+      
+      for flow in _flows/**/*.yml; do
+        if [ -f "$flow" ]; then
+          echo "Checking $flow..."
+          if ! yq eval '.' "$flow" > /dev/null 2>&1; then
+            echo "❌ Invalid YAML: $flow"
+            ERROR=1
+          else
+            echo "✓ Valid: $flow"
+          fi
+        fi
+      done
+      
+      if [ $ERROR -eq 1 ]; then
+        echo ""
+        echo "❌ Validation failed!"
+        exit 1
+      fi
+      
+      echo ""
+      echo "✅ All Kestra flows are valid"
+  only:
+    changes:
+      - kestra-flows/_flows/**/*.yml
+
+# Deploy Namespace Files (usa lo stage sync esistente)
+deploy_kestra_namespace_files:
+  stage: sync
+  image: curlimages/curl:latest
+  needs: []
+  script:
+    - cd ${KESTRA_DIR}
+    - |
+      echo "Deploying namespace files to ${KESTRA_NAMESPACE}..."
+      
+      # Trova tutti i file escluso _flows e file di config
+      find . -type f \
+        ! -path "./_flows/*" \
+        ! -path "./.git/*" \
+        ! -name ".gitignore" \
+        ! -name "README.md" \
+        | while read -r file; do
+        
+        # Rimuovi ./ iniziale
+        clean_path="${file#./}"
+        
+        echo "📤 Uploading: $clean_path"
+        
+        response=$(curl -s -w "\n%{http_code}" -X PUT \
+          -H "Content-Type: application/octet-stream" \
+          --data-binary @"$file" \
+          "${KESTRA_URL}/api/v1/namespaces/${KESTRA_NAMESPACE}/files?path=${clean_path}")
+        
+        http_code=$(echo "$response" | tail -n1)
+        
+        if [ "$http_code" -ge 200 ] && [ "$http_code" -lt 300 ]; then
+          echo "✓ Uploaded: $clean_path"
+        else
+          echo "✗ Failed: $clean_path (HTTP $http_code)"
+        fi
+      done
+      
+      echo ""
+      echo "✅ Namespace files deployed"
+  only:
+    refs:
+      - main
+    changes:
+      - kestra-flows/scripts/**/*
+      - kestra-flows/queries/**/*
+      - kestra-flows/configs/**/*
+      - kestra-flows/templates/**/*
+  environment:
+    name: production
+
+# Deploy Flows (usa lo stage sync esistente, dopo namespace files)
+deploy_kestra_flows:
+  stage: sync
+  image: curlimages/curl:latest
+  needs:
+    - job: deploy_kestra_namespace_files
+      optional: true
+  script:
+    - cd ${KESTRA_DIR}
+    - |
+      echo "Deploying flows to Kestra..."
+      FAILED=0
+      SUCCESS=0
+      
+      for flow in _flows/**/*.yml; do
+        if [ -f "$flow" ]; then
+          echo ""
+          echo "========================================="
+          echo "📦 Deploying: $flow"
+          echo "========================================="
+          
+          response=$(curl -s -w "\n%{http_code}" -X POST \
+            -H "Content-Type: application/x-yaml" \
+            --data-binary @"$flow" \
+            "${KESTRA_URL}/api/v1/flows/import")
+          
+          http_code=$(echo "$response" | tail -n1)
+          body=$(echo "$response" | head -n-1)
+          
+          if [ "$http_code" -ge 200 ] && [ "$http_code" -lt 300 ]; then
+            echo "✅ Successfully deployed: $flow"
+            SUCCESS=$((SUCCESS + 1))
+          else
+            echo "❌ Failed to deploy: $flow"
+            echo "HTTP Status: $http_code"
+            echo "Response: $body"
+            FAILED=$((FAILED + 1))
+          fi
+        fi
+      done
+      
+      echo ""
+      echo "========================================="
+      echo "Deployment Summary"
+      echo "========================================="
+      echo "✅ Success: $SUCCESS"
+      echo "❌ Failed: $FAILED"
+      echo "========================================="
+      
+      if [ $FAILED -gt 0 ]; then
+        echo ""
+        echo "❌ Some flows failed to deploy!"
+        exit 1
+      fi
+      
+      echo ""
+      echo "✅ All flows deployed successfully!"
+  only:
+    refs:
+      - main
+    changes:
+      - kestra-flows/_flows/**/*.yml
+  environment:
+    name: production
+    url: https://kestra.local.ildoc.it
