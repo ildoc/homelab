@@ -1,6 +1,6 @@
 id: ansible_playbook_runner
 namespace: infrastructure
-description: Flow generico per eseguire playbook Ansible
+description: Flow generico per eseguire qualsiasi playbook Ansible
 
 inputs:
   - id: playbook_path
