@@ -12,6 +12,17 @@ kestra:
     extraEnv:
       - name: TZ
         value: "Europe/Rome"
+      # Credenziali DB come env vars
+      - name: KESTRA_DATASOURCES_POSTGRES_USERNAME
+        valueFrom:
+          secretKeyRef:
+            name: kestra-db-secret
+            key: username
+      - name: KESTRA_DATASOURCES_POSTGRES_PASSWORD
+        valueFrom:
+          secretKeyRef:
+            name: kestra-db-secret
+            key: password
     
     # Carica secrets per i workflow (accessibili con secret() function)
     extraEnvFrom:
@@ -29,7 +40,7 @@ kestra:
       - name: storage
         mountPath: /app/storage
 
-  # Configurazione Kestra - DEVE essere definita sotto configurations.application
+  # Configurazione Kestra completa (con riferimenti a env vars per credenziali)
   configurations:
     application:
       kestra:
@@ -47,17 +58,14 @@ kestra:
           local:
             base-path: "/app/storage"
       
-      # Configurazione datasource (senza credenziali)
+      # Configurazione datasource COMPLETA (username/password da env vars)
       datasources:
         postgres:
           url: jdbc:postgresql://192.168.0.30:5432/kestra_db
           driver-class-name: org.postgresql.Driver
           dialect: POSTGRES
-    
-    # Carica le credenziali DB da secret esterno (username + password)
-    secrets:
-      - name: kestra-db-secret
-        key: application-secrets.yml
+          username: ${KESTRA_DATASOURCES_POSTGRES_USERNAME}
+          password: ${KESTRA_DATASOURCES_POSTGRES_PASSWORD}
 
   # Deployments
   deployments:

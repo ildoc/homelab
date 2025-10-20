@@ -1,9 +1,9 @@
 db:
   postgres:
-    admin_user: "{{ lookup('community.hashi_vault.hashi_vault', 'ansible/data/postgres:admin_user') }}"
-    admin_password: "{{ lookup('community.hashi_vault.hashi_vault', 'ansible/data/postgres:admin_password') }}"
-    pgadmin_email: "{{ lookup('community.hashi_vault.hashi_vault', 'ansible/data/postgres:pgadmin_email') }}"
-    pgadmin_password: "{{ lookup('community.hashi_vault.hashi_vault', 'ansible/data/postgres:pgadmin_password') }}"
+    admin_user: "{{ _secrets.postgres.admin_user }}"
+    admin_password: "{{ _secrets.postgres.admin_password }}"
+    pgadmin_email: "{{ _secrets.postgres.pgadmin_email }}"
+    pgadmin_password: "{{ _secrets.postgres.pgadmin_password }}"
 
     databases:
       - name: invidious_db
@@ -40,9 +40,8 @@ db:
         lc_ctype: en_US.UTF-8
 
     users:
-      # Utenti applicativi con accesso completo al loro database
       - name: invidious_user
-        password: "{{ lookup('community.hashi_vault.hashi_vault', 'ansible/data/invidious:postgres_password') }}"
+        password: "{{ _secrets.postgres_users.invidious }}"
         databases:
           - invidious_db
         privileges: ALL
@@ -50,7 +49,7 @@ db:
         sequence_privs: ALL
       
       - name: authentik_user
-        password: "{{ lookup('community.hashi_vault.hashi_vault', 'cross/data/apps/authentik:postgres_password') }}"
+        password: "{{ _secrets.postgres_users.authentik }}"
         databases:
           - authentik_db
         privileges: ALL
@@ -58,7 +57,7 @@ db:
         sequence_privs: ALL
 
       - name: matrix_user
-        password: "{{ lookup('community.hashi_vault.hashi_vault', 'cross/data/apps/matrix:postgres_password') }}"
+        password: "{{ _secrets.postgres_users.matrix }}"
         databases:
           - matrix_db
         privileges: ALL
@@ -66,7 +65,7 @@ db:
         sequence_privs: ALL
       
       - name: sonarqube_user
-        password: "{{ lookup('community.hashi_vault.hashi_vault', 'cross/data/apps/sonarqube:postgres_password') }}"
+        password: "{{ _secrets.postgres_users.sonarqube }}"
         databases:
           - sonarqube_db
         privileges: ALL
@@ -74,10 +73,9 @@ db:
         sequence_privs: ALL
 
       - name: kestra_user
-        password: "{{ lookup('community.hashi_vault.hashi_vault', 'cross/data/apps/kestra:postgres_password') }}"
+        password: "{{ _secrets.postgres_users.kestra }}"
         databases:
           - kestra_db
         privileges: ALL
         table_privs: ALL
         sequence_privs: ALL
-

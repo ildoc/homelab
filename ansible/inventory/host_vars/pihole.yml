@@ -135,7 +135,7 @@ pihole:
     - address: "https://mirror1.malwaredomains.com/files/justdomains"
       type: "block"
       comment: "Malware Domains"
-      enabled: true
+      enabled: false
 
     - address: "https://big.oisd.nl"
       type: "block"
@@ -145,7 +145,7 @@ pihole:
     - address: "https://someonewhocares.org/hosts/zero/hosts"
       type: "block"
       comment: "Dan Pollock's List"
-      enabled: false  # Esempio di lista disabilitata
+      enabled: true
 
   # Whitelist - Domini sempre permessi
   whitelist:
@@ -166,7 +166,7 @@ pihole:
     regex:     
       - domain: "^(.+[-.])?local\\.ildoc\\.it$"
         comment: "All local subdomains"
-        enabled: false
+        enabled: true
 
   # Blacklist - Domini sempre bloccati
   blacklist:

@@ -1,7 +1,30 @@
 ---
+- name: Load secrets from Vault
+  hosts: localhost
+  gather_facts: false
+  vars:
+    vault_secrets_map:
+      postgres:
+        admin_user: "ansible/data/postgres:admin_user"
+        admin_password: "ansible/data/postgres:admin_password"
+        pgadmin_email: "ansible/data/postgres:pgadmin_email"
+        pgadmin_password: "ansible/data/postgres:pgadmin_password"
+      postgres_users:
+        invidious: "ansible/data/invidious:postgres_password"
+        authentik: "cross/data/apps/authentik:postgres_password"
+        matrix: "cross/data/apps/matrix:postgres_password"
+        sonarqube: "cross/data/apps/sonarqube:postgres_password"
+        kestra: "cross/data/apps/kestra:postgres_password"
+  
+  tasks:
+    - name: Include vault secrets loading task
+      ansible.builtin.include_tasks: "{{ playbook_dir }}/tasks/vault/load-secrets.yaml"
+
 - name: Manage db
   hosts: db
   gather_facts: true
+  vars:
+    _secrets: "{{ hostvars['localhost']['vault_secrets_loaded'] }}"
+  
   roles:
-    # - role: apt
     - role: db
