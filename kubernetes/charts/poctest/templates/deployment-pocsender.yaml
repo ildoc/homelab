@@ -26,6 +26,6 @@ spec:
           secret:
             secretName: pocmanager-secret
             items:
-              - key: secret_key
+              - key: secret-key
                 path: secretfile.json
           
