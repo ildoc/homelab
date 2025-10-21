@@ -22,14 +22,16 @@ gitlab-runner:
         
         [runners.kubernetes]
           namespace = "{{.Release.Namespace}}"
-          image = "docker:24-dind"
+          image = "alpine:3.19"
           pull_policy = ["if-not-present"]
           
+          # Risorse per il container principale del job
           cpu_limit = "2"
           cpu_request = "500m"
           memory_limit = "4Gi"
           memory_request = "512Mi"
           
+          # Risorse per l'helper
           helper_cpu_limit = "500m"
           helper_cpu_request = "100m"
           helper_memory_limit = "256Mi"
@@ -39,7 +41,19 @@ gitlab-runner:
           poll_interval = 3
           poll_timeout = 180
           
-          # Cache volume
+          # Configurazione per buildah/podman (rootless)
+          # Non serve privileged=true come con Docker
+          [runners.kubernetes.pod_security_context]
+            run_as_non_root = false
+            # Buildah stable image gira come root di default, ma in modo sicuro
+          
+          # Volume per storage temporaneo buildah
+          [[runners.kubernetes.volumes.empty_dir]]
+            name = "buildah-storage"
+            mount_path = "/var/lib/containers"
+            medium = ""
+          
+          # Cache volume per artifacts
           [[runners.kubernetes.volumes.pvc]]
             name = "gitlab-runner-cache"
             mount_path = "/cache"
