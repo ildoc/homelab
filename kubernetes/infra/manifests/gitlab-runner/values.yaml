@@ -26,6 +26,9 @@ gitlab-runner:
           image = "alpine:3.19"
           pull_policy = ["if-not-present"]
           
+          # IMPORTANTE: Necessario per overlay storage driver
+          privileged = true
+          
           # Risorse per il container principale del job
           cpu_limit = "2"
           cpu_request = "500m"
@@ -42,13 +45,7 @@ gitlab-runner:
           poll_interval = 3
           poll_timeout = 180
           
-          # Configurazione per buildah/podman (rootless)
-          # Non serve privileged=true come con Docker
-          [runners.kubernetes.pod_security_context]
-            run_as_non_root = false
-            # Buildah stable image gira come root di default, ma in modo sicuro
-          
-          # Volume per storage temporaneo buildah
+          # Volume per storage temporaneo buildah/podman
           [[runners.kubernetes.volumes.empty_dir]]
             name = "buildah-storage"
             mount_path = "/var/lib/containers"
