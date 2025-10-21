@@ -13,6 +13,7 @@ spec:
       labels:
         app: pocmanager
     spec:
+      serviceAccountName: pocmanager-sa
       containers:
         - name: pocmanager
           image: registry.gitlab.local.ildoc.it/bots/pocmanager:9319b119bef61dc36e92cc510708c820ff97c632
