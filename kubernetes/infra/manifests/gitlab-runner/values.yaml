@@ -19,6 +19,7 @@ gitlab-runner:
         name = "kubernetes-runner-{{.index}}"
         executor = "kubernetes"
         output_limit = 16384
+        request_concurrency = 3
         
         [runners.kubernetes]
           namespace = "{{.Release.Namespace}}"
@@ -57,6 +58,8 @@ gitlab-runner:
           [[runners.kubernetes.volumes.pvc]]
             name = "gitlab-runner-cache"
             mount_path = "/cache"
+            read_only = false
+            mount_propagation = "HostToContainer"
   
   rbac:
     create: true
