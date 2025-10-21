@@ -16,5 +16,5 @@ spec:
       serviceAccountName: pocmanager-sa
       containers:
         - name: pocmanager
-          image: registry.gitlab.local.ildoc.it/bots/pocmanager:9319b119bef61dc36e92cc510708c820ff97c632
+          image: registry.gitlab.local.ildoc.it/bots/pocmanager:b7b80501b360b448ebabb24fc6ef550051bd06d6
           
