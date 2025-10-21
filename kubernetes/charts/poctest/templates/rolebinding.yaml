@@ -1,0 +1,14 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: pocmanager-rolebinding
+  namespace: apps
+subjects:
+  - kind: ServiceAccount
+    name: pocmanager-sa
+    namespace: apps
+roleRef:
+  kind: Role
+  name: pocmanager-role
+  apiGroup: rbac.authorization.k8s.io
