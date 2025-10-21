@@ -53,6 +53,7 @@ gitlab-runner:
             name = "buildah-storage"
             mount_path = "/var/lib/containers"
             medium = ""
+            size_limit = "10Gi"
           
           # Cache volume per artifacts
           [[runners.kubernetes.volumes.pvc]]
