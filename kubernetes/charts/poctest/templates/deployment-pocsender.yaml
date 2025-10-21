@@ -16,6 +16,9 @@ spec:
       containers:
         - name: pocsender
           image: registry.gitlab.local.ildoc.it/bots/pocsender:ae52e4f4ffc5d843d423056e3ea7568e6f7719f4
+          env:
+            - name: ASPNETCORE_URLS
+              value: "http://*:80"
           volumeMounts:
             - name: secret-volume
               mountPath: /app/secretfile.json
