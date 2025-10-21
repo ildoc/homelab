@@ -8,6 +8,7 @@ spec:
   selector:
     matchLabels:
       app: pocmanager
+  revisionHistoryLimit: 1
   template:
     metadata:
       labels:
