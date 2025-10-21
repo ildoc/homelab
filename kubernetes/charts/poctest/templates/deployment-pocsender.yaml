@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: pocsender
-          image: registry.gitlab.local.ildoc.it/bots/pocsender:ae52e4f4ffc5d843d423056e3ea7568e6f7719f4
+          image: registry.gitlab.local.ildoc.it/bots/pocsender:fedbbb8ced27d6d8d4ff1fe202904d73023b2a75
           volumeMounts:
             - name: secret-volume
               mountPath: /app/secretfile.json
