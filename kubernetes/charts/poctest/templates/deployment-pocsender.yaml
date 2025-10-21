@@ -1,0 +1,31 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pocsender
+  namespace: apps
+spec:
+  selector:
+    matchLabels:
+      app: pocsender
+  template:
+    metadata:
+      labels:
+        app: pocsender
+    spec:
+      containers:
+        - name: pocsender
+          image: registry.gitlab.local.ildoc.it/bots/pocsender:ae52e4f4ffc5d843d423056e3ea7568e6f7719f4
+          volumeMounts:
+            - name: secret-volume
+              mountPath: /app/secretfile.json
+              subPath: secretfile.json
+              readOnly: true
+      volumes:
+        - name: secret-volume
+          secret:
+            secretName: pocmanager-secret
+            items:
+              - key: secret_key
+                path: secretfile.json
+          

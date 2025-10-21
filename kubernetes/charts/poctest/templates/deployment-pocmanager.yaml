@@ -1,0 +1,19 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pocmanager
+  namespace: apps
+spec:
+  selector:
+    matchLabels:
+      app: pocmanager
+  template:
+    metadata:
+      labels:
+        app: pocmanager
+    spec:
+      containers:
+        - name: pocmanager
+          image: registry.gitlab.local.ildoc.it/bots/pocmanager
+          
