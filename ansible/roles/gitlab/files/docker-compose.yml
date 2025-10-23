@@ -27,7 +27,7 @@ services:
   #     - DOCKER_HOST=unix:///var/run/docker.sock
 
   nginx:
-    image: nginx:stable@sha256:3b4019335070fb6445987c8dd72cf18dec2cbc63b3575581eb66469c8173cd4f
+    image: nginx:stable@sha256:10f4f3e09ace179005137b811167c8dc03c089b60059236d45c340f1f1e56ac3
     container_name: nginx
     depends_on:
       - gitlab
