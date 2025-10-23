@@ -16,7 +16,7 @@ variables:
 # Valida sintassi YAML dei flow (usa lo stage lint_quality esistente)
 validate_kestra_flows:
   stage: lint_quality
-  image: mikefarah/yq:latest
+  image: mikefarah/yq:latest@sha256:75b3a60dce1fa4641b0f02bdb4465eddc5da95e62028118a292239ca8e3921e5
   needs: []
   script:
     - cd ${KESTRA_DIR}
@@ -51,7 +51,7 @@ validate_kestra_flows:
 # Deploy Namespace Files (usa lo stage sync esistente)
 deploy_kestra_namespace_files:
   stage: sync
-  image: hashicorp/vault:latest
+  image: hashicorp/vault:latest@sha256:62dd55c9ccbdc0af0a9269e87481a64650258907434d5ddb5e795e2eb2ac5780
   needs: []
   before_script:
     - |
@@ -137,7 +137,7 @@ deploy_kestra_namespace_files:
 # Deploy Flows (usa lo stage sync esistente, dopo namespace files)
 deploy_kestra_flows:
   stage: sync
-  image: hashicorp/vault:latest
+  image: hashicorp/vault:latest@sha256:62dd55c9ccbdc0af0a9269e87481a64650258907434d5ddb5e795e2eb2ac5780
   needs:
     - job: deploy_kestra_namespace_files
       optional: true

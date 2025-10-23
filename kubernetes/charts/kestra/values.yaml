@@ -147,7 +147,7 @@ kestra:
         image:
           repository: docker
           pullPolicy: IfNotPresent
-          tag: dind-rootless
+          tag: dind-rootless@sha256:82202f05939bf78cd34db8fcc3e9a0f8dcd43810cf2d29b8f0e53029746509fd
         securityContext:
           privileged: true
           runAsUser: 1000
