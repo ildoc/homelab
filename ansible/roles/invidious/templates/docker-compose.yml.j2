@@ -2,7 +2,6 @@
 services:
 
   invidious:
-    # renovate: datasource=docker depName=quay.io/invidious/invidious versioning=loose
     image: quay.io/invidious/invidious:2025.10.17-5cfe294
     restart: unless-stopped
     ports:
@@ -45,8 +44,7 @@ services:
   #    - invidious-db
 
   companion:
-    # renovate: datasource=docker depName=quay.io/invidious/invidious-companion versioning=loose
-    image: quay.io/invidious/invidious-companion:master-572f219
+    image: quay.io/invidious/invidious-companion:master-6ff94c2
     environment:
       SERVER_SECRET_KEY: {{ invidious.companion_key }}
     restart: unless-stopped
