@@ -1,2 +1,0 @@
----
-redis_templates_path: "{{ playbook_dir }}/roles/redis/templates/"

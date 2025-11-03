@@ -1,2 +1,0 @@
----
-db_templates_path: "{{ playbook_dir }}/roles/db/templates/"

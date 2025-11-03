@@ -12,7 +12,7 @@ redis:
     
     - name: admin
       enabled: true
-      password: "{{ lookup('community.hashi_vault.hashi_vault', 'ansible/data/redis:admin_password') }}"
+      password: "{{ _secrets.redis.admin_password }}"
       permissions:
         - "+@all"
         - "~*"
@@ -31,7 +31,7 @@ redis:
 
     - name: authentik
       enabled: true
-      password: "{{ lookup('community.hashi_vault.hashi_vault', 'cross/data/apps/authentik:redis_password') }}"
+      password: "{{ _secrets.authentik.redis_password }}"
       permissions:
         - "allchannels"
         - "~*"

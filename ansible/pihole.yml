@@ -1,7 +1,21 @@
 ---
+- name: Load secrets from Vault
+  hosts: localhost
+  gather_facts: false
+  vars:
+    vault_secrets_map:
+      pihole:
+        api_key: "ansible/data/pihole:api_key"
+  
+  tasks:
+    - name: Include vault secrets loading task
+      ansible.builtin.include_tasks: "{{ playbook_dir }}/tasks/vault/load-secrets.yaml"
+
 - name: Manage dns and dhcp reservations
   hosts: pihole
   become: true
   gather_facts: true
+  vars:
+    _secrets: "{{ hostvars['localhost']['vault_secrets_loaded'] }}"
   roles:
     - role: pihole

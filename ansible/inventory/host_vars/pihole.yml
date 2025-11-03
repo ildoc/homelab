@@ -1,6 +1,6 @@
 pihole:
   api_url: "https://pihole.local.ildoc.it"
-  api_key: "{{ lookup('community.hashi_vault.hashi_vault', 'ansible/data/pihole:api_key') }}"
+  api_key: "{{ _secrets.pihole.api_key }}"
   validate_certs: false  # Set to true if you have valid SSL certificates
   check_updates: true
   auto_update: false

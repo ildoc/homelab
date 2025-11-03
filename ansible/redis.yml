@@ -1,6 +1,22 @@
 ---
+- name: Load secrets from Vault
+  hosts: localhost
+  gather_facts: false
+  vars:
+    vault_secrets_map:
+      redis:
+        admin_password: "ansible/data/redis:admin_password"
+      authentik:
+        redis_password: "cross/data/apps/authentik:redis_password"
+  
+  tasks:
+    - name: Include vault secrets loading task
+      ansible.builtin.include_tasks: "{{ playbook_dir }}/tasks/vault/load-secrets.yaml"
+
 - name: Manage redis
   hosts: redis
   gather_facts: true
+  vars:
+    _secrets: "{{ hostvars['localhost']['vault_secrets_loaded'] }}"
   roles:
     - role: redis

@@ -54,14 +54,14 @@
 - name: Set variables for docker-compose deployment
   ansible.builtin.set_fact:
     remote_path: ~/docker-compose.yml
-    local_path: "{{ redis_templates_path }}/docker-compose.yml.j2"
+    template_file: docker-compose.yml.j2
     project_path: /root
 
 - name: Deploy docker-compose
-  ansible.builtin.include_tasks: "{{ tasks_dir }}/docker/update-compose-template.yaml"
+  ansible.builtin.include_tasks: "{{ tasks_dir }}/docker/update-compose-unified.yaml"
   vars:
     update_compose_remote_path: "{{ remote_path }}"
-    template_file_name: "{{ local_path }}"
+    template_file_name: "{{ template_file }}"
     update_compose_project_path: "{{ project_path }}"
     force_update: "{{ redis_conf_result.changed }}"  # Force restart only if redis.conf changed
 
@@ -75,7 +75,7 @@
 
 - name: Get admin password for verification
   ansible.builtin.set_fact:
-    redis_admin_password: "{{ lookup('community.hashi_vault.hashi_vault', 'ansible/data/redis:admin_password') }}"
+    redis_admin_password: "{{ _secrets.redis.admin_password }}"
   no_log: true
 
 # Reload ACL without restart if only ACL file changed

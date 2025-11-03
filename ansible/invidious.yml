@@ -1,6 +1,24 @@
 ---
+- name: Load secrets from Vault
+  hosts: localhost
+  gather_facts: false
+  vars:
+    vault_secrets_map:
+      invidious:
+        db_password: "ansible/data/invidious:postgres_password"
+        visitor_data: "ansible/data/invidious:visitor_data"
+        po_token: "ansible/data/invidious:po_token"
+        hmac_key: "ansible/data/invidious:hmac_key"
+        companion_key: "ansible/data/invidious:companion_key"
+  
+  tasks:
+    - name: Include vault secrets loading task
+      ansible.builtin.include_tasks: "{{ playbook_dir }}/tasks/vault/load-secrets.yaml"
+
 - name: Configure invidious
   hosts: invidious
   gather_facts: true
+  vars:
+    _secrets: "{{ hostvars['localhost']['vault_secrets_loaded'] }}"
   roles:
     - role: invidious

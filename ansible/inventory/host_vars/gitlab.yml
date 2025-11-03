@@ -1,7 +1,7 @@
 gitlab:
   domain: gitlab.local.ildoc.it
-  letsencrypt_email: "{{ lookup('community.hashi_vault.hashi_vault', 'ansible/data/gitlab:letsencrypt_email') }}"
-  cloudflare_token: "{{ lookup('community.hashi_vault.hashi_vault', 'ansible/data/gitlab:cloudflare_token') }}"
+  letsencrypt_email: "{{ _secrets.gitlab.letsencrypt_email }}"
+  cloudflare_token: "{{ _secrets.gitlab.cloudflare_token }}"
   cleanup:
     interval_hours: 6
     aggressive_hour: 2
