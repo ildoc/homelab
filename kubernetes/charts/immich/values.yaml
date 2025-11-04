@@ -10,10 +10,10 @@ immich:
             DB_PORT: "5432"
             DB_DATABASE_NAME: "immich"
             DB_USERNAME: "immich_user"
-            # La password viene iniettata tramite ExternalSecret tramite extraEnv
-          # extraEnv va dentro containers.main secondo la bjw-s common library
-          extraEnv:
-            - name: DB_PASSWORD
+            # La password viene iniettata tramite ExternalSecret
+            # Tentativo: proviamo a mettere DB_PASSWORD direttamente in env con valueFrom
+            # NOTA: Questo potrebbe non funzionare se il chart non supporta valueFrom in env
+            DB_PASSWORD:
               valueFrom:
                 secretKeyRef:
                   name: immich-db-secret
