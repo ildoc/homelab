@@ -10,13 +10,16 @@ immich:
             DB_PORT: "5432"
             DB_DATABASE_NAME: "immich"
             DB_USERNAME: "immich_user"
-            # La password viene iniettata tramite ExternalSecret tramite envFrom (vedi sotto)
+            # La password viene iniettata tramite ExternalSecret tramite extraEnv
       
-      # Prova envFrom per iniettare tutto il secret come variabili d'ambiente
-      # Il secret deve avere le chiavi con lo stesso nome delle variabili d'ambiente
-      envFrom:
-        - secretRef:
-            name: immich-db-secret
+      # La bjw-s common library supporta extraEnv a questo livello
+      # extraEnv viene aggiunto alle variabili d'ambiente del container
+      extraEnv:
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: immich-db-secret
+              key: DB_PASSWORD
 
   immich:
     persistence:
