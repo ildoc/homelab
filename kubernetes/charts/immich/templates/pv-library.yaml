@@ -14,7 +14,7 @@ spec:
   accessModes:
     - ReadWriteMany
   persistentVolumeReclaimPolicy: Retain
-  storageClassName: ""
+  storageClassName: "nfs-csi"
   nfs:
     server: {{ .server }}
     path: {{ .path }}

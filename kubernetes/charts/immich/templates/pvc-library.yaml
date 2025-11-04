@@ -15,5 +15,5 @@ spec:
       # è quella del server NFS stesso, indipendentemente da questo valore
       storage: {{ .size | default "1Gi" }}
   volumeName: immich-{{ .name }}-pv
-  storageClassName: ""
+  storageClassName: "nfs-csi"
 {{- end }}
