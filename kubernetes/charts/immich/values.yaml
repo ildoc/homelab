@@ -10,15 +10,13 @@ immich:
             DB_PORT: "5432"
             DB_DATABASE_NAME: "immich"
             DB_USERNAME: "immich_user"
-            # La password viene iniettata tramite ExternalSecret tramite extraEnv (vedi sotto)
+            # La password viene iniettata tramite ExternalSecret tramite envFrom (vedi sotto)
       
-      # extraEnv deve essere a livello di controllers.main, non dentro containers.main
-      extraEnv:
-        - name: DB_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: immich-db-secret
-              key: postgres-password
+      # Prova envFrom per iniettare tutto il secret come variabili d'ambiente
+      # Il secret deve avere le chiavi con lo stesso nome delle variabili d'ambiente
+      envFrom:
+        - secretRef:
+            name: immich-db-secret
 
   immich:
     persistence:
