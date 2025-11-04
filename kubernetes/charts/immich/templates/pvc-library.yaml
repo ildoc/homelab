@@ -1,0 +1,19 @@
+{{- range .Values.nfsVolumes }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .pvc }}
+  namespace: apps
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      # La size è richiesta da Kubernetes ma per NFS è solo formale/documentale
+      # Kubernetes NON applica alcun limite reale - la capacità disponibile
+      # è quella del server NFS stesso, indipendentemente da questo valore
+      storage: {{ .size | default "1Gi" }}
+  volumeName: immich-{{ .name }}-pv
+  storageClassName: ""
+{{- end }}

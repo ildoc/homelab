@@ -1,0 +1,57 @@
+immich:
+  # Configurazione database esterno PostgreSQL
+  # Il chart Immich non include PostgreSQL, deve essere configurato esternamente
+  controllers:
+    main:
+      containers:
+        main:
+          env:
+            # Configurazione database PostgreSQL esterno
+            DB_HOSTNAME: "192.168.0.30"
+            DB_PORT: "5432"
+            DB_DATABASE_NAME: "immich"
+            DB_USERNAME: "immich_user"
+            # La password viene iniettata tramite ExternalSecret tramite extraEnv (vedi sotto)
+          
+          # extraEnv permette di usare valueFrom per i secret (come in kestra)
+          extraEnv:
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: immich-db-secret
+                  key: postgres-password
+
+  persistence:
+    # Main data store per tutte le foto condiviso tra i diversi componenti
+    # Usa il PVC creato dal template che monta la share NFS
+    library:
+      existingClaim: "immich-library-pvc"
+
+  # Disabilita ingress tradizionale (usiamo HTTPRoute)
+  server:
+    ingress:
+      main:
+        enabled: false
+
+# Configurazione HTTPRoute (template del wrapper)
+httproute:
+  hostname: "immich.local.ildoc.it"
+  serviceName: ""  # Lascia vuoto per usare il pattern {release-name}-server, altrimenti specifica il nome
+
+# Configurazione volumi NFS (template del wrapper)
+# Aggiungi qui tutte le cartelle NFS che vuoi montare
+# Ogni volume creerà automaticamente un PV e un PVC
+# NOTA: La size è opzionale per NFS e NON è limitante
+#       Kubernetes richiede questo campo ma NON applica alcun limite reale
+#       La capacità disponibile è quella del server NFS, anche se specifichi 1Gi
+nfsVolumes:
+  - name: library
+    pvc: "immich-library-pvc"
+    server: "192.168.0.123"
+    path: "/mnt/data/foto"
+    # size: 100Gi  # Opzionale - solo formale per NFS
+  # - name: backup
+  #   pvc: "immich-backup-pvc"
+  #   server: "192.168.0.123"
+  #   path: "/mnt/data/backup/Telefono/Fotocamera"
+    # size: 100Gi  # Opzionale - solo formale per NFS

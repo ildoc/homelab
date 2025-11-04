@@ -1,0 +1,25 @@
+{{- range .Values.nfsVolumes }}
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: immich-{{ .name }}-pv
+spec:
+  # La capacity per NFS è solo formale/documentale
+  # Kubernetes NON applica alcun limite - la capacità reale è quella del server NFS
+  # Puoi avere 1Gi qui e terabyte di dati nella share senza problemi
+  capacity:
+    storage: {{ .size | default "1Gi" }}
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: ""
+  nfs:
+    server: {{ .server }}
+    path: {{ .path }}
+  mountOptions:
+    - nfsvers=4.1
+    - hard
+    - noatime
+{{- end }}

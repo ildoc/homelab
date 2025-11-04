@@ -15,6 +15,7 @@
         matrix: "cross/data/apps/matrix:postgres_password"
         sonarqube: "cross/data/apps/sonarqube:postgres_password"
         kestra: "cross/data/apps/kestra:postgres_password"
+        immich: "cross/data/apps/immich:postgres_password"
   
   tasks:
     - name: Include vault secrets loading task
