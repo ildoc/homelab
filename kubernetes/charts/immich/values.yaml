@@ -25,6 +25,14 @@ immich:
       # Usa il PVC creato dal template che monta la share NFS
       library:
         existingClaim: "immich-library-pvc"
+      
+      foto:
+        existingClaim: "immich-foto-pvc"
+        mounthPath: "/mnt/filippo_foto"
+      
+      backup_telefono:
+        existingClaim: "immich-backup-pvc"
+        mounthPath: "/mnt/filippo_backup"
 
   # Componenti Immich
   server:
@@ -52,10 +60,14 @@ nfsVolumes:
   - name: library
     pvc: "immich-library-pvc"
     server: "192.168.0.123"
+    path: "/mnt/data/nfs_shared/immich"
+  - name: foto
+    pvc: "immich-foto-pvc"
+    server: "192.168.0.123"
     path: "/mnt/data/foto"
     # size: 100Gi  # Opzionale - solo formale per NFS
-  # - name: backup
-  #   pvc: "immich-backup-pvc"
-  #   server: "192.168.0.123"
-  #   path: "/mnt/data/backup/Telefono/Fotocamera"
+  - name: backup
+    pvc: "immich-backup-pvc"
+    server: "192.168.0.123"
+    path: "/mnt/data/backup/Telefono/Fotocamera"
     # size: 100Gi  # Opzionale - solo formale per NFS
