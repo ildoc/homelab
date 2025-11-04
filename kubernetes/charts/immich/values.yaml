@@ -1,6 +1,5 @@
 immich:
-  # Configurazione database esterno PostgreSQL
-  # Il chart Immich non include PostgreSQL, deve essere configurato esternamente
+  # Configurazione condivisa tra tutti i componenti Immich
   controllers:
     main:
       containers:
@@ -21,14 +20,16 @@ immich:
                   name: immich-db-secret
                   key: postgres-password
 
-  persistence:
-    # Main data store per tutte le foto condiviso tra i diversi componenti
-    # Usa il PVC creato dal template che monta la share NFS
-    library:
-      existingClaim: "immich-library-pvc"
+  immich:
+    persistence:
+      # Main data store per tutte le foto condiviso tra i diversi componenti
+      # Usa il PVC creato dal template che monta la share NFS
+      library:
+        existingClaim: "immich-library-pvc"
 
-  # Disabilita ingress tradizionale (usiamo HTTPRoute)
+  # Componenti Immich
   server:
+    enabled: true
     ingress:
       main:
         enabled: false
