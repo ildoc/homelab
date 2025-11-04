@@ -19,6 +19,6 @@ spec:
             value: /
       backendRefs:
         - name: {{ if .Values.httproute.serviceName }}{{ .Values.httproute.serviceName }}{{ else }}{{ printf "%s-server" .Release.Name }}{{ end }}
-          port: 3001
+          port: 2283
 {{- end }}
 

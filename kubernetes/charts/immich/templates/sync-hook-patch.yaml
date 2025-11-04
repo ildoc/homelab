@@ -1,25 +1,25 @@
----
-# Sync hook di ArgoCD per aggiungere DB_PASSWORD al deployment
-# Questo Job viene eseguito dopo il sync e patcha il deployment
-apiVersion: batch/v1
-kind: Job
-metadata:
-  name: immich-server-env-patch
-  namespace: apps
-  annotations:
-    argocd.argoproj.io/hook: PostSync
-    argocd.argoproj.io/hook-delete-policy: HookSucceeded
-spec:
-  template:
-    spec:
-      serviceAccountName: default
-      containers:
-      - name: kubectl
-        image: bitnami/kubectl:latest
-        command:
-        - /bin/sh
-        - -c
-        - |
-          kubectl patch deployment immich-server -n apps --type='json' -p='[{"op": "add", "path": "/spec/template/spec/containers/0/env/-", "value": {"name": "DB_PASSWORD", "valueFrom": {"secretKeyRef": {"name": "immich-db-secret", "key": "DB_PASSWORD"}}}}]'
-      restartPolicy: OnFailure
+# ---
+# # Sync hook di ArgoCD per aggiungere DB_PASSWORD al deployment
+# # Questo Job viene eseguito dopo il sync e patcha il deployment
+# apiVersion: batch/v1
+# kind: Job
+# metadata:
+#   name: immich-server-env-patch
+#   namespace: apps
+#   annotations:
+#     argocd.argoproj.io/hook: PostSync
+#     argocd.argoproj.io/hook-delete-policy: HookSucceeded
+# spec:
+#   template:
+#     spec:
+#       serviceAccountName: default
+#       containers:
+#       - name: kubectl
+#         image: bitnami/kubectl:latest
+#         command:
+#         - /bin/sh
+#         - -c
+#         - |
+#           kubectl patch deployment immich-server -n apps --type='json' -p='[{"op": "add", "path": "/spec/template/spec/containers/0/env/-", "value": {"name": "DB_PASSWORD", "valueFrom": {"secretKeyRef": {"name": "immich-db-secret", "key": "DB_PASSWORD"}}}}]'
+#       restartPolicy: OnFailure
 
