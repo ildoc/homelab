@@ -11,14 +11,14 @@ immich:
             DB_DATABASE_NAME: "immich"
             DB_USERNAME: "immich_user"
             # La password viene iniettata tramite ExternalSecret tramite extraEnv (vedi sotto)
-          
-          # extraEnv permette di usare valueFrom per i secret (come in kestra)
-          extraEnv:
-            - name: DB_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: immich-db-secret
-                  key: postgres-password
+      
+      # extraEnv deve essere a livello di controllers.main, non dentro containers.main
+      extraEnv:
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: immich-db-secret
+              key: postgres-password
 
   immich:
     persistence:
@@ -33,6 +33,10 @@ immich:
     ingress:
       main:
         enabled: false
+
+  # Abilita Valkey (Redis) incluso nel chart - necessario per Immich
+  valkey:
+    enabled: true
 
 # Configurazione HTTPRoute (template del wrapper)
 httproute:

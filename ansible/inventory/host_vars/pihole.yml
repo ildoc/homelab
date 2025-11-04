@@ -33,8 +33,8 @@ pihole:
     - { ip: 192.168.0.81, domain: "bazarr.local.ildoc.it"}
     - { ip: 192.168.0.81, domain: "flaresolverr.local.ildoc.it"}
     - { ip: 192.168.0.81, domain: "grafana.local.ildoc.it"}
-    - { ip: 192.168.0.81, domain: "kestra.local.ildoc.it"}
-    - { ip: 192.168.0.81, domain: "n8n.local.ildoc.it"}
+    # - { ip: 192.168.0.81, domain: "kestra.local.ildoc.it"}
+    # - { ip: 192.168.0.81, domain: "n8n.local.ildoc.it"}
     - { ip: 192.168.0.81, domain: "nut.local.ildoc.it"}
     - { ip: 192.168.0.81, domain: "prometheus.local.ildoc.it"}
     - { ip: 192.168.0.81, domain: "prowlarr.local.ildoc.it"}
@@ -44,6 +44,7 @@ pihole:
     - { ip: 192.168.0.81, domain: "sonarr.local.ildoc.it"}
     - { ip: 192.168.0.81, domain: "speedtest.local.ildoc.it"}
     - { ip: 192.168.0.81, domain: "tools.local.ildoc.it"}
+    - { ip: 192.168.0.81, domain: "immich.local.ildoc.it"}
     
     - { ip: 192.168.0.81, domain: "pocmanager.local.ildoc.it"}
     - { ip: 192.168.0.81, domain: "pocsender.local.ildoc.it"}
