@@ -8,7 +8,7 @@ immich:
             # Configurazione database PostgreSQL esterno
             DB_HOSTNAME: "192.168.0.30"
             DB_PORT: "5432"
-            DB_DATABASE_NAME: "immich"
+            DB_DATABASE_NAME: "immich_db"
             DB_USERNAME: "immich_user"
             # La password viene iniettata tramite ExternalSecret
             # Tentativo: proviamo a mettere DB_PASSWORD direttamente in env con valueFrom
