@@ -284,21 +284,3 @@ smtp:
 # Outpost per forward auth (proxy provider)
 outpost:
   replicas: 2
-  image:
-    tag: "2025.8.4"
-  resources:
-    requests:
-      cpu: 50m
-      memory: 128Mi
-    limits:
-      cpu: 200m
-      memory: 256Mi
-  affinity:
-    podAntiAffinity:
-      preferredDuringSchedulingIgnoredDuringExecution:
-        - weight: 100
-          podAffinityTerm:
-            labelSelector:
-              matchLabels:
-                app.kubernetes.io/name: authentik-proxy-outpost
-            topologyKey: kubernetes.io/hostname
