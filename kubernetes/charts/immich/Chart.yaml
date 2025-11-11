@@ -4,6 +4,6 @@ name: immich
 version: 1.0.0
 dependencies:
   - name: immich
-    version: "0.10.1"
+    version: "0.10.2"
     repository: https://immich-app.github.io/immich-charts
 
