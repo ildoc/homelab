@@ -9,7 +9,7 @@
     project_path: .
 
 - name: Include update docker-compose
-  ansible.builtin.include_tasks: "{{ tasks_dir }}/docker/update-compose-template.yaml"
+  ansible.builtin.include_tasks: "{{ tasks_dir }}/docker/update-compose.yaml"
   vars:
     update_compose_remote_path: "{{ remote_path }}"
     template_file_name: "{{ local_path }}"

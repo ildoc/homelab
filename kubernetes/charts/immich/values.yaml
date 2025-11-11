@@ -33,35 +33,35 @@ immich:
     # I volumi aggiuntivi devono essere definiti anche qui per essere montati nel server
     # Il merge del template server potrebbe non includere i volumi da immich.immich.persistence
     persistence:
-      foto:
-        enabled: true
-        type: persistentVolumeClaim
-        existingClaim: immich-foto-pvc
-        globalMounts:
-          - path: /mnt/filippo_foto
-      backup:
-        enabled: true
-        type: persistentVolumeClaim
-        existingClaim: immich-backup-pvc
-        globalMounts:
-          - path: /mnt/filippo_backup
+      # foto:
+      #   enabled: true
+      #   type: persistentVolumeClaim
+      #   existingClaim: immich-foto-pvc
+      #   globalMounts:
+      #     - path: /mnt/filippo_foto
+      # backup:
+      #   enabled: true
+      #   type: persistentVolumeClaim
+      #   existingClaim: immich-backup-pvc
+      #   globalMounts:
+      #     - path: /mnt/filippo_backup
 
   # Abilita Valkey (Redis) incluso nel chart - necessario per Immich
   valkey:
     enabled: true
     persistence:
-      foto:
-        enabled: true
-        type: persistentVolumeClaim
-        existingClaim: immich-foto-pvc
-        globalMounts:
-          - path: /mnt/filippo_foto
-      backup:
-        enabled: true
-        type: persistentVolumeClaim
-        existingClaim: immich-backup-pvc
-        globalMounts:
-          - path: /mnt/filippo_backup
+      # foto:
+      #   enabled: true
+      #   type: persistentVolumeClaim
+      #   existingClaim: immich-foto-pvc
+      #   globalMounts:
+      #     - path: /mnt/filippo_foto
+      # backup:
+      #   enabled: true
+      #   type: persistentVolumeClaim
+      #   existingClaim: immich-backup-pvc
+      #   globalMounts:
+      #     - path: /mnt/filippo_backup
 
   # Machine Learning component
   machine-learning:
@@ -74,18 +74,18 @@ immich:
         existingClaim: immich-library-pvc
         globalMounts:
           - path: /data
-      foto:
-        enabled: true
-        type: persistentVolumeClaim
-        existingClaim: immich-foto-pvc
-        globalMounts:
-          - path: /mnt/filippo_foto
-      backup:
-        enabled: true
-        type: persistentVolumeClaim
-        existingClaim: immich-backup-pvc
-        globalMounts:
-          - path: /mnt/filippo_backup
+      # foto:
+      #   enabled: true
+      #   type: persistentVolumeClaim
+      #   existingClaim: immich-foto-pvc
+      #   globalMounts:
+      #     - path: /mnt/filippo_foto
+      # backup:
+      #   enabled: true
+      #   type: persistentVolumeClaim
+      #   existingClaim: immich-backup-pvc
+      #   globalMounts:
+      #     - path: /mnt/filippo_backup
 
 # Configurazione HTTPRoute (template del wrapper)
 httproute:
@@ -103,13 +103,13 @@ nfsVolumes:
     pvc: "immich-library-pvc"
     server: "192.168.0.123"
     path: "/mnt/data/nfs_shared/immich"
-  - name: foto
-    pvc: "immich-foto-pvc"
-    server: "192.168.0.123"
-    path: "/mnt/data/foto"
+  # - name: foto
+  #   pvc: "immich-foto-pvc"
+  #   server: "192.168.0.123"
+  #   path: "/mnt/data/foto"
     # size: 100Gi  # Opzionale - solo formale per NFS
-  - name: backup
-    pvc: "immich-backup-pvc"
-    server: "192.168.0.123"
-    path: "/mnt/data/backup/Telefono/Fotocamera"
+  # - name: backup
+  #   pvc: "immich-backup-pvc"
+  #   server: "192.168.0.123"
+  #   path: "/mnt/data/backup/Telefono/Fotocamera"
     # size: 100Gi  # Opzionale - solo formale per NFS

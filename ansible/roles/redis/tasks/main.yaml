@@ -58,7 +58,7 @@
     project_path: /root
 
 - name: Deploy docker-compose
-  ansible.builtin.include_tasks: "{{ tasks_dir }}/docker/update-compose-unified.yaml"
+  ansible.builtin.include_tasks: "{{ tasks_dir }}/docker/update-compose.yaml"
   vars:
     update_compose_remote_path: "{{ remote_path }}"
     template_file_name: "{{ template_file }}"
