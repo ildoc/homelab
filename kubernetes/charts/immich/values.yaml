@@ -4,6 +4,8 @@ immich:
     main:
       containers:
         main:
+          image:
+            tag: "v2.2.3"
           env:
             # Configurazione database PostgreSQL esterno
             DB_HOSTNAME: "192.168.0.30"
@@ -19,8 +21,6 @@ immich:
 
   immich:
     persistence:
-      # Main data store per tutte le foto condiviso tra i diversi componenti
-      # Usa il PVC creato dal template che monta la share NFS
       library:
         existingClaim: "immich-library-pvc"
 
@@ -30,43 +30,14 @@ immich:
     ingress:
       main:
         enabled: false
-    # I volumi aggiuntivi devono essere definiti anche qui per essere montati nel server
-    # Il merge del template server potrebbe non includere i volumi da immich.immich.persistence
-    persistence:
-      # foto:
-      #   enabled: true
-      #   type: persistentVolumeClaim
-      #   existingClaim: immich-foto-pvc
-      #   globalMounts:
-      #     - path: /mnt/filippo_foto
-      # backup:
-      #   enabled: true
-      #   type: persistentVolumeClaim
-      #   existingClaim: immich-backup-pvc
-      #   globalMounts:
-      #     - path: /mnt/filippo_backup
 
   # Abilita Valkey (Redis) incluso nel chart - necessario per Immich
   valkey:
     enabled: true
-    persistence:
-      # foto:
-      #   enabled: true
-      #   type: persistentVolumeClaim
-      #   existingClaim: immich-foto-pvc
-      #   globalMounts:
-      #     - path: /mnt/filippo_foto
-      # backup:
-      #   enabled: true
-      #   type: persistentVolumeClaim
-      #   existingClaim: immich-backup-pvc
-      #   globalMounts:
-      #     - path: /mnt/filippo_backup
-
+    
   # Machine Learning component
   machine-learning:
     enabled: true
-    # Condividi i volumi anche con machine-learning per permettere l'accesso alle librerie esterne
     persistence:
       library:
         enabled: true
@@ -74,42 +45,16 @@ immich:
         existingClaim: immich-library-pvc
         globalMounts:
           - path: /data
-      # foto:
-      #   enabled: true
-      #   type: persistentVolumeClaim
-      #   existingClaim: immich-foto-pvc
-      #   globalMounts:
-      #     - path: /mnt/filippo_foto
-      # backup:
-      #   enabled: true
-      #   type: persistentVolumeClaim
-      #   existingClaim: immich-backup-pvc
-      #   globalMounts:
-      #     - path: /mnt/filippo_backup
+      
 
 # Configurazione HTTPRoute (template del wrapper)
 httproute:
   hostname: "immich.local.ildoc.it"
-  serviceName: ""  # Lascia vuoto per usare il pattern {release-name}-server, altrimenti specifica il nome
+  serviceName: ""
 
-# Configurazione volumi NFS (template del wrapper)
-# Aggiungi qui tutte le cartelle NFS che vuoi montare
-# Ogni volume creerà automaticamente un PV e un PVC
-# NOTA: La size è opzionale per NFS e NON è limitante
-#       Kubernetes richiede questo campo ma NON applica alcun limite reale
-#       La capacità disponibile è quella del server NFS, anche se specifichi 1Gi
 nfsVolumes:
   - name: library
     pvc: "immich-library-pvc"
     server: "192.168.0.123"
     path: "/mnt/data/nfs_shared/immich"
-  # - name: foto
-  #   pvc: "immich-foto-pvc"
-  #   server: "192.168.0.123"
-  #   path: "/mnt/data/foto"
-    # size: 100Gi  # Opzionale - solo formale per NFS
-  # - name: backup
-  #   pvc: "immich-backup-pvc"
-  #   server: "192.168.0.123"
-  #   path: "/mnt/data/backup/Telefono/Fotocamera"
-    # size: 100Gi  # Opzionale - solo formale per NFS
+
