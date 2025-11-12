@@ -1,0 +1,23 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bentopdf
+  namespace: apps
+spec:
+  selector:
+    matchLabels:
+      app: bentopdf
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      labels:
+        app: bentopdf
+    spec:
+      containers:
+        - name: bentopdf
+          image: bentopdf/bentopdf:v1.6.1
+          resources:
+            limits:
+              cpu: 50m
+              memory: 500Mi
