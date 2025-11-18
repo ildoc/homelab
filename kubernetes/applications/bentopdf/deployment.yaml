@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: bentopdf
-          image: bentopdf/bentopdf:v1.6.1
+          image: bentopdf/bentopdf-simple:v1.6.1
           resources:
             limits:
               cpu: 50m
