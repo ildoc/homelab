@@ -283,4 +283,15 @@ smtp:
 
 # Outpost per forward auth (proxy provider)
 outpost:
+  enabled: false  # Imposta a true per abilitare l'outpost proxy
   replicas: 2
+  image:
+    tag: ""  # Se vuoto, usa .Chart.AppVersion come default
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+  affinity: {}  # Opzionale, lascia vuoto o configura secondo necessità
