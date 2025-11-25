@@ -27,7 +27,7 @@ services:
   #     - DOCKER_HOST=unix:///var/run/docker.sock
 
   nginx:
-    image: nginx:stable@sha256:10f4f3e09ace179005137b811167c8dc03c089b60059236d45c340f1f1e56ac3
+    image: nginx:stable@sha256:3048d7a6bad5fb1a1a2516249e570b85645a00411bad6b3126983577f040bb5f
     container_name: nginx
     depends_on:
       - gitlab
@@ -40,7 +40,7 @@ services:
     restart: always
 
   docker-cleanup:
-    image: docker:latest@sha256:24173119fa6d1b5b4a27ab164fa7863deb66574ee5b90fef3b85dc888ef1a7e6
+    image: docker:latest@sha256:30249d28c36eccbbfe17cb3ce0da91950ff53769de9dfcb90869f018675c3667
     container_name: docker-cleanup
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
