@@ -1,9 +1,3 @@
-gateway:
-  enabled: true
-  name: cilium-gateway
-  namespace: kube-system
-  hostname: argocd.local.ildoc.it
-
 argo-cd:
   global:
     domain: argocd.local.ildoc.it
@@ -20,6 +14,14 @@ argo-cd:
     replicas: 2
     ingress:
       enabled: false
+    httpRoute:
+      enabled: true
+      parentRefs:
+        - name: cilium-gateway
+          namespace: kube-system
+          sectionName: https
+      hostnames:
+        - argocd.local.ildoc.it
 
   repoServer:
     replicas: 2
