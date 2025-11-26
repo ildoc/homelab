@@ -23,7 +23,7 @@ spec:
             - /bin/sh
             - -c
             - |
-              echo "postgres://miniflux:${POSTGRES_PASSWORD}@192.168.0.30/miniflux?sslmode=disable" > /shared/database_url
+              echo "postgres://miniflux_user:${POSTGRES_PASSWORD}@192.168.0.30/miniflux_db?sslmode=disable" > /shared/database_url
               echo "✓ DATABASE_URL prepared"
           env:
             - name: POSTGRES_PASSWORD
