@@ -5,18 +5,18 @@
 - name: Set variables
   ansible.builtin.set_fact:
     remote_path: ~/docker-compose.yml
-    local_path: docker-compose.yml
+    template_file: docker-compose.yml
     project_path: .
 
 - name: Include update docker-compose
   ansible.builtin.include_tasks: "{{ tasks_dir }}/docker/update-compose.yaml"
   vars:
     update_compose_remote_path: "{{ remote_path }}"
-    update_compose_local_path: "{{ local_path }}"
+    template_file_name: "{{ template_file }}"
     update_compose_project_path: "{{ project_path }}"
 
 - name: Copy init-vault.sh
-  ansible.builtin.copy:
+  ansible.builtin.template:
     src: init-vault.sh
     dest: ~/init-vault.sh
     mode: '0755'
@@ -26,15 +26,33 @@
     path: ~/config/vault-config.json
   register: remote_config
 
-- name: Read local vault-config.json
-  ansible.builtin.stat:
-    path: vault-config.json
-  register: local_config
-  delegate_to: localhost
+- name: Read remote file content
+  ansible.builtin.slurp:
+    src: ~/config/vault-config.json
+  register: remote_config_content
+  when: remote_config.stat.exists
+
+- name: Render template content
+  ansible.builtin.set_fact:
+    template_config_raw: "{{ lookup('template', 'vault-config.json') }}"
+
+- name: Normalize template content to string
+  ansible.builtin.set_fact:
+    template_config_rendered: "{{ (template_config_raw | string).strip() }}"
+
+- name: Set default remote content when file doesn't exist
+  ansible.builtin.set_fact:
+    remote_content_decoded: ""
+  when: not remote_config.stat.exists
+
+- name: Decode remote content when file exists
+  ansible.builtin.set_fact:
+    remote_content_decoded: "{{ (remote_config_content.content | b64decode | string).strip() }}"
+  when: remote_config.stat.exists
 
 - name: Check file content and set variables
   ansible.builtin.set_fact:
-    config_different: "{{ not remote_config.stat.exists or remote_config.stat.checksum != local_config.stat.checksum }}"
+    config_different: "{{ not remote_config.stat.exists or (remote_content_decoded != template_config_rendered) }}"
 
 - name: Are they different?
   ansible.builtin.debug:
@@ -50,7 +68,7 @@
         mode: '0755'
 
     - name: Copy vault-config.json
-      ansible.builtin.copy:
+      ansible.builtin.template:
         src: vault-config.json
         dest: ~/config/vault-config.json
         mode: '0644'
@@ -76,35 +94,3 @@
   until: vault_health.status in [200, 429, 473, 501]
   retries: 10
   delay: 3
-
-- name: Check if Vault is initialized
-  ansible.builtin.shell: docker exec vault vault status -format=json
-  register: vault_status
-  ignore_errors: true
-  changed_when: false
-
-- name: Display Vault initialization instructions
-  ansible.builtin.debug:
-    msg: |
-      Vault is not initialized. Please run:
-      
-      docker exec -it vault sh
-      vault operator init
-      
-      Save the unseal keys and root token securely!
-      Then unseal Vault with:
-      
-      vault operator unseal <key1>
-      vault operator unseal <key2>
-      vault operator unseal <key3>
-      
-      After unsealing, configure OIDC by running init-vault.sh with:
-      
-      export VAULT_ADDR=http://127.0.0.1:8200
-      export VAULT_TOKEN=<your-root-token>
-      export OIDC_DISCOVERY_URL="https://auth.ildoc.it/application/o/vault/"
-      export OIDC_CLIENT_ID="<client-id-from-authentik>"
-      export OIDC_CLIENT_SECRET="<client-secret-from-authentik>"
-      
-      ./init-vault.sh
-  when: vault_status.rc != 0 or (vault_status.stdout | from_json).initialized == false
