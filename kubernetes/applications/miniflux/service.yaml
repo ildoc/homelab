@@ -4,8 +4,6 @@ kind: Service
 metadata:
   name: miniflux
   namespace: apps
-  annotations:
-    argocd.argoproj.io/sync-wave: "4"
 spec:
   type: ClusterIP
   ports:
