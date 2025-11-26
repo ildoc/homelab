@@ -46,6 +46,7 @@ pihole:
     - { ip: 192.168.0.81, domain: "tools.local.ildoc.it"}
     - { ip: 192.168.0.81, domain: "immich.local.ildoc.it"}
     - { ip: 192.168.0.81, domain: "pdf.local.ildoc.it"}
+    - { ip: 192.168.0.81, domain: "miniflux.local.ildoc.it"}
     
     - { ip: 192.168.0.81, domain: "pocmanager.local.ildoc.it"}
     - { ip: 192.168.0.81, domain: "pocsender.local.ildoc.it"}
