@@ -3,7 +3,7 @@ sonarqube:
   community:
     enabled: true
     # Se vuoi una versione specifica, decommenta e specifica:
-    buildNumber: "25.9.0.114957"
+    buildNumber: "25.11.0.114957"
 
   # Disabilita il PostgreSQL interno
   postgresql:
