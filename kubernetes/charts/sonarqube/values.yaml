@@ -3,7 +3,7 @@ sonarqube:
   community:
     enabled: true
     # Se vuoi una versione specifica, decommenta e specifica:
-    # buildNumber: "25.9.0.112764"
+    buildNumber: "25.9.0.114957"
 
   # Disabilita il PostgreSQL interno
   postgresql:
@@ -22,7 +22,6 @@ sonarqube:
   monitoringPasscodeSecretName: "sonarqube-secrets"
   monitoringPasscodeSecretKey: "monitoring-passcode"
 
-  # Timezone
   env:
     - name: TZ
       value: "Europe/Rome"
