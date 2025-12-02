@@ -71,6 +71,10 @@ nginx['proxy_set_headers'] = {
 ## GitLab Rails Settings
 ################################################################################
 
+# Database connection pool - ottimizza il numero di connessioni
+# Dovrebbe essere >= al numero di thread Puma per worker
+gitlab_rails['db_pool'] = 10
+
 # Disabilita funzionalità non necessarie per risparmiare risorse
 gitlab_rails['gitlab_default_projects_features_snippets'] = false
 gitlab_rails['gitlab_default_projects_features_wiki'] = false
@@ -140,8 +144,10 @@ puma['per_worker_max_memory_mb'] = 1024  # 1GB per worker
 ## PostgreSQL Settings
 ################################################################################
 
-# Riduci connessioni massime per risparmiare memoria
-postgresql['max_connections'] = 50
+# Aumenta connessioni massime per evitare errori "connection slots reserved"
+# Formula: (puma_workers * puma_threads) + (sidekiq_concurrency * 2) + 20 buffer
+# Con 1 worker Puma (4 thread) + 10 Sidekiq = 4 + 20 + 20 = ~44, quindi 100 è sicuro
+postgresql['max_connections'] = 100
 
 # Shared buffers - raccomandato 1/4 della RAM totale (max 14GB)
 # Per container Docker, il default di 256MB è adeguato
@@ -207,6 +213,10 @@ gitaly['configuration'] = {
 
 # Numero di worker Sidekiq - ridotto per ambienti con poca memoria
 sidekiq['max_concurrency'] = 10
+
+# Database connection pool per Sidekiq
+# Dovrebbe essere >= a max_concurrency
+sidekiq['db_pool_size'] = 15
 
 # Memory killer per Sidekiq
 sidekiq['memory_killer_max_memory_growth_kb'] = 300000  # ~300MB
