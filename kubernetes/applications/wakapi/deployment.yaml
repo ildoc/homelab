@@ -46,7 +46,7 @@ spec:
                   name: wakapi-secrets
                   key: oidc_client_secret
             - name: WAKAPI_OIDC_PROVIDERS_0_ENDPOINT
-              value: "https://authentik.local.ildoc.it/application/o/wakapi/"
+              value: "https://auth.local.ildoc.it/application/o/wakapi/"
 
 
             - name: WAKAPI_PASSWORD_SALT
