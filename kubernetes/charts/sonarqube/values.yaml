@@ -1,5 +1,4 @@
 sonarqube:
-  # Community Build edition
   community:
     enabled: true
     # Se vuoi una versione specifica, decommenta e specifica:
@@ -54,12 +53,8 @@ sonarqube:
     externalPort: 9000
     internalPort: 9000
 
-  # Deployment strategy (usa il default del chart)
-  deploymentStrategy: {}
-  
   replicaCount: 1
 
-  # HTTPRoute tramite Gateway API (nativo del chart!)
   httproute:
     enabled: true
     gateway: "cilium-gateway"
@@ -67,11 +62,9 @@ sonarqube:
     hostnames:
       - "sonar.local.ildoc.it"
 
-  # Disabilita ingress tradizionale
   ingress:
     enabled: false
 
-  # Disabilita nginx bundled
   ingress-nginx:
     enabled: false
 
@@ -87,7 +80,6 @@ sonarqube:
     securityContext:
       privileged: false
 
-  # Service Account
   serviceAccount:
     create: true
     automountToken: false
