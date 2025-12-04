@@ -22,11 +22,38 @@ spec:
           env:
             - name: WAKAPI_PORT 
               value: "3000"
+            - name: WAKAPI_DISABLE_FRONTPAGE
+              value: "true"
+            - name: WAKAPI_ALLOW_SIGNUP
+              value: "false"
+            - name: WAKAPI_OIDC_ALLOW_SIGNUP
+              value: "true"
+            - name: WAKAPI_LEADERBOARD_ENABLED
+              value: "false"
+
+            - name: WAKAPI_OIDC_PROVIDERS_0_NAME
+              value: "authentik"
+            - name: WAKAPI_OIDC_PROVIDERS_0_DISPLAY_NAME
+              value: "Authentik"
+            - name: WAKAPI_OIDC_PROVIDERS_0_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: wakapi-secrets
+                  key: oidc_client_id
+            - name: WAKAPI_OIDC_PROVIDERS_0_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: wakapi-secrets
+                  key: oidc_client_secret
+            - name: WAKAPI_OIDC_PROVIDERS_0_ENDPOINT
+              value: "https://authentik.local.ildoc.it/application/o/wakapi/"
+
+
             - name: WAKAPI_PASSWORD_SALT
               valueFrom:
                 secretKeyRef:
                   name: wakapi-secrets
-                  key: WAKAPI_PASSWORD_SALT
+                  key: password_salt
           volumeMounts:
             - name: data
               mountPath: /data
