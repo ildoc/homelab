@@ -19,9 +19,12 @@ spec:
       containers:
         - name: wakapi
           image: ghcr.io/muety/wakapi:2.16.1
-          envFrom:
-            - secretRef:
-                name: wakapi-secrets
+          env:
+            - name: WAKAPI_PASSWORD_SALT
+              valueFrom:
+                secretKeyRef:
+                  name: wakapi-secrets
+                  key: WAKAPI_PASSWORD_SALT
           volumeMounts:
             - name: data
               mountPath: /data
