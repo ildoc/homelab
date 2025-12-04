@@ -30,6 +30,8 @@ spec:
               value: "true"
             - name: WAKAPI_LEADERBOARD_ENABLED
               value: "false"
+            - name: WAKAPI_PUBLIC_URL
+              value: "https://wakapi.local.ildoc.it"
 
             - name: WAKAPI_OIDC_PROVIDERS_0_NAME
               value: "authentik"
