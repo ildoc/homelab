@@ -20,6 +20,8 @@ spec:
         - name: wakapi
           image: ghcr.io/muety/wakapi:2.16.1
           env:
+            - name: WAKAPI_PORT 
+              value: "3000"
             - name: WAKAPI_PASSWORD_SALT
               valueFrom:
                 secretKeyRef:
