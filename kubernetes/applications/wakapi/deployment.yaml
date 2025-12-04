@@ -1,0 +1,35 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wakapi
+  namespace: apps
+spec:
+  selector:
+    matchLabels:
+      app: wakapi
+  strategy:
+    type: Recreate
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      labels:
+        app: wakapi
+    spec:
+      containers:
+        - name: wakapi
+          image: ghcr.io/muety/wakapi:2.16.1
+          envFrom:
+            - secretRef:
+                name: wakapi-secrets
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          resources:
+            limits:
+              cpu: 50m
+              memory: 500Mi
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: wakapi

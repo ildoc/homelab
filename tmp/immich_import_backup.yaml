@@ -1,0 +1,97 @@
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: immich-import-backup
+  namespace: apps
+spec:
+  # Numero massimo di retry in caso di fallimento
+  backoffLimit: 2
+  # Tempo massimo per completare il job (8 ore)
+  activeDeadlineSeconds: 28800
+  template:
+    spec:
+      containers:
+      - name: immich-cli
+        image: node:20-alpine
+        command:
+          - sh
+          - -c
+          - |
+            echo "=== Inizio import Immich ==="
+            echo "Data/Ora: $(date)"
+            
+            # Verifica che il volume sia montato
+            if [ ! -d "/mnt/filippo_backup" ]; then
+              echo "ERRORE: Directory /mnt/filippo_backup non trovata!"
+              exit 1
+            fi
+            
+            echo "Verifica accesso al volume..."
+            ls -la /mnt/filippo_backup | head -5
+            echo ""
+            
+            echo "Conteggio file da processare..."
+            FILE_COUNT=$(find /mnt/filippo_backup -type f | wc -l)
+            echo "Totale file trovati: ${FILE_COUNT}"
+            echo ""
+            
+            # Verifica configurazione
+            echo "Configurazione Immich:"
+            echo "  URL: ${IMMICH_INSTANCE_URL}"
+            echo "  API Key: ${IMMICH_API_KEY:0:10}... (primi 10 caratteri)"
+            echo ""
+            
+            # Installa la CLI se non presente
+            if ! command -v immich &> /dev/null; then
+              echo "Installazione Immich CLI..."
+              npm install -g @immich/cli
+            fi
+            
+            # Verifica versione CLI
+            echo "Versione Immich CLI:"
+            immich --version || echo "Versione non disponibile"
+            echo ""
+            
+            echo "=== Inizio upload (questo può richiedere molto tempo con ${FILE_COUNT} file) ==="
+            echo "Data/Ora inizio: $(date)"
+            
+            # La nuova CLI usa variabili d'ambiente
+            # Nota: "Crawling for assets..." è normale e può richiedere molto tempo con molti file
+            # La CLI scannerà tutti i file prima di iniziare l'upload
+            immich upload \
+              --recursive \
+              /mnt/filippo_backup
+            
+            echo ""
+            echo "=== Import completato! ==="
+            echo "Data/Ora fine: $(date)"
+        env:
+          # La nuova CLI di Immich usa queste variabili d'ambiente
+          - name: IMMICH_INSTANCE_URL
+            value: "http://immich-server:2283/api"
+          - name: IMMICH_API_KEY
+            value: "CzaGbhWdTh6xFoixZgfSzhQcAifGB1PlsqhGEhlSA"
+        volumeMounts:
+          - name: foto
+            mountPath: /mnt/filippo_backup
+            readOnly: true
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "2000m"
+      
+      volumes:
+        - name: foto
+          nfs:
+            server: 192.168.0.123
+            path: /mnt/data/backup/Telefono/Fotocamera
+      
+      restartPolicy: OnFailure
+      
+      # Opzionale: esegui sul nodo preferito se hai configurazioni specifiche
+      # nodeSelector:
+      #   kubernetes.io/hostname: "nome-nodo"

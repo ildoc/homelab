@@ -1,0 +1,139 @@
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: immich-import-foto
+  namespace: apps
+spec:
+  # Numero massimo di retry in caso di fallimento
+  backoffLimit: 2
+  # Tempo massimo per completare il job (8 ore)
+  activeDeadlineSeconds: 28800
+  template:
+    spec:
+      containers:
+      - name: immich-cli
+        image: node:20-alpine
+        command:
+          - sh
+          - -c
+          - |
+            echo "=== Inizio import Immich ==="
+            echo "Data/Ora: $(date)"
+            
+            # Verifica che il volume sia montato
+            if [ ! -d "/mnt/filippo_foto" ]; then
+              echo "ERRORE: Directory /mnt/filippo_foto non trovata!"
+              exit 1
+            fi
+            
+            echo "Verifica accesso al volume..."
+            ls -la /mnt/filippo_foto | head -5
+            echo ""
+            
+            echo "Conteggio file da processare..."
+            FILE_COUNT=$(find /mnt/filippo_foto -type f | wc -l)
+            echo "Totale file trovati: ${FILE_COUNT}"
+            echo ""
+            
+            # Verifica configurazione
+            echo "Configurazione Immich:"
+            echo "  URL: ${IMMICH_INSTANCE_URL}"
+            echo "  API Key: ${IMMICH_API_KEY:0:10}... (primi 10 caratteri)"
+            if [ -n "${IMMICH_ALBUM_NAME}" ]; then
+              echo "  Album: ${IMMICH_ALBUM_NAME}"
+            else
+              echo "  Album: nessuno (le foto verranno caricate senza album)"
+            fi
+            echo ""
+            
+            # Installa la CLI se non presente
+            if ! command -v immich &> /dev/null; then
+              echo "Installazione Immich CLI..."
+              npm install -g @immich/cli
+            fi
+            
+            # Verifica versione CLI
+            echo "Versione Immich CLI:"
+            immich --version || echo "Versione non disponibile"
+            echo ""
+            
+            echo "=== Inizio upload (questo può richiedere molto tempo con ${FILE_COUNT} file) ==="
+            echo "Data/Ora inizio: $(date)"
+            echo ""
+            echo "NOTA: La fase 'Crawling for assets...' può richiedere molto tempo."
+            echo "Con ${FILE_COUNT} file, potrebbe richiedere 30-60+ minuti solo per la scansione."
+            echo "Il processo è attivo se vedi uso di CPU/RAM nel nodo."
+            echo ""
+            
+            # Avvia un monitor in background che mostra periodicamente che il processo è vivo
+            (
+              while true; do
+                sleep 60
+                echo "[$(date)] Processo ancora attivo... (CPU/RAM in uso = processo funzionante)"
+              done
+            ) &
+            MONITOR_PID=$!
+            
+            # La nuova CLI usa variabili d'ambiente
+            # IMMICH_LOG_LEVEL=debug abilita output dettagliato
+            # Nota: "Crawling for assets..." è normale e può richiedere molto tempo con molti file
+            # La CLI scannerà tutti i file prima di iniziare l'upload
+            # Se IMMICH_ALBUM_NAME è impostato, le foto verranno aggiunte a quell'album
+            # (l'album verrà creato automaticamente se non esiste)
+            if [ -n "${IMMICH_ALBUM_NAME}" ] && [ "${IMMICH_ALBUM_NAME}" != "" ]; then
+              echo "Le foto verranno aggiunte all'album: ${IMMICH_ALBUM_NAME}"
+              immich upload \
+                --recursive \
+                --album-name "${IMMICH_ALBUM_NAME}" \
+                /mnt/filippo_foto
+            else
+              echo "Le foto verranno caricate senza album"
+              immich upload \
+                --recursive \
+                /mnt/filippo_foto
+            fi
+            
+            # Termina il monitor quando il comando finisce
+            kill $MONITOR_PID 2>/dev/null || true
+            
+            echo ""
+            echo "=== Import completato! ==="
+            echo "Data/Ora fine: $(date)"
+        env:
+          # La nuova CLI di Immich usa queste variabili d'ambiente
+          - name: IMMICH_INSTANCE_URL
+            value: "http://immich-server:2283/api"
+          - name: IMMICH_API_KEY
+            value: "CzaGbhWdTh6xFoixZgfSzhQcAifGB1PlsqhGEhlSA"
+          # Abilita logging dettagliato per vedere più output
+          - name: IMMICH_LOG_LEVEL
+            value: "debug"
+          # Opzionale: nome dell'album dove importare le foto
+          # Se non specificato, le foto verranno caricate senza album
+          # L'album verrà creato automaticamente se non esiste
+          - name: IMMICH_ALBUM_NAME
+            value: ""  # Sostituisci con il nome dell'album desiderato, es: "Foto Import"
+        volumeMounts:
+          - name: foto
+            mountPath: /mnt/filippo_foto
+            readOnly: true
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "2000m"
+      
+      volumes:
+        - name: foto
+          nfs:
+            server: 192.168.0.123
+            path: /mnt/data/foto
+      
+      restartPolicy: OnFailure
+      
+      # Opzionale: esegui sul nodo preferito se hai configurazioni specifiche
+      # nodeSelector:
+      #   kubernetes.io/hostname: "nome-nodo"
