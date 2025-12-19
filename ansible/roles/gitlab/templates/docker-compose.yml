@@ -1,7 +1,7 @@
 ---
 services:
   gitlab:
-    image: gitlab/gitlab-ce:18.6.1-ce.0@sha256:4a1765618d5b3aea9f9ae5efdb4f15a1880f0cab16801116f99c611080945c56
+    image: gitlab/gitlab-ce:18.7.0-ce.0@sha256:9c17686c3cd1b72f52282543d2dcf7c96add29b4698ec367bfb1455be8f13ce0
     container_name: gitlab
     hostname: 'gitlab'
     ports:
