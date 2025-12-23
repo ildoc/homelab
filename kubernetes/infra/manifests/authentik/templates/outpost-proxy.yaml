@@ -22,7 +22,7 @@ spec:
     spec:
       containers:
       - name: proxy
-        image: ghcr.io/goauthentik/proxy:{{ .Values.outpost.image.tag | default .Chart.AppVersion | default "2025.10.2" }}
+        image: ghcr.io/goauthentik/proxy@sha256:4de697fbeae74a65526fc1fe4ec9770ebc38d02c7e863c7b0ecb8975003a70d3:{{ .Values.outpost.image.tag | default .Chart.AppVersion | default "2025.10.2" }}
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 9000

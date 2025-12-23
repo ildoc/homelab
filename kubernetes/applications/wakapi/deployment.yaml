@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
         - name: wakapi
-          image: ghcr.io/muety/wakapi:2.16.1
+          image: ghcr.io/muety/wakapi:2.16.1@sha256:d26b5d9e786dd69c0602271a8d4560142f515f8680cd38db371b41e761d2f266
           env:
             - name: WAKAPI_PORT 
               value: "3000"

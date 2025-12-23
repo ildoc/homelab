@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
         - name: engiaibot
-          image: registry.gitlab.local.ildoc.it/bots/engiaibot:8d54d4422459a6d081e3f83b1bf6eccccf40bc8d
+          image: registry.gitlab.local.ildoc.it/bots/engiaibot:8d54d4422459a6d081e3f83b1bf6eccccf40bc8d@sha256:b90f9c97d02bb3b08bb0f6cea4cdbf70941e7a0e9bbbfbc44a94e0ad6d12fc64
           resources:
             limits:
               cpu: 50m
