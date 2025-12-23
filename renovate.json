@@ -19,6 +19,12 @@
     "**/archived/**",
     "docs/**"
   ],
+  "kubernetes": {
+    "fileMatch": [
+      "(^|/)kubernetes/.*\\.ya?ml$",
+      "(^|/)(deployment|statefulset|daemonset|job|cronjob)\\.ya?ml$"
+    ]
+  },
   "packageRules": [
     {
       "description": "Raggruppa tutti gli aggiornamenti digest Docker in una singola PR",
