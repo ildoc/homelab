@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
         - name: peanut
-          image: brandawg93/peanut:5.15.0
+          image: brandawg93/peanut:5.19.2@sha256:feef67c1b97376593dbf2dee800349df97b62b7daf961d3531483c84f289445e
           volumeMounts:
             - name: config
               mountPath: /config
