@@ -1,7 +1,7 @@
 ---
 services:
   gitlab:
-    image: gitlab/gitlab-ce:18.7.0-ce.0@sha256:9c17686c3cd1b72f52282543d2dcf7c96add29b4698ec367bfb1455be8f13ce0
+    image: gitlab/gitlab-ce:18.7.1-ce.0@sha256:07c65c7d208651e0b5f73828d747e4f559a87c87f95352d24015d1d0071efdc9
     container_name: gitlab
     hostname: 'gitlab'
     ports:
@@ -27,7 +27,7 @@ services:
   #     - DOCKER_HOST=unix:///var/run/docker.sock
 
   nginx:
-    image: nginx:stable@sha256:552e7481ca93ffccd046aa658dbbed22caefbc09c66fa7cd247cbb90b8a5c609
+    image: nginx:stable@sha256:e7e2c41c74775ccfe88d07fa3d9ebc9e0d6ae5c755244bc525153b37e308f699
     container_name: nginx
     depends_on:
       - gitlab
