@@ -12,10 +12,11 @@
     - name: Include vault secrets loading task
       ansible.builtin.include_tasks: "{{ playbook_dir }}/tasks/vault/load-secrets.yaml"
 
-- name: Configure gitlab
+- name: Configure gitlab with traefik
   hosts: gitlab
   gather_facts: true
   vars:
     _secrets: "{{ hostvars['localhost']['vault_secrets_loaded'] }}"
+  
   roles:
     - role: gitlab

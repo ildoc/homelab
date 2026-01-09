@@ -4,11 +4,8 @@
 - name: Install docker
   ansible.builtin.include_tasks: "{{ tasks_dir }}/docker/install.yaml"
 
-- name: Nginx setup
-  ansible.builtin.include_tasks: nginx.yaml
-
-- name: Certbot setup
-  ansible.builtin.include_tasks: certbot.yaml
+- name: Setup Traefik config
+  ansible.builtin.include_tasks: setup_traefik.yaml
 
 - name: Setup GitLab
   ansible.builtin.include_tasks: setup_gitlab.yaml

@@ -1,13 +1,31 @@
 ---
 services:
+  traefik:
+    image: traefik:v3.6.6
+    container_name: traefik
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - CF_DNS_API_TOKEN={{ _secrets.gitlab.cloudflare_token }}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik/config/traefik.yml:/traefik.yml:ro
+      - ./traefik/letsencrypt:/letsencrypt
+    networks:
+      - traefik
+
   gitlab:
     image: gitlab/gitlab-ce:18.7.1-ce.0@sha256:07c65c7d208651e0b5f73828d747e4f559a87c87f95352d24015d1d0071efdc9
     container_name: gitlab
     hostname: 'gitlab'
+    depends_on:
+      - traefik
     ports:
-      - '80:80'
       - '22:22'
-      - '5000:5000'
     volumes:
       - ./gitlab/config:/etc/gitlab
       - ./gitlab/logs:/var/log/gitlab
@@ -16,6 +34,28 @@ services:
     command: ["/entrypoint.sh"]
     shm_size: '256m'
     restart: unless-stopped
+    networks:
+      - traefik
+    labels:
+      - "traefik.enable=true"
+      
+      # GitLab main - router HTTP
+      - "traefik.http.routers.gitlab.rule=Host(`{{ gitlab.domain }}`)"
+      - "traefik.http.routers.gitlab.entrypoints=websecure"
+      - "traefik.http.routers.gitlab.tls.certresolver=cloudflare"
+      - "traefik.http.routers.gitlab.service=gitlab"
+      
+      # GitLab main - service
+      - "traefik.http.services.gitlab.loadbalancer.server.port=80"
+      
+      # GitLab Registry - router
+      - "traefik.http.routers.gitlab-registry.rule=Host(`registry.{{ gitlab.domain }}`)"
+      - "traefik.http.routers.gitlab-registry.entrypoints=websecure"
+      - "traefik.http.routers.gitlab-registry.tls.certresolver=cloudflare"
+      - "traefik.http.routers.gitlab-registry.service=gitlab-registry"
+      
+      # GitLab Registry - service
+      - "traefik.http.services.gitlab-registry.loadbalancer.server.port=5000"
 
   # runner:
   #   image: 'gitlab/gitlab-runner:latest'
@@ -25,19 +65,6 @@ services:
   #   restart: always
   #   environment:
   #     - DOCKER_HOST=unix:///var/run/docker.sock
-
-  nginx:
-    image: nginx:stable@sha256:e7e2c41c74775ccfe88d07fa3d9ebc9e0d6ae5c755244bc525153b37e308f699
-    container_name: nginx
-    depends_on:
-      - gitlab
-    ports:
-      - "443:443"
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./certbot/conf:/etc/letsencrypt:ro
-      - ./certbot/www:/var/www/certbot
-    restart: always
 
   docker-cleanup:
     image: docker:latest@sha256:173f284a4299164772a90f52b373e73e087583c0963f1334c9995f190ef6f3f5
@@ -61,3 +88,7 @@ services:
         done
       "
     restart: unless-stopped
+
+networks:
+  traefik:
+    name: traefik
