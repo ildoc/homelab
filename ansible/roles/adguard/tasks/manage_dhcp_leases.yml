@@ -1,0 +1,115 @@
+---
+# ansible/roles/adguard/tasks/manage_dhcp_leases.yml
+# DHCP static leases are managed via /control/dhcp/add_static_lease, /control/dhcp/remove_static_lease, /control/dhcp/update_static_lease
+
+- name: Get current DHCP configuration from AdGuard Home
+  ansible.builtin.uri:
+    url: "{{ adguard.api_url }}/control/dhcp/status"
+    method: GET
+    headers:
+      Authorization: "Basic {{ adguard_auth_header }}"
+    validate_certs: "{{ adguard.validate_certs | default(false) }}"
+    return_content: true
+  register: dhcp_status
+
+- name: Parse existing DHCP static leases
+  ansible.builtin.set_fact:
+    existing_static_leases: "{{ dhcp_status.json.static_leases | default([]) }}"
+
+- name: Create lookup dict for existing leases (by MAC)
+  ansible.builtin.set_fact:
+    existing_leases_dict: "{{ dict(existing_static_leases | map(attribute='mac') | zip(existing_static_leases)) }}"
+
+- name: Create lookup dict for desired leases (by MAC)
+  ansible.builtin.set_fact:
+    desired_leases_dict: "{{ dict(adguard.dhcp_static_leases | map(attribute='mac') | zip(adguard.dhcp_static_leases)) }}"
+
+- name: Get list of existing lease MACs
+  ansible.builtin.set_fact:
+    existing_macs: "{{ existing_static_leases | map(attribute='mac') | list }}"
+
+- name: Get list of desired lease MACs
+  ansible.builtin.set_fact:
+    desired_macs: "{{ adguard.dhcp_static_leases | map(attribute='mac') | list }}"
+
+- name: Identify leases to add
+  ansible.builtin.set_fact:
+    leases_to_add: "{{ desired_macs | difference(existing_macs) }}"
+
+- name: Identify leases to remove
+  ansible.builtin.set_fact:
+    leases_to_remove: "{{ existing_macs | difference(desired_macs) }}"
+
+- name: Initialize leases to update list
+  ansible.builtin.set_fact:
+    leases_to_update: []
+
+- name: Check for leases needing updates
+  ansible.builtin.set_fact:
+    leases_to_update: "{{ leases_to_update + [item] }}"
+  loop: "{{ desired_macs | intersect(existing_macs) }}"
+  when: >
+    existing_leases_dict[item].ip != desired_leases_dict[item].ip or
+    existing_leases_dict[item].hostname != desired_leases_dict[item].hostname
+
+- name: Add new DHCP static leases
+  ansible.builtin.uri:
+    url: "{{ adguard.api_url }}/control/dhcp/add_static_lease"
+    method: POST
+    headers:
+      Authorization: "Basic {{ adguard_auth_header }}"
+      Content-Type: "application/json"
+    body_format: json
+    body:
+      mac: "{{ item }}"
+      ip: "{{ desired_leases_dict[item].ip }}"
+      hostname: "{{ desired_leases_dict[item].hostname }}"
+    status_code: [200]
+    validate_certs: "{{ adguard.validate_certs | default(false) }}"
+  loop: "{{ leases_to_add }}"
+  when: leases_to_add | length > 0
+  register: leases_add_result
+
+- name: Update existing DHCP static leases
+  ansible.builtin.uri:
+    url: "{{ adguard.api_url }}/control/dhcp/update_static_lease"
+    method: POST
+    headers:
+      Authorization: "Basic {{ adguard_auth_header }}"
+      Content-Type: "application/json"
+    body_format: json
+    body:
+      mac: "{{ item }}"
+      ip: "{{ desired_leases_dict[item].ip }}"
+      hostname: "{{ desired_leases_dict[item].hostname }}"
+    status_code: [200]
+    validate_certs: "{{ adguard.validate_certs | default(false) }}"
+  loop: "{{ leases_to_update }}"
+  when: leases_to_update | length > 0
+  register: leases_update_result
+
+- name: Remove obsolete DHCP static leases
+  ansible.builtin.uri:
+    url: "{{ adguard.api_url }}/control/dhcp/remove_static_lease"
+    method: POST
+    headers:
+      Authorization: "Basic {{ adguard_auth_header }}"
+      Content-Type: "application/json"
+    body_format: json
+    body:
+      mac: "{{ item }}"
+      ip: "{{ existing_leases_dict[item].ip }}"
+      hostname: "{{ existing_leases_dict[item].hostname }}"
+    status_code: [200]
+    validate_certs: "{{ adguard.validate_certs | default(false) }}"
+  loop: "{{ leases_to_remove }}"
+  when: leases_to_remove | length > 0
+  register: leases_remove_result
+
+- name: Display DHCP leases changes summary
+  ansible.builtin.debug:
+    msg:
+      - "DHCP leases added: {{ leases_to_add | length }}"
+      - "DHCP leases updated: {{ leases_to_update | length }}"
+      - "DHCP leases removed: {{ leases_to_remove | length }}"
+  when: (leases_to_add | length > 0) or (leases_to_update | length > 0) or (leases_to_remove | length > 0)

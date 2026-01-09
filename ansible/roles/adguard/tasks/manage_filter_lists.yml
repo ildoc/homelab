@@ -1,0 +1,142 @@
+---
+# ansible/roles/adguard/tasks/manage_filter_lists.yml
+# Filter lists are managed via /control/filtering/status (GET) and /control/filtering/add_url, /control/filtering/remove_url (POST)
+
+- name: Get existing filter lists from AdGuard Home
+  ansible.builtin.uri:
+    url: "{{ adguard.api_url }}/control/filtering/status"
+    method: GET
+    headers:
+      Authorization: "Basic {{ adguard_auth_header }}"
+    validate_certs: "{{ adguard.validate_certs | default(false) }}"
+    return_content: true
+  register: filtering_status
+
+- name: Parse existing filter lists
+  ansible.builtin.set_fact:
+    existing_filters: "{{ filtering_status.json.filters | default([]) }}"
+
+- name: Create lookup dict for existing filters (by url)
+  ansible.builtin.set_fact:
+    existing_filters_dict: "{{ dict(existing_filters | map(attribute='url') | zip(existing_filters)) }}"
+
+- name: Create lookup dict for desired filters (by url)
+  ansible.builtin.set_fact:
+    desired_filters_dict: "{{ dict(adguard.filter_lists | map(attribute='url') | zip(adguard.filter_lists)) }}"
+
+- name: Get list of existing filter URLs
+  ansible.builtin.set_fact:
+    existing_urls: "{{ existing_filters | map(attribute='url') | list }}"
+
+- name: Get list of desired filter URLs
+  ansible.builtin.set_fact:
+    desired_urls: "{{ adguard.filter_lists | map(attribute='url') | list }}"
+
+- name: Identify filters to add
+  ansible.builtin.set_fact:
+    filters_to_add: "{{ desired_urls | difference(existing_urls) }}"
+
+- name: Identify filters to remove
+  ansible.builtin.set_fact:
+    filters_to_remove: "{{ existing_urls | difference(desired_urls) }}"
+
+- name: Initialize filters to update list
+  ansible.builtin.set_fact:
+    filters_to_update: []
+
+- name: Check for filters needing updates
+  ansible.builtin.set_fact:
+    filters_to_update: "{{ filters_to_update + [item] }}"
+  loop: "{{ desired_urls | intersect(existing_urls) }}"
+  when: existing_filters_dict[item].enabled != (desired_filters_dict[item].enabled | default(true) | bool)
+
+- name: Add new filter lists
+  ansible.builtin.uri:
+    url: "{{ adguard.api_url }}/control/filtering/add_url"
+    method: POST
+    headers:
+      Authorization: "Basic {{ adguard_auth_header }}"
+      Content-Type: "application/json"
+    body_format: json
+    body:
+      name: "{{ desired_filters_dict[item].name }}"
+      url: "{{ item }}"
+      whitelist: false
+    status_code: [200]
+    validate_certs: "{{ adguard.validate_certs | default(false) }}"
+  loop: "{{ filters_to_add }}"
+  when: filters_to_add | length > 0
+  register: filters_add_result
+
+- name: Set filters to enabled/disabled state if needed
+  ansible.builtin.uri:
+    url: "{{ adguard.api_url }}/control/filtering/set_url"
+    method: POST
+    headers:
+      Authorization: "Basic {{ adguard_auth_header }}"
+      Content-Type: "application/json"
+    body_format: json
+    body:
+      url: "{{ item }}"
+      data:
+        enabled: "{{ desired_filters_dict[item].enabled | default(true) }}"
+        name: "{{ desired_filters_dict[item].name }}"
+        url: "{{ item }}"
+      whitelist: false
+    status_code: [200]
+    validate_certs: "{{ adguard.validate_certs | default(false) }}"
+  loop: "{{ filters_to_update }}"
+  when: filters_to_update | length > 0
+
+# Also enable/disable newly added filters if needed
+- name: Set newly added filters to enabled/disabled state
+  ansible.builtin.uri:
+    url: "{{ adguard.api_url }}/control/filtering/set_url"
+    method: POST
+    headers:
+      Authorization: "Basic {{ adguard_auth_header }}"
+      Content-Type: "application/json"
+    body_format: json
+    body:
+      url: "{{ item }}"
+      data:
+        enabled: "{{ desired_filters_dict[item].enabled | default(true) }}"
+        name: "{{ desired_filters_dict[item].name }}"
+        url: "{{ item }}"
+      whitelist: false
+    status_code: [200]
+    validate_certs: "{{ adguard.validate_certs | default(false) }}"
+  loop: "{{ filters_to_add }}"
+  when: 
+    - filters_to_add | length > 0
+    - not (desired_filters_dict[item].enabled | default(true) | bool)
+
+- name: Remove obsolete filter lists
+  ansible.builtin.uri:
+    url: "{{ adguard.api_url }}/control/filtering/remove_url"
+    method: POST
+    headers:
+      Authorization: "Basic {{ adguard_auth_header }}"
+      Content-Type: "application/json"
+    body_format: json
+    body:
+      url: "{{ item }}"
+      whitelist: false
+    status_code: [200]
+    validate_certs: "{{ adguard.validate_certs | default(false) }}"
+  loop: "{{ filters_to_remove }}"
+  when: filters_to_remove | length > 0
+  register: filters_remove_result
+
+- name: Display filter lists changes summary
+  ansible.builtin.debug:
+    msg:
+      - "Filter lists added: {{ filters_to_add | length }}"
+      - "Filter lists updated: {{ filters_to_update | length }}"
+      - "Filter lists removed: {{ filters_to_remove | length }}"
+  when: (filters_to_add | length > 0) or (filters_to_update | length > 0) or (filters_to_remove | length > 0)
+
+- name: Set filters changed flag
+  ansible.builtin.set_fact:
+    filters_changed: true
+  when: (filters_to_add | length > 0) or (filters_to_update | length > 0) or (filters_to_remove | length > 0)

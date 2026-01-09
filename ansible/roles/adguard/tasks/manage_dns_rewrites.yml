@@ -1,0 +1,127 @@
+---
+# ansible/roles/adguard/tasks/manage_dns_rewrites.yml
+# DNS rewrites are managed via /control/rewrite/list (GET) and /control/rewrite/add|delete (POST)
+# Format: {"domain": "example.com", "answer": "192.168.1.1"}
+
+- name: Get existing DNS rewrites from AdGuard Home
+  ansible.builtin.uri:
+    url: "{{ adguard.api_url }}/control/rewrite/list"
+    method: GET
+    headers:
+      Authorization: "Basic {{ adguard_auth_header }}"
+    validate_certs: "{{ adguard.validate_certs | default(false) }}"
+    return_content: true
+  register: existing_rewrites
+
+- name: Parse existing DNS rewrites
+  ansible.builtin.set_fact:
+    existing_rewrites_list: "{{ existing_rewrites.json | default([]) }}"
+
+- name: Create lookup dict for existing rewrites (by domain)
+  ansible.builtin.set_fact:
+    existing_rewrites_dict: "{{ dict(existing_rewrites_list | map(attribute='domain') | zip(existing_rewrites_list)) }}"
+
+- name: Create lookup dict for desired rewrites (by domain)
+  ansible.builtin.set_fact:
+    desired_rewrites_dict: "{{ dict(adguard.dns_rewrites | map(attribute='domain') | zip(adguard.dns_rewrites)) }}"
+
+- name: Get list of existing rewrite domains
+  ansible.builtin.set_fact:
+    existing_domains: "{{ existing_rewrites_list | map(attribute='domain') | list }}"
+
+- name: Get list of desired rewrite domains
+  ansible.builtin.set_fact:
+    desired_domains: "{{ adguard.dns_rewrites | map(attribute='domain') | list }}"
+
+- name: Identify rewrites to add
+  ansible.builtin.set_fact:
+    rewrites_to_add: "{{ desired_domains | difference(existing_domains) }}"
+
+- name: Identify rewrites to remove
+  ansible.builtin.set_fact:
+    rewrites_to_remove: "{{ existing_domains | difference(desired_domains) }}"
+
+- name: Initialize rewrites to update list
+  ansible.builtin.set_fact:
+    rewrites_to_update: []
+
+- name: Check for rewrites needing updates
+  ansible.builtin.set_fact:
+    rewrites_to_update: "{{ rewrites_to_update + [item] }}"
+  loop: "{{ desired_domains | intersect(existing_domains) }}"
+  when: existing_rewrites_dict[item].answer != desired_rewrites_dict[item].ip
+
+- name: Add new DNS rewrites
+  ansible.builtin.uri:
+    url: "{{ adguard.api_url }}/control/rewrite/add"
+    method: POST
+    headers:
+      Authorization: "Basic {{ adguard_auth_header }}"
+      Content-Type: "application/json"
+    body_format: json
+    body:
+      domain: "{{ item }}"
+      answer: "{{ desired_rewrites_dict[item].ip }}"
+    status_code: [200]
+    validate_certs: "{{ adguard.validate_certs | default(false) }}"
+  loop: "{{ rewrites_to_add }}"
+  when: rewrites_to_add | length > 0
+  register: rewrites_add_result
+
+- name: Update existing DNS rewrites (delete + add)
+  block:
+    - name: Delete DNS rewrites that need updating
+      ansible.builtin.uri:
+        url: "{{ adguard.api_url }}/control/rewrite/delete"
+        method: POST
+        headers:
+          Authorization: "Basic {{ adguard_auth_header }}"
+          Content-Type: "application/json"
+        body_format: json
+        body:
+          domain: "{{ item }}"
+          answer: "{{ existing_rewrites_dict[item].answer }}"
+        status_code: [200]
+        validate_certs: "{{ adguard.validate_certs | default(false) }}"
+      loop: "{{ rewrites_to_update }}"
+
+    - name: Re-add DNS rewrites with new values
+      ansible.builtin.uri:
+        url: "{{ adguard.api_url }}/control/rewrite/add"
+        method: POST
+        headers:
+          Authorization: "Basic {{ adguard_auth_header }}"
+          Content-Type: "application/json"
+        body_format: json
+        body:
+          domain: "{{ item }}"
+          answer: "{{ desired_rewrites_dict[item].ip }}"
+        status_code: [200]
+        validate_certs: "{{ adguard.validate_certs | default(false) }}"
+      loop: "{{ rewrites_to_update }}"
+  when: rewrites_to_update | length > 0
+
+- name: Remove obsolete DNS rewrites
+  ansible.builtin.uri:
+    url: "{{ adguard.api_url }}/control/rewrite/delete"
+    method: POST
+    headers:
+      Authorization: "Basic {{ adguard_auth_header }}"
+      Content-Type: "application/json"
+    body_format: json
+    body:
+      domain: "{{ item }}"
+      answer: "{{ existing_rewrites_dict[item].answer }}"
+    status_code: [200]
+    validate_certs: "{{ adguard.validate_certs | default(false) }}"
+  loop: "{{ rewrites_to_remove }}"
+  when: rewrites_to_remove | length > 0
+  register: rewrites_remove_result
+
+- name: Display DNS rewrites changes summary
+  ansible.builtin.debug:
+    msg:
+      - "DNS rewrites added: {{ rewrites_to_add | length }}"
+      - "DNS rewrites updated: {{ rewrites_to_update | length }}"
+      - "DNS rewrites removed: {{ rewrites_to_remove | length }}"
+  when: (rewrites_to_add | length > 0) or (rewrites_to_update | length > 0) or (rewrites_to_remove | length > 0)

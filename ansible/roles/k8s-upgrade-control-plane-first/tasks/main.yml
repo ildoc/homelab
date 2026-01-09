@@ -1,0 +1,213 @@
+---
+- name: Unhold Kubernetes packages
+  ansible.builtin.command: apt-mark unhold kubelet kubeadm kubectl
+  changed_when: true
+
+- name: Ensure Kubernetes keyrings directory exists
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Download new Kubernetes repository key (raw format)
+  ansible.builtin.get_url:
+    url: "https://pkgs.k8s.io/core:/stable:/v{{ kubernetes.k8s_version }}/deb/Release.key"
+    dest: "/tmp/kubernetes-apt-keyring-new.raw"
+    mode: '0644'
+    owner: root
+    group: root
+    force: true
+  register: kubernetes_key
+
+- name: Convert new Kubernetes key to GPG format
+  ansible.builtin.command:
+    cmd: "gpg --dearmor -o /tmp/kubernetes-apt-keyring-new.gpg /tmp/kubernetes-apt-keyring-new.raw"
+  args:
+    creates: "/tmp/kubernetes-apt-keyring-new.gpg"
+  when: kubernetes_key.changed
+
+- name: Move converted key to /etc/apt/keyrings
+  ansible.builtin.copy:
+    src: "/tmp/kubernetes-apt-keyring-new.gpg"
+    dest: "/etc/apt/keyrings/kubernetes-apt-keyring.gpg"
+    remote_src: true
+    owner: root
+    group: root
+    mode: '0644'
+    force: true
+  when: kubernetes_key.changed
+
+- name: Remove temporary key files
+  ansible.builtin.file:
+    path: "/tmp/kubernetes-apt-keyring-new.{{ item }}"
+    state: absent
+  loop:
+    - raw
+    - gpg
+  when: kubernetes_key.changed
+
+- name: Update Kubernetes APT repository to new version
+  ansible.builtin.copy:
+    dest: /etc/apt/sources.list.d/kubernetes.list
+    content: "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v{{ kubernetes.k8s_version }}/deb/ /"
+    owner: root
+    group: root
+    mode: '0644'
+  register: repo_updated
+
+- name: Display repository change
+  ansible.builtin.debug:
+    msg: "Repository updated to v{{ kubernetes.k8s_version }}"
+  when: repo_updated.changed
+
+- name: Update apt cache
+  ansible.builtin.apt:
+    update_cache: true
+
+- name: Upgrade kubeadm to specific version
+  ansible.builtin.apt:
+    name: "kubeadm={{ kubernetes.k8s_version }}.*"
+    state: present
+    update_cache: true
+    allow_downgrade: true
+
+- name: Verify kubeadm version
+  ansible.builtin.command: kubeadm version
+  register: kubeadm_version
+  changed_when: false
+
+- name: Display kubeadm version
+  ansible.builtin.debug:
+    msg: "{{ kubeadm_version.stdout }}"
+
+- name: Check upgrade plan
+  ansible.builtin.command: kubeadm upgrade plan
+  register: upgrade_plan
+  changed_when: false
+
+- name: Display upgrade plan
+  ansible.builtin.debug:
+    msg: "{{ upgrade_plan.stdout_lines }}"
+
+- name: Get installed kubeadm version
+  ansible.builtin.shell: kubeadm version -o short | sed 's/v//'
+  register: installed_kubeadm_version
+  changed_when: false
+
+- name: Display installed kubeadm version
+  ansible.builtin.debug:
+    msg: "Will upgrade to version: {{ installed_kubeadm_version.stdout }}"
+
+- name: Get pods running on this node
+  ansible.builtin.shell: |
+    kubectl get pods -A --field-selector spec.nodeName={{ ansible_hostname }} -o custom-columns=NAMESPACE:.metadata.namespace,NAME:.metadata.name,STATUS:.status.phase --no-headers
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  register: node_pods
+  changed_when: false
+
+- name: Display pods on node
+  ansible.builtin.debug:
+    msg: "Pods on {{ ansible_hostname }}:\n{{ node_pods.stdout }}"
+
+- name: Drain first control plane node (attempt 1 - graceful)
+  ansible.builtin.command: >
+    kubectl drain {{ ansible_hostname }}
+    --ignore-daemonsets
+    --delete-emptydir-data
+    --timeout=300s
+    --grace-period=30
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  register: drain_result
+  failed_when: false
+  changed_when: drain_result.rc == 0
+
+- name: Display drain attempt 1 result
+  ansible.builtin.debug:
+    msg: |
+      {% if drain_result.rc == 0 %}
+      ✓ SUCCESS: Graceful drain completed successfully
+      {% else %}
+      ✗ FAILED: Graceful drain failed (rc={{ drain_result.rc }}), will retry with force...
+      Error: {{ drain_result.stderr | default('No error message') }}
+      {% endif %}
+
+- name: Drain first control plane node (attempt 2 - force if needed)
+  ansible.builtin.command: >
+    kubectl drain {{ ansible_hostname }}
+    --ignore-daemonsets
+    --delete-emptydir-data
+    --force
+    --disable-eviction
+    --timeout=180s
+    --grace-period=10
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  register: drain_force_result
+  when: drain_result.rc != 0
+  changed_when: drain_force_result.rc == 0
+
+- name: Display drain attempt 2 result
+  ansible.builtin.debug:
+    msg: |
+      {% if drain_result.rc == 0 %}
+      ℹ SKIPPED: Force drain not needed (graceful drain succeeded)
+      {% elif drain_force_result.rc == 0 %}
+      ✓ SUCCESS: Force drain completed successfully
+      {% else %}
+      ✗ FAILED: Force drain also failed (rc={{ drain_force_result.rc }})
+      Error: {{ drain_force_result.stderr | default('No error message') }}
+      {% endif %}
+
+- name: Verify drain succeeded
+  ansible.builtin.fail:
+    msg: "Failed to drain node {{ ansible_hostname }}. Both graceful and force drain attempts failed."
+  when: 
+    - drain_result.rc != 0
+    - drain_force_result is defined
+    - drain_force_result.rc != 0
+
+- name: Apply kubeadm upgrade
+  ansible.builtin.command: kubeadm upgrade apply v{{ installed_kubeadm_version.stdout }} -y
+  register: upgrade_result
+  changed_when: upgrade_result.rc == 0
+
+- name: Display upgrade result
+  ansible.builtin.debug:
+    msg: "{{ upgrade_result.stdout_lines }}"
+
+- name: Upgrade kubelet and kubectl to specific version
+  ansible.builtin.apt:
+    name:
+      - "kubelet={{ kubernetes.k8s_version }}.*"
+      - "kubectl={{ kubernetes.k8s_version }}.*"
+    state: present
+    allow_downgrade: true
+
+- name: Restart kubelet
+  ansible.builtin.systemd:
+    name: kubelet
+    daemon_reload: true
+    state: restarted
+
+- name: Uncordon first control plane node
+  ansible.builtin.command: kubectl uncordon {{ ansible_hostname }}
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+
+- name: Hold Kubernetes packages
+  ansible.builtin.command: apt-mark hold kubelet kubeadm kubectl
+  changed_when: true
+
+- name: Wait for node to be ready
+  ansible.builtin.command: kubectl get nodes {{ ansible_hostname }} -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}'
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  register: node_status
+  until: node_status.stdout == "True"
+  retries: 30
+  delay: 10
+  changed_when: false

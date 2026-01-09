@@ -1,0 +1,178 @@
+adguard:
+  api_url: "http://192.168.0.5"
+  username: "{{ _secrets.adguard.username }}"
+  password: "{{ _secrets.adguard.password }}"
+  validate_certs: false  # Set to true if you have valid SSL certificates
+  dhcp_enabled: false  # Set to true to manage DHCP static leases
+
+  # DNS Rewrites - Custom DNS records
+  dns_rewrites:
+    - { ip: "192.168.0.10", domain: "pve01" }
+    - { ip: "192.168.0.11", domain: "pve02" }
+    - { ip: "192.168.0.12", domain: "pve03" }
+    
+    - { ip: "192.168.0.124", domain: "web" }
+    - { ip: "192.168.0.133", domain: "homeassistant" }
+    - { ip: "192.168.0.183", domain: "ubuntu" }
+    - { ip: "192.168.0.111", domain: "invidious" }
+
+    - { ip: "192.168.0.30", domain: "db" }
+    - { ip: "192.168.0.40", domain: "redis" }
+    - { ip: "192.168.0.50", domain: "vault" }
+
+    - { ip: "192.168.0.145", domain: "adguard.local.ildoc.it" }
+    - { ip: "192.168.0.183", domain: "ubuntu.local.ildoc.it" }
+      
+    - { ip: "192.168.0.25", domain: "gitlab.local.ildoc.it" }
+    - { ip: "192.168.0.25", domain: "registry.gitlab.local.ildoc.it" }
+      
+    - { ip: "192.168.0.81", domain: "alertmanager.local.ildoc.it" }
+    - { ip: "192.168.0.81", domain: "argocd.local.ildoc.it" }
+    - { ip: "192.168.0.81", domain: "audiobookshelf.local.ildoc.it" }
+    - { ip: "192.168.0.81", domain: "auth.local.ildoc.it" }
+    - { ip: "192.168.0.81", domain: "bazarr.local.ildoc.it" }
+    - { ip: "192.168.0.81", domain: "flaresolverr.local.ildoc.it" }
+    - { ip: "192.168.0.81", domain: "grafana.local.ildoc.it" }
+    - { ip: "192.168.0.81", domain: "nut.local.ildoc.it" }
+    - { ip: "192.168.0.81", domain: "prometheus.local.ildoc.it" }
+    - { ip: "192.168.0.81", domain: "prowlarr.local.ildoc.it" }
+    - { ip: "192.168.0.81", domain: "radarr.local.ildoc.it" }
+    - { ip: "192.168.0.81", domain: "rancher.local.ildoc.it" }
+    - { ip: "192.168.0.81", domain: "sonar.local.ildoc.it" }
+    - { ip: "192.168.0.81", domain: "sonarr.local.ildoc.it" }
+    - { ip: "192.168.0.81", domain: "speedtest.local.ildoc.it" }
+    - { ip: "192.168.0.81", domain: "tools.local.ildoc.it" }
+    - { ip: "192.168.0.81", domain: "immich.local.ildoc.it" }
+    - { ip: "192.168.0.81", domain: "pdf.local.ildoc.it" }
+    - { ip: "192.168.0.81", domain: "miniflux.local.ildoc.it" }
+    - { ip: "192.168.0.81", domain: "wakapi.local.ildoc.it" }
+    
+    - { ip: "192.168.0.81", domain: "pocmanager.local.ildoc.it" }
+    - { ip: "192.168.0.81", domain: "pocsender.local.ildoc.it" }
+      
+    - { ip: "192.168.0.82", domain: "invidious.local.ildoc.it" }
+    - { ip: "192.168.0.82", domain: "pbs.local.ildoc.it" }
+    - { ip: "192.168.0.82", domain: "proxmox.local.ildoc.it" }
+    - { ip: "192.168.0.82", domain: "truenas.local.ildoc.it" }
+    - { ip: "192.168.0.82", domain: "vault.local.ildoc.it" }
+
+  # DHCP Static Leases
+  dhcp_static_leases:
+    - { mac: "60:83:E7:AC:6C:68", ip: "192.168.0.175", hostname: "archlinux" }
+    - { mac: "02:F1:76:00:ED:DD", ip: "192.168.0.133", hostname: "homeassistant" }
+    - { mac: "BC:24:11:F2:C2:A4", ip: "192.168.0.111", hostname: "invidious" }
+    - { mac: "BC:24:11:D2:18:86", ip: "192.168.0.192", hostname: "mediaserver" }
+    - { mac: "BC:24:11:5A:5D:EC", ip: "192.168.0.124", hostname: "web" }
+    - { mac: "2C:CF:67:43:0B:FB", ip: "192.168.0.167", hostname: "pihole2" }
+    - { mac: "BC:24:11:07:CC:1D", ip: "192.168.0.180", hostname: "kube-01" }
+    - { mac: "BC:24:11:13:0F:8C", ip: "192.168.0.181", hostname: "kube-02" }
+    - { mac: "BC:24:11:41:20:6E", ip: "192.168.0.182", hostname: "kube-03" }
+    - { mac: "BC:24:11:0A:07:CF", ip: "192.168.0.183", hostname: "ubuntu" }
+    - { mac: "04:7C:16:70:7D:02", ip: "192.168.0.123", hostname: "truenas" }
+    - { mac: "BC:24:11:DE:F6:0A", ip: "192.168.0.75", hostname: "wireguard" }
+    - { mac: "BC:24:11:B9:E8:E5", ip: "192.168.0.50", hostname: "vault" }
+    - { mac: "AA:BB:CC:DD:EE:01", ip: "192.168.0.60", hostname: "kube01-test" }
+    - { mac: "AA:BB:CC:DD:EE:02", ip: "192.168.0.61", hostname: "kube02-test" }
+    - { mac: "AA:BB:CC:DD:EE:03", ip: "192.168.0.62", hostname: "kube03-test" }
+    - { mac: "AA:AA:AA:AA:AA:AA", ip: "192.168.0.25", hostname: "gitlab" }
+    - { mac: "AA:AA:AA:AA:AA:DB", ip: "192.168.0.30", hostname: "db" }
+    - { mac: "AA:AA:AA:AA:CA:CE", ip: "192.168.0.40", hostname: "redis" }
+      
+    - { mac: "aa:bb:cc:11:22:88", ip: "192.168.0.41", hostname: "webserver-app" }
+    - { mac: "aa:bb:cc:22:11:77", ip: "192.168.0.42", hostname: "mongodb-db" }
+
+  # Filter Lists (Blocklists)
+  filter_lists:
+    - url: "https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts"
+      name: "Steven Black's Unified Hosts List"
+      enabled: true
+    
+    - url: "https://raw.githubusercontent.com/PolishFiltersTeam/KADhosts/master/KADhosts.txt"
+      name: "KAD hosts"
+      enabled: true
+    
+    - url: "https://v.firebog.net/hosts/AdguardDNS.txt"
+      name: "Adguard DNS"
+      enabled: true
+    
+    - url: "https://v.firebog.net/hosts/Easyprivacy.txt"
+      name: "EasyPrivacy"
+      enabled: true
+    
+    - url: "https://www.github.developerdan.com/hosts/lists/ads-and-tracking-extended.txt"
+      name: "Ads and tracking extended"
+      enabled: true
+
+    - url: "https://raw.githubusercontent.com/FadeMind/hosts.extras/master/add.Spam/hosts"
+      name: "FadeMind List"
+      enabled: true
+    
+    - url: "https://v.firebog.net/hosts/static/w3kbl.txt"
+      name: "Firebog w3kbl list"
+      enabled: true
+
+    - url: "https://v.firebog.net/hosts/Prigent-Ads.txt"
+      name: "Firebog Prigent ads list"
+      enabled: true
+
+    - url: "https://raw.githubusercontent.com/hagezi/dns-blocklists/main/wildcard/pro.txt"
+      name: "Hagezi Pro Blocklist"
+      enabled: true
+
+    - url: "https://raw.githubusercontent.com/Perflyst/PiHoleBlocklist/master/SmartTV-AGH.txt"
+      name: "Smart TV AGH Blocklist"
+      enabled: true
+    
+    - url: "https://raw.githubusercontent.com/AdAway/adaway.github.io/master/hosts.txt"
+      name: "AdAway Hosts"
+      enabled: true
+    
+    - url: "https://mirror1.malwaredomains.com/files/justdomains"
+      name: "Malware Domains"
+      enabled: false
+
+    - url: "https://big.oisd.nl"
+      name: "OISD Full"
+      enabled: true
+
+    - url: "https://someonewhocares.org/hosts/zero/hosts"
+      name: "Dan Pollock's List"
+      enabled: true
+
+  # Whitelist - Always allowed domains
+  whitelist:
+    domains:
+      - domain: "clicks.eventbrite.com"
+        comment: "Eventbrite clicks"
+        enabled: true
+      
+      - domain: "click.discord.com"
+        comment: "Discord links"
+        enabled: true
+      
+      - domain: "oci.external-secrets.io"
+        comment: "External Secrets OCI"
+        enabled: true
+
+    # Whitelist regex - Allowed patterns
+    regex:     
+      - domain: "^(.+[-.])?local\\.ildoc\\.it$"
+        comment: "All local subdomains"
+        enabled: true
+
+  # Blacklist - Always blocked domains
+  blacklist:
+    domains:      
+      - domain: "facebook.com"
+        comment: "Block Facebook completely"
+        enabled: false  # Example of disabled block
+      
+      - domain: "analytics.google.com"
+        comment: "Google Analytics"
+        enabled: true
+
+    # Blacklist regex - Blocked patterns
+    regex:     
+      - domain: "^(.+[-.])?tracking?\\..*$"
+        comment: "Block tracking domains"
+        enabled: false

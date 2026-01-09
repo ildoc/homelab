@@ -1,0 +1,23 @@
+---
+# ansible/roles/adguard/tasks/update_filters.yml
+# Trigger filter update via /control/filtering/refresh (POST)
+
+- name: Trigger filter lists update
+  ansible.builtin.uri:
+    url: "{{ adguard.api_url }}/control/filtering/refresh"
+    method: POST
+    headers:
+      Authorization: "Basic {{ adguard_auth_header }}"
+      Content-Type: "application/json"
+    body_format: json
+    body:
+      whitelist: false
+      force: false
+    status_code: [200]
+    validate_certs: "{{ adguard.validate_certs | default(false) }}"
+  register: filter_refresh_result
+
+- name: Display filter update status
+  ansible.builtin.debug:
+    msg: "Filter lists update triggered successfully"
+  when: filter_refresh_result.status == 200

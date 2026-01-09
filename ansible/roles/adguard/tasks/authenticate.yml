@@ -1,0 +1,23 @@
+---
+# ansible/roles/adguard/tasks/authenticate.yml
+# AdGuard Home uses Basic Authentication
+
+- name: Set authentication header for AdGuard Home API
+  ansible.builtin.set_fact:
+    adguard_auth_header: "{{ (adguard.username + ':' + adguard.password) | b64encode }}"
+  no_log: true  # Don't log credentials
+
+- name: Test authentication with AdGuard Home API
+  ansible.builtin.uri:
+    url: "{{ adguard.api_url }}/control/status"
+    method: GET
+    headers:
+      Authorization: "Basic {{ adguard_auth_header }}"
+    status_code: [200]
+    validate_certs: "{{ adguard.validate_certs | default(false) }}"
+    return_content: true
+  register: adguard_auth_test
+
+- name: Display authentication status
+  ansible.builtin.debug:
+    msg: "Authenticated successfully to AdGuard Home"

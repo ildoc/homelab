@@ -1,0 +1,85 @@
+---
+# ansible/roles/adguard/tasks/manage_custom_rules.yml
+# Custom rules are managed via /control/filtering/set_rules (POST)
+# Format: plain text rules like "@@||example.com^" (whitelist) or "||ads.example.com^" (blacklist)
+
+- name: Get current custom filtering rules
+  ansible.builtin.uri:
+    url: "{{ adguard.api_url }}/control/filtering/status"
+    method: GET
+    headers:
+      Authorization: "Basic {{ adguard_auth_header }}"
+    validate_certs: "{{ adguard.validate_certs | default(false) }}"
+    return_content: true
+  register: filtering_status
+
+- name: Parse existing user rules
+  ansible.builtin.set_fact:
+    existing_rules_text: "{{ filtering_status.json.user_rules | join('\n') | default('') }}"
+    existing_rules: "{{ filtering_status.json.user_rules | default([]) }}"
+
+- name: Initialize custom rules list
+  ansible.builtin.set_fact:
+    custom_rules: []
+
+- name: Build whitelist domain rules
+  ansible.builtin.set_fact:
+    custom_rules: "{{ custom_rules + ['@@||' + item.domain + '^$important' + ((' # ' + item.comment) if item.comment is defined else '')] }}"
+  loop: "{{ adguard.whitelist.domains | default([]) }}"
+  when: 
+    - adguard.whitelist is defined
+    - adguard.whitelist.domains is defined
+    - item.enabled | default(true) | bool
+
+- name: Build whitelist regex rules
+  ansible.builtin.set_fact:
+    custom_rules: "{{ custom_rules + ['@@/' + item.domain + '/$important' + ((' # ' + item.comment) if item.comment is defined else '')] }}"
+  loop: "{{ adguard.whitelist.regex | default([]) }}"
+  when:
+    - adguard.whitelist is defined
+    - adguard.whitelist.regex is defined
+    - item.enabled | default(true) | bool
+
+- name: Build blacklist domain rules
+  ansible.builtin.set_fact:
+    custom_rules: "{{ custom_rules + ['||' + item.domain + '^' + ((' # ' + item.comment) if item.comment is defined else '')] }}"
+  loop: "{{ adguard.blacklist.domains | default([]) }}"
+  when:
+    - adguard.blacklist is defined
+    - adguard.blacklist.domains is defined
+    - item.enabled | default(true) | bool
+
+- name: Build blacklist regex rules
+  ansible.builtin.set_fact:
+    custom_rules: "{{ custom_rules + ['/' + item.domain + '/' + ((' # ' + item.comment) if item.comment is defined else '')] }}"
+  loop: "{{ adguard.blacklist.regex | default([]) }}"
+  when:
+    - adguard.blacklist is defined
+    - adguard.blacklist.regex is defined
+    - item.enabled | default(true) | bool
+
+- name: Convert custom rules to text
+  ansible.builtin.set_fact:
+    custom_rules_text: "{{ custom_rules | join('\n') }}"
+
+- name: Update custom filtering rules if changed
+  ansible.builtin.uri:
+    url: "{{ adguard.api_url }}/control/filtering/set_rules"
+    method: POST
+    headers:
+      Authorization: "Basic {{ adguard_auth_header }}"
+      Content-Type: "application/json"
+    body_format: json
+    body:
+      rules: "{{ custom_rules }}"
+    status_code: [200]
+    validate_certs: "{{ adguard.validate_certs | default(false) }}"
+  when: existing_rules | sort != custom_rules | sort
+  register: rules_update_result
+
+- name: Display custom rules changes summary
+  ansible.builtin.debug:
+    msg:
+      - "Custom rules updated: {{ custom_rules | length }} rules"
+      - "Previous rules count: {{ existing_rules | length }}"
+  when: rules_update_result is changed

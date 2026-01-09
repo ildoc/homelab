@@ -1,0 +1,47 @@
+---
+# ansible/roles/adguard/tasks/main.yml
+
+- name: Ensure required variables are defined
+  ansible.builtin.assert:
+    that:
+      - adguard.username is defined
+      - adguard.password is defined
+      - adguard.api_url is defined
+    fail_msg: "adguard.username, adguard.password and adguard.api_url must be defined"
+
+# Prepare authentication
+- name: Set authentication credentials
+  ansible.builtin.include_tasks: authenticate.yml
+  tags: ['always']
+
+# DNS Rewrites (Custom DNS records)
+- name: Manage DNS rewrites via API
+  ansible.builtin.include_tasks: manage_dns_rewrites.yml
+  when: adguard.dns_rewrites is defined
+  tags: ['dns']
+
+# DHCP Static Leases
+- name: Manage DHCP static leases via API
+  ansible.builtin.include_tasks: manage_dhcp_leases.yml
+  when: 
+    - adguard.dhcp_enabled | default(false)
+    - adguard.dhcp_static_leases is defined
+  tags: ['dhcp']
+
+# Filter lists (Blocklists)
+- name: Manage filter lists via API
+  ansible.builtin.include_tasks: manage_filter_lists.yml
+  when: adguard.filter_lists is defined
+  tags: ['filters', 'blocklists']
+
+# Custom filtering rules (whitelist/blacklist)
+- name: Manage custom filtering rules via API
+  ansible.builtin.include_tasks: manage_custom_rules.yml
+  when: adguard.whitelist is defined or adguard.blacklist is defined
+  tags: ['rules', 'whitelist', 'blacklist']
+
+# Update filters if needed
+- name: Update filters if lists changed
+  ansible.builtin.include_tasks: update_filters.yml
+  when: filters_changed is defined and filters_changed
+  tags: ['filters', 'update']

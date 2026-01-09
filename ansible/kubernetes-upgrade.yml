@@ -1,0 +1,615 @@
+---
+# Kubernetes Upgrade Playbook
+# Esegue validazione, pre-checks, upgrade e validazione post-upgrade
+# 
+# Usage: ansible-playbook -i inventory/hosts.ini kubernetes-upgrade.yml
+#
+# IMPORTANTE: Prima di eseguire:
+# 1. Aggiorna kubernetes.k8s_version in group_vars/all.yml
+# 2. Verifica che tutti i nodi siano Ready
+# 3. Leggi le release notes della nuova versione
+
+# ============================================
+# STEP 1: VALIDATE UPGRADE VERSION
+# ============================================
+- name: Validate upgrade version
+  hosts: k8s[0]
+  become: true
+  tasks:
+    - name: Get current Kubernetes version
+      ansible.builtin.command: kubelet --version
+      register: current_kubelet_version
+      changed_when: false
+
+    - name: Extract current version (major.minor)
+      ansible.builtin.set_fact:
+        current_k8s_version: "{{ current_kubelet_version.stdout | regex_search('v([0-9]+\\.[0-9]+)', '\\1') | first }}"
+
+    - name: Display versions
+      ansible.builtin.debug:
+        msg:
+          - "Current version: {{ current_k8s_version }}"
+          - "Target version: {{ kubernetes.k8s_version }}"
+
+    - name: Parse version numbers
+      ansible.builtin.set_fact:
+        current_minor: "{{ current_k8s_version.split('.')[1] | int }}"
+        target_minor: "{{ kubernetes.k8s_version.split('.')[1] | int }}"
+        current_major: "{{ current_k8s_version.split('.')[0] | int }}"
+        target_major: "{{ kubernetes.k8s_version.split('.')[0] | int }}"
+
+    - name: Check for major version change
+      ansible.builtin.fail:
+        msg: |
+          ❌ ERROR: Major version upgrade detected!
+          Current: {{ current_k8s_version }}
+          Target: {{ kubernetes.k8s_version }}
+          
+          Major version upgrades (e.g., 1.x -> 2.x) are not supported by this playbook.
+      when: current_major != target_major
+
+    - name: Check for downgrade
+      ansible.builtin.fail:
+        msg: |
+          ❌ ERROR: Downgrade detected!
+          Current: {{ current_k8s_version }}
+          Target: {{ kubernetes.k8s_version }}
+          
+          Downgrading Kubernetes is not supported and can cause cluster corruption.
+      when: 
+        - current_major == target_major
+        - target_minor | int < current_minor | int
+
+    - name: Check for same version
+      ansible.builtin.fail:
+        msg: |
+          ❌ ERROR: Same version detected!
+          Current: {{ current_k8s_version }}
+          Target: {{ kubernetes.k8s_version }}
+          
+          Cluster is already running the target version. No upgrade needed.
+      when: 
+        - current_major == target_major
+        - target_minor | int == current_minor | int
+
+    - name: Check for version skip
+      ansible.builtin.fail:
+        msg: |
+          ❌ ERROR: Version skip detected!
+          Current: {{ current_k8s_version }}
+          Target: {{ kubernetes.k8s_version }}
+          
+          Kubernetes only supports upgrading one minor version at a time.
+          You must upgrade incrementally:
+          {% for v in range(current_minor | int + 1, target_minor | int + 1) %}
+          - {{ current_major }}.{{ v }}
+          {% endfor %}
+      when: 
+        - current_major == target_major
+        - (target_minor | int - current_minor | int) > 1
+
+    - name: Update APT cache for version check
+      ansible.builtin.apt:
+        update_cache: true
+      changed_when: false
+
+    - name: Add target version repository temporarily
+      ansible.builtin.copy:
+        dest: /etc/apt/sources.list.d/kubernetes-check.list
+        content: "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v{{ kubernetes.k8s_version }}/deb/ /"
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Download target version repository key
+      ansible.builtin.get_url:
+        url: "https://pkgs.k8s.io/core:/stable:/v{{ kubernetes.k8s_version }}/deb/Release.key"
+        dest: "/tmp/k8s-check-key.raw"
+        mode: '0644'
+      register: version_check_key
+      failed_when: false
+
+    - name: Check if target version repository exists
+      ansible.builtin.fail:
+        msg: |
+          ❌ ERROR: Target version {{ kubernetes.k8s_version }} does not exist!
+          
+          The Kubernetes repository for v{{ kubernetes.k8s_version }} could not be found.
+          Please verify the version number at: https://kubernetes.io/releases/
+      when: version_check_key.failed
+
+    - name: Convert key to GPG format
+      ansible.builtin.command:
+        cmd: "gpg --dearmor -o /tmp/k8s-check-key.gpg /tmp/k8s-check-key.raw"
+      when: not version_check_key.failed
+
+    - name: Move key to keyrings
+      ansible.builtin.copy:
+        src: "/tmp/k8s-check-key.gpg"
+        dest: "/etc/apt/keyrings/kubernetes-check-keyring.gpg"
+        remote_src: true
+        mode: '0644'
+      when: not version_check_key.failed
+
+    - name: Update cache with target repository
+      ansible.builtin.apt:
+        update_cache: true
+      when: not version_check_key.failed
+
+    - name: Check if kubeadm package exists for target version
+      ansible.builtin.shell: apt-cache madison kubeadm | grep "{{ kubernetes.k8s_version }}" | head -1
+      register: kubeadm_available
+      changed_when: false
+      failed_when: false
+
+    - name: Verify target version packages exist
+      ansible.builtin.fail:
+        msg: |
+          ❌ ERROR: No kubeadm packages found for version {{ kubernetes.k8s_version }}!
+          
+          The repository exists but contains no packages for this version.
+          Available versions:
+          {{ kubeadm_available.stdout | default('None found') }}
+      when: kubeadm_available.stdout == ""
+
+    - name: Display available target version
+      ansible.builtin.debug:
+        msg: |
+          ✓ Target version validated successfully!
+          Available package: {{ kubeadm_available.stdout }}
+
+    - name: Clean up temporary repository files
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /etc/apt/sources.list.d/kubernetes-check.list
+        - /etc/apt/keyrings/kubernetes-check-keyring.gpg
+        - /tmp/k8s-check-key.raw
+        - /tmp/k8s-check-key.gpg
+
+    - name: Upgrade validation summary
+      ansible.builtin.debug:
+        msg:
+          - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          - "✓ Version Validation PASSED"
+          - "  Current: v{{ current_k8s_version }}"
+          - "  Target:  v{{ kubernetes.k8s_version }}"
+          - "  Upgrade: +{{ target_minor | int - current_minor | int }} minor version(s)"
+          - "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+# ============================================
+# STEP 2: PRE-UPGRADE CHECKS AND BACKUP
+# ============================================
+- name: Pre-upgrade checks
+  hosts: k8s
+  become: true
+  tasks:
+    - name: Check cgroup version (CRITICAL for Kubernetes 1.35+)
+      ansible.builtin.command: stat -fc %T /sys/fs/cgroup
+      register: cgroup_version
+      changed_when: false
+
+    - name: Display cgroup version
+      ansible.builtin.debug:
+        msg: "cgroup version: {{ cgroup_version.stdout }} (should be cgroup2fs for modern Kubernetes)"
+
+    - name: Verify cgroup is v2
+      ansible.builtin.fail:
+        msg: "ERROR: cgroup v1 detected! Kubernetes 1.35+ requires cgroup v2. Please migrate first."
+      when: 
+        - cgroup_version.stdout != "cgroup2fs"
+        - kubernetes.k8s_version is version('1.35', '>=')
+
+    - name: Check disk space
+      ansible.builtin.command: df -h /var/lib/kubelet
+      register: disk_space
+      changed_when: false
+
+    - name: Display disk space
+      ansible.builtin.debug:
+        msg: "{{ disk_space.stdout_lines }}"
+
+    - name: Create backup directory
+      ansible.builtin.file:
+        path: /var/backups/k8s-upgrade
+        state: directory
+        mode: '0755'
+
+- name: Backup etcd on control plane nodes
+  hosts: "{{ groups['k8s'][:3] }}"
+  become: true
+  tasks:
+    - name: Check if etcd is running
+      ansible.builtin.command: systemctl is-active etcd
+      register: etcd_status
+      changed_when: false
+      failed_when: false
+
+    - name: Backup etcd using kubeadm
+      ansible.builtin.shell: |
+        ETCDCTL_API=3 etcdctl snapshot save \
+        /var/backups/k8s-upgrade/etcd-backup-{{ ansible_hostname }}-{{ ansible_date_time.iso8601_basic_short }}.db \
+        --cacert=/etc/kubernetes/pki/etcd/ca.crt \
+        --cert=/etc/kubernetes/pki/etcd/server.crt \
+        --key=/etc/kubernetes/pki/etcd/server.key
+      environment:
+        ETCDCTL_ENDPOINTS: https://127.0.0.1:2379
+      register: etcd_backup
+      when: etcd_status.rc == 0 or etcd_status.stdout == "active"
+      changed_when: etcd_backup.rc == 0
+
+    - name: Backup Kubernetes certificates
+      ansible.builtin.command: tar -czf /var/backups/k8s-upgrade/pki-backup-{{ ansible_hostname }}-{{ ansible_date_time.iso8601_basic_short }}.tar.gz /etc/kubernetes/pki
+      args:
+        creates: /var/backups/k8s-upgrade/pki-backup-{{ ansible_hostname }}-{{ ansible_date_time.iso8601_basic_short }}.tar.gz
+
+    - name: Backup kubeconfig
+      ansible.builtin.copy:
+        src: /etc/kubernetes/admin.conf
+        dest: /var/backups/k8s-upgrade/admin.conf.backup-{{ ansible_date_time.iso8601_basic_short }}
+        remote_src: true
+        mode: '0600'
+
+- name: Check cluster health
+  hosts: "{{ groups['k8s'][0] }}"
+  become: true
+  tasks:
+    - name: Get node status
+      ansible.builtin.command: kubectl get nodes -o wide
+      environment:
+        KUBECONFIG: /etc/kubernetes/admin.conf
+      register: nodes_status
+      changed_when: false
+
+    - name: Display node status
+      ansible.builtin.debug:
+        msg: "{{ nodes_status.stdout_lines }}"
+
+    - name: Check for NotReady nodes
+      ansible.builtin.command: kubectl get nodes -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.status.conditions[?(@.type=="Ready")].status}{"\n"}{end}'
+      environment:
+        KUBECONFIG: /etc/kubernetes/admin.conf
+      register: node_ready_status
+      changed_when: false
+      failed_when: "'False' in node_ready_status.stdout"
+
+    - name: Get pod status
+      ansible.builtin.command: kubectl get pods -A -o wide
+      environment:
+        KUBECONFIG: /etc/kubernetes/admin.conf
+      register: pods_status
+      changed_when: false
+
+    - name: Check for failing pods
+      ansible.builtin.shell: kubectl get pods -A --field-selector=status.phase!=Running,status.phase!=Succeeded | grep -v NAMESPACE | wc -l
+      environment:
+        KUBECONFIG: /etc/kubernetes/admin.conf
+      register: failing_pods_count
+      changed_when: false
+      failed_when: false
+
+    - name: Display failing pods warning
+      ansible.builtin.debug:
+        msg: "WARNING: There are {{ failing_pods_count.stdout }} pods not in Running/Succeeded state. Review before upgrading!"
+      when: failing_pods_count.stdout | int > 0
+
+    - name: Get component status
+      ansible.builtin.command: kubectl get --raw='/readyz?verbose'
+      environment:
+        KUBECONFIG: /etc/kubernetes/admin.conf
+      register: cluster_health
+      changed_when: false
+      failed_when: false
+
+    - name: Display cluster health
+      ansible.builtin.debug:
+        msg: "{{ cluster_health.stdout_lines }}"
+
+    - name: Pre-upgrade summary
+      ansible.builtin.debug:
+        msg:
+          - "============================================"
+          - "Pre-upgrade checks completed!"
+          - "Target version: {{ kubernetes.k8s_version }}"
+          - "Backups created in: /var/backups/k8s-upgrade/"
+          - "============================================"
+
+# ============================================
+# STEP 3: UPGRADE KUBERNETES CLUSTER
+# ============================================
+- name: Pause before upgrade
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Confirm upgrade start
+      ansible.builtin.pause:
+        prompt: |
+          
+          ============================================
+          Ready to upgrade to Kubernetes {{ kubernetes.k8s_version }}
+          
+          This will:
+          1. Upgrade first control plane node
+          2. Upgrade additional control plane nodes (one at a time)
+          3. Upgrade worker nodes (if any)
+          
+          Press ENTER to continue or Ctrl+C to abort
+          ============================================
+
+- name: Upgrade first control plane node
+  hosts: "{{ groups['k8s'][0] }}"
+  become: true
+  roles:
+    - k8s-upgrade-control-plane-first
+
+- name: Upgrade additional control plane nodes
+  hosts: "{{ groups['k8s'][1:] }}"
+  become: true
+  serial: 1
+  roles:
+    - k8s-upgrade-control-plane
+
+- name: Upgrade worker nodes (if any)
+  hosts: k8s_workers
+  become: true
+  serial: 1
+  tasks:
+    - name: Check if this host is in k8s_workers group
+      ansible.builtin.set_fact:
+        is_worker: true
+      when: "'k8s_workers' in group_names"
+
+    - name: Include worker upgrade role
+      ansible.builtin.include_role:
+        name: k8s-upgrade-worker
+      when: is_worker | default(false)
+
+# ============================================
+# STEP 4: POST-UPGRADE VALIDATION
+# ============================================
+- name: Post-upgrade validation
+  hosts: "{{ groups['k8s'][0] }}"
+  become: true
+  vars:
+    # Auto-detect kubeconfig path or use specified one
+    # Priority: 1. kubeconfig_path variable, 2. /root/.kube/config, 3. /etc/kubernetes/admin.conf
+    kube_config_path: "{{ kubeconfig_path | default('/root/.kube/config' if lookup('env', 'HOME') == '/root' else '/etc/kubernetes/admin.conf') }}"
+  tasks:
+    - name: Check which kubeconfig exists
+      ansible.builtin.stat:
+        path: "{{ item }}"
+      register: kubeconfig_check
+      loop:
+        - /root/.kube/config
+        - /etc/kubernetes/admin.conf
+      failed_when: false
+
+    - name: Set kubeconfig path based on what exists
+      ansible.builtin.set_fact:
+        kube_config_path: "{{ kubeconfig_check.results | selectattr('stat.exists', 'equalto', true) | map(attribute='item') | first }}"
+      when: kubeconfig_check.results | selectattr('stat.exists', 'equalto', true) | list | length > 0
+
+    - name: Display kubeconfig being used
+      ansible.builtin.debug:
+        msg: "Using kubeconfig: {{ kube_config_path }}"
+    - name: Wait for API server to be ready
+      ansible.builtin.command: kubectl get --raw='/readyz'
+      environment:
+        KUBECONFIG: "{{ kube_config_path }}"
+      register: api_ready
+      until: api_ready.rc == 0
+      retries: 20
+      delay: 10
+      changed_when: false
+      failed_when: false
+
+    - name: Display API readiness warning if check failed
+      ansible.builtin.debug:
+        msg: "⚠ WARNING: Could not verify API server readiness. Manual check recommended."
+      when: api_ready.rc != 0
+
+    - name: Display API readiness warning if check failed
+      ansible.builtin.debug:
+        msg: "⚠ WARNING: Could not verify API server readiness. Manual check recommended."
+      when: api_ready.rc != 0
+
+    - name: Get all nodes
+      ansible.builtin.command: kubectl get nodes -o wide
+      environment:
+        KUBECONFIG: "{{ kube_config_path }}"
+      register: all_nodes
+      changed_when: false
+      failed_when: false
+      when: api_ready.rc == 0
+
+    - name: Display all nodes
+      ansible.builtin.debug:
+        msg: "{{ all_nodes.stdout_lines }}"
+      when: 
+        - api_ready.rc == 0
+        - all_nodes.rc == 0
+
+    - name: Check all nodes are Ready
+      ansible.builtin.shell: |
+        kubectl get nodes --no-headers | awk '{print $2}' | grep -v Ready | wc -l
+      environment:
+        KUBECONFIG: "{{ kube_config_path }}"
+      register: not_ready_count
+      changed_when: false
+      failed_when: false
+      when: api_ready.rc == 0
+
+    - name: Warn if nodes not ready
+      ansible.builtin.debug:
+        msg: "⚠ WARNING: {{ not_ready_count.stdout }} nodes are not Ready!"
+      when:
+        - api_ready.rc == 0
+        - not_ready_count.rc == 0
+        - not_ready_count.stdout | int > 0
+
+    - name: Get node versions
+      ansible.builtin.command: kubectl get nodes -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.status.nodeInfo.kubeletVersion}{"\n"}{end}'
+      environment:
+        KUBECONFIG: "{{ kube_config_path }}"
+      register: node_versions
+      changed_when: false
+      failed_when: false
+      when: api_ready.rc == 0
+
+    - name: Display node versions
+      ansible.builtin.debug:
+        msg: "{{ node_versions.stdout_lines }}"
+      when:
+        - api_ready.rc == 0
+        - node_versions.rc == 0
+
+    - name: Verify all nodes are on target version
+      ansible.builtin.shell: |
+        kubectl get nodes -o jsonpath='{range .items[*]}{.status.nodeInfo.kubeletVersion}{"\n"}{end}' | \
+        grep -v "v{{ kubernetes.k8s_version }}" | wc -l
+      environment:
+        KUBECONFIG: "{{ kube_config_path }}"
+      register: wrong_version_count
+      changed_when: false
+      failed_when: false
+      when: api_ready.rc == 0
+
+    - name: Warn if version mismatch
+      ansible.builtin.debug:
+        msg: "⚠ WARNING: {{ wrong_version_count.stdout }} nodes are not on target version {{ kubernetes.k8s_version }}"
+      when:
+        - api_ready.rc == 0
+        - wrong_version_count.rc == 0
+        - wrong_version_count.stdout | int > 0
+
+    - name: Get cluster version
+      ansible.builtin.command: kubectl version --short
+      environment:
+        KUBECONFIG: "{{ kube_config_path }}"
+      register: cluster_version
+      changed_when: false
+      failed_when: false
+      when: api_ready.rc == 0
+
+    - name: Display cluster version
+      ansible.builtin.debug:
+        msg: "{{ cluster_version.stdout_lines }}"
+      when:
+        - api_ready.rc == 0
+        - cluster_version.rc == 0
+
+    - name: Get component health
+      ansible.builtin.command: kubectl get --raw='/readyz?verbose'
+      environment:
+        KUBECONFIG: "{{ kube_config_path }}"
+      register: component_health
+      changed_when: false
+      failed_when: false
+      when: api_ready.rc == 0
+
+    - name: Display component health
+      ansible.builtin.debug:
+        msg: "{{ component_health.stdout_lines }}"
+      when:
+        - api_ready.rc == 0
+        - component_health.rc == 0
+
+    - name: Check system pods status
+      ansible.builtin.command: kubectl get pods -n kube-system
+      environment:
+        KUBECONFIG: "{{ kube_config_path }}"
+      register: system_pods
+      changed_when: false
+      failed_when: false
+      when: api_ready.rc == 0
+
+    - name: Display system pods
+      ansible.builtin.debug:
+        msg: "{{ system_pods.stdout_lines }}"
+      when:
+        - api_ready.rc == 0
+        - system_pods.rc == 0
+
+    - name: Check for crashlooping pods
+      ansible.builtin.shell: |
+        kubectl get pods -A --field-selector=status.phase=Running -o json | \
+        jq -r '.items[] | select(.status.containerStatuses[]?.restartCount > 5) | "\(.metadata.namespace)/\(.metadata.name) - Restarts: \(.status.containerStatuses[].restartCount)"'
+      environment:
+        KUBECONFIG: "{{ kube_config_path }}"
+      register: crashlooping_pods
+      changed_when: false
+      failed_when: false
+      when: api_ready.rc == 0
+
+    - name: Display crashlooping pods warning
+      ansible.builtin.debug:
+        msg: "WARNING: Pods with high restart count:\n{{ crashlooping_pods.stdout_lines }}"
+      when:
+        - api_ready.rc == 0
+        - crashlooping_pods.rc == 0
+        - crashlooping_pods.stdout | length > 0
+
+    - name: Check API server response time
+      ansible.builtin.uri:
+        url: "https://{{ kubernetes.vip_address }}:6443/healthz"
+        validate_certs: false
+        status_code: 200
+        timeout: 10
+      register: api_response
+      failed_when: false
+      retries: 10
+      delay: 5
+
+    - name: Display API response time
+      ansible.builtin.debug:
+        msg: "API server responded in {{ api_response.elapsed }} seconds"
+      when: api_response.status == 200
+
+    - name: Warn if API unreachable
+      ansible.builtin.debug:
+        msg: "⚠ WARNING: Could not reach API server at {{ kubernetes.vip_address }}:6443"
+      when: api_response.status != 200
+
+    - name: Get etcd health (if accessible)
+      ansible.builtin.command: |
+        kubectl exec -n kube-system etcd-{{ ansible_hostname }} -- \
+        etcdctl --cacert=/etc/kubernetes/pki/etcd/ca.crt \
+        --cert=/etc/kubernetes/pki/etcd/server.crt \
+        --key=/etc/kubernetes/pki/etcd/server.key \
+        endpoint health
+      environment:
+        KUBECONFIG: "{{ kube_config_path }}"
+      register: etcd_health
+      changed_when: false
+      failed_when: false
+      when: api_ready.rc == 0
+
+    - name: Display etcd health
+      ansible.builtin.debug:
+        msg: "{{ etcd_health.stdout_lines }}"
+      when:
+        - api_ready.rc == 0
+        - etcd_health.rc == 0
+
+    - name: Final upgrade summary
+      ansible.builtin.debug:
+        msg:
+          - ""
+          - "╔════════════════════════════════════════════╗"
+          - "║  Kubernetes Upgrade Process Completed!    ║"
+          - "╚════════════════════════════════════════════╝"
+          - ""
+          - "{% if api_ready.rc == 0 %}✓{% else %}⚠{% endif %} Upgrade steps executed"
+          - "{% if api_ready.rc == 0 %}✓{% else %}⚠{% endif %} Target version: {{ kubernetes.k8s_version }}"
+          - "✓ Backups stored in /var/backups/k8s-upgrade/"
+          - ""
+          - "{% if api_ready.rc != 0 %}⚠ Some validations could not be performed.{% endif %}"
+          - "{% if api_ready.rc != 0 %}  Please manually verify cluster health with:{% endif %}"
+          - "{% if api_ready.rc != 0 %}  kubectl get nodes{% endif %}"
+          - "{% if api_ready.rc != 0 %}  kubectl get pods -A{% endif %}"
+          - ""
+          - "Next steps:"
+          - "- Monitor cluster for 24h"
+          - "- Test applications"
+          - ""
