@@ -1,0 +1,116 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: adguardhome-sync
+  namespace: apps
+spec:
+  selector:
+    matchLabels:
+      app: adguardhome-sync
+  strategy:
+    type: Recreate
+  replicas: 1
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      labels:
+        app: adguardhome-sync
+    spec:
+      containers:
+      - name: adguardhome-sync
+        image: ghcr.io/bakito/adguardhome-sync:v0.6.14
+        env:
+        # Origin (Primary) AdGuard Home instance
+        - name: ORIGIN_URL
+          valueFrom:
+            secretKeyRef:
+              name: adguardhome-sync-secrets
+              key: origin_url
+        - name: ORIGIN_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: adguardhome-sync-secrets
+              key: origin_username
+        - name: ORIGIN_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: adguardhome-sync-secrets
+              key: origin_password
+        
+        # Replica (Secondary) AdGuard Home instances
+        - name: REPLICA1_URL
+          valueFrom:
+            secretKeyRef:
+              name: adguardhome-sync-secrets
+              key: replica1_url
+        - name: REPLICA1_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: adguardhome-sync-secrets
+              key: replica1_username
+        - name: REPLICA1_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: adguardhome-sync-secrets
+              key: replica1_password
+        
+        # Optional: Add more replicas if needed
+        # - name: REPLICA2_URL
+        #   valueFrom:
+        #     secretKeyRef:
+        #       name: adguardhome-sync-secrets
+        #       key: replica2_url
+        
+        # Sync configuration
+        - name: CRON
+          value: "0 * * * *"  # Every hour, same as nebula-sync
+        - name: RUN_ON_START
+          value: "true"
+        - name: TZ
+          value: "Europe/Rome"
+        
+        # Features to sync (customize as needed)
+        - name: FEATURES_GENERAL_SETTINGS
+          value: "true"
+        - name: FEATURES_QUERY_LOG_CONFIG
+          value: "true"
+        - name: FEATURES_STATS_CONFIG
+          value: "true"
+        - name: FEATURES_CLIENT_SETTINGS
+          value: "true"
+        - name: FEATURES_SERVICES
+          value: "true"
+        - name: FEATURES_FILTERS
+          value: "true"
+        - name: FEATURES_DHCP_SERVER_CONFIG
+          value: "false"
+        - name: FEATURES_DHCP_STATIC_LEASES
+          value: "false"
+        - name: FEATURES_DNS_SERVER_CONFIG
+          value: "true"
+        - name: FEATURES_DNS_ACCESS_LISTS
+          value: "true"
+        - name: FEATURES_DNS_REWRITES
+          value: "true"
+        
+        # API settings
+        - name: API_PORT
+          value: "8080"
+        - name: LOG_LEVEL
+          value: "info"
+        - name: API_INSECURE_SKIP_VERIFY
+          value: "true"  # Same as CLIENT_SKIP_TLS_VERIFICATION
+        
+        ports:
+        - containerPort: 8080
+          name: http
+          protocol: TCP
+        
+        resources:
+          limits:
+            cpu: 50m
+            memory: 500Mi
+          requests:
+            cpu: 10m
+            memory: 128Mi
