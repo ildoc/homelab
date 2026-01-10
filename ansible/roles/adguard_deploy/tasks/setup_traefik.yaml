@@ -1,0 +1,19 @@
+---
+- name: Create traefik config folder
+  ansible.builtin.file:
+    path: ~/traefik/config
+    state: directory
+    mode: '0755'
+
+- name: Create traefik certificates folder
+  ansible.builtin.file:
+    path: ~/traefik/letsencrypt
+    state: directory
+    mode: '0755'
+
+- name: Template traefik static config
+  ansible.builtin.template:
+    src: traefik.yml.j2
+    dest: ~/traefik/config/traefik.yml
+    mode: '0644'
+  notify: Restart containers

@@ -1,0 +1,33 @@
+---
+- name: Load secrets from Vault
+  hosts: localhost
+  gather_facts: false
+  vars:
+    vault_secrets_map:
+      adguard:
+        letsencrypt_email: "ansible/data/adguard:letsencrypt_email"
+        cloudflare_token: "ansible/data/adguard:cloudflare_token"
+  
+  tasks:
+    - name: Include vault secrets loading task
+      ansible.builtin.include_tasks: "{{ playbook_dir }}/tasks/vault/load-secrets.yaml"
+
+- name: Deploy primary adguard with traefik
+  hosts: adguard[0]
+  gather_facts: true
+  vars:
+    _secrets: "{{ hostvars['localhost']['vault_secrets_loaded'] }}"
+    adguard_domain: "adguard.local.ildoc.it"
+  
+  roles:
+    - role: adguard_deploy
+
+- name: Deploy secondary adguard with traefik
+  hosts: adguard[1:]
+  gather_facts: true
+  vars:
+    _secrets: "{{ hostvars['localhost']['vault_secrets_loaded'] }}"
+    adguard_domain: "adguard2.local.ildoc.it"
+  
+  roles:
+    - role: adguard_deploy

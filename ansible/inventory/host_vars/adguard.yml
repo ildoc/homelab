@@ -1,5 +1,5 @@
 adguard:
-  api_url: "http://192.168.0.5"
+  api_url: "http://192.168.0.5:8080"
   username: "{{ _secrets.adguard.username }}"
   password: "{{ _secrets.adguard.password }}"
   validate_certs: false  # Set to true if you have valid SSL certificates
@@ -20,7 +20,8 @@ adguard:
     - { ip: "192.168.0.40", domain: "redis" }
     - { ip: "192.168.0.50", domain: "vault" }
 
-    - { ip: "192.168.0.145", domain: "adguard.local.ildoc.it" }
+    - { ip: "192.168.0.5", domain: "adguard.local.ildoc.it" }
+    - { ip: "192.168.0.6", domain: "adguard2.local.ildoc.it" }
     - { ip: "192.168.0.183", domain: "ubuntu.local.ildoc.it" }
       
     - { ip: "192.168.0.25", domain: "gitlab.local.ildoc.it" }

@@ -1,0 +1,58 @@
+---
+services:
+  traefik:
+    image: traefik:v3.6.6
+    container_name: traefik
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - CF_DNS_API_TOKEN={{ _secrets.adguard.cloudflare_token }}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik/config/traefik.yml:/traefik.yml:ro
+      - ./traefik/letsencrypt:/letsencrypt
+    networks:
+      - traefik
+
+  adguard:
+    image: adguard/adguardhome:v0.107.71
+    container_name: adguard
+    hostname: adguard
+    depends_on:
+      - traefik
+    ports:
+      - "3000:3000"  # Web UI - setup iniziale
+      - "8080:80"    # Web UI - accesso diretto post-setup
+      - "53:53/tcp"
+      - "53:53/udp"
+      - "853:853/tcp"  # DNS-over-TLS
+    volumes:
+      - ./adguard/work:/opt/adguardhome/work
+      - ./adguard/conf:/opt/adguardhome/conf
+    restart: unless-stopped
+    networks:
+      - traefik
+    labels:
+      - "traefik.enable=true"
+      
+      # AdGuard Web UI
+      - "traefik.http.routers.adguard.rule=Host(`{{ adguard_domain }}`)"
+      - "traefik.http.routers.adguard.entrypoints=websecure"
+      - "traefik.http.routers.adguard.tls.certresolver=cloudflare"
+      - "traefik.http.routers.adguard.service=adguard"
+      - "traefik.http.services.adguard.loadbalancer.server.port=80"
+      
+      # DNS over HTTPS (DoH)
+      - "traefik.http.routers.adguard-doh.rule=Host(`{{ adguard_domain }}`) && PathPrefix(`/dns-query`)"
+      - "traefik.http.routers.adguard-doh.entrypoints=websecure"
+      - "traefik.http.routers.adguard-doh.tls.certresolver=cloudflare"
+      - "traefik.http.routers.adguard-doh.service=adguard-doh"
+      - "traefik.http.services.adguard-doh.loadbalancer.server.port=80"
+
+networks:
+  traefik:
+    name: traefik

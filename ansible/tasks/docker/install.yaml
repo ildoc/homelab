@@ -15,18 +15,31 @@
           - gpg
         update_cache: true
 
-    - name: Add Docker GPG key
-      ansible.builtin.apt_key:
-        url: https://download.docker.com/linux/ubuntu/gpg
-        state: present
+    - name: Create keyrings directory
+      ansible.builtin.file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: '0755'
 
-    - name: Get ubuntu version
+    - name: Detect OS and architecture
+      ansible.builtin.set_fact:
+        docker_os: "{{ 'debian' if ansible_distribution in ['Debian', 'Raspbian'] else 'ubuntu' }}"
+        docker_arch: "{{ 'arm64' if ansible_architecture == 'aarch64' else ('armhf' if ansible_architecture in ['armv7l', 'armv6l'] else 'amd64') }}"
+
+    - name: Download Docker GPG key
+      ansible.builtin.get_url:
+        url: "https://download.docker.com/linux/{{ docker_os }}/gpg"
+        dest: /etc/apt/keyrings/docker.asc
+        mode: '0644'
+
+    - name: Get OS codename
       ansible.builtin.command: lsb_release -cs
-      register: ubuntu_version
+      register: os_codename
+      changed_when: false
 
     - name: Add Docker repository
       ansible.builtin.apt_repository:
-        repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ubuntu_version.stdout }} stable"
+        repo: "deb [arch={{ docker_arch }} signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/{{ docker_os }} {{ os_codename.stdout }} stable"
         state: present
 
     - name: Update apt cache
@@ -43,6 +56,13 @@
           - docker-buildx-plugin
         update_cache: true
 
-# # add the current user to the docker group
-# - name: add user permissions
-#   shell: "usermod -aG docker {{ ansible_env.SUDO_USER }}"
+    - name: Add user to docker group
+      ansible.builtin.user:
+        name: "{{ ansible_user }}"
+        groups: docker
+        append: true
+      when: ansible_user != 'root'
+
+    - name: Reset ssh connection to apply docker group
+      ansible.builtin.meta: reset_connection
+      when: ansible_user != 'root'

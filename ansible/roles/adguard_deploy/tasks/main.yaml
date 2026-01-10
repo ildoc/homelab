@@ -1,0 +1,14 @@
+---
+# ansible/roles/adguard_deploy/tasks/main.yaml
+
+- name: Install docker with elevated privileges
+  block:
+    - name: Install docker
+      ansible.builtin.include_tasks: "{{ tasks_dir }}/docker/install.yaml"
+  become: true
+
+- name: Setup Traefik config
+  ansible.builtin.include_tasks: setup_traefik.yaml
+
+- name: Setup AdGuard
+  ansible.builtin.include_tasks: setup_adguard.yaml
