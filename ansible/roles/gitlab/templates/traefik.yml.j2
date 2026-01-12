@@ -1,5 +1,9 @@
 ---
 # Traefik static configuration
+# Allow encoded characters in URL paths (needed for GitLab API with %2F in project names)
+core:
+  defaultRuleSyntax: v3
+
 entryPoints:
   web:
     address: ":80"
@@ -13,6 +17,8 @@ entryPoints:
   websecure:
     address: ":443"
     http:
+      encodedCharacters:
+        allowEncodedSlash: true  # Allow %2F in URL paths (needed for GitLab API)
       tls:
         certResolver: cloudflare
         domains:

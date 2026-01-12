@@ -1,0 +1,47 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: freshrss
+  namespace: apps
+spec:
+  selector:
+    matchLabels:
+      app: freshrss
+  strategy:
+    type: Recreate
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      labels:
+        app: freshrss
+    spec:
+      containers:
+        - name: freshrss
+          image: freshrss/freshrss
+          env:
+            - name: PUID
+              value: "1000"
+            - name: PGID
+              value: "1000"
+            - name: TZ
+              value: "Europe/Rome"
+            - name: CRON_MIN
+              value: "2,32"
+            - name: OIDC_ENABLED
+              value: "1"
+          volumeMounts:
+            - name: freshrss-data
+              mountPath: /var/www/FreshRSS/data
+              subPath: data
+            - name: freshrss-data
+              mountPath: /var/www/FreshRSS/extensions
+              subPath: extensions
+          resources:
+            limits:
+              cpu: 50m
+              memory: 500Mi
+      volumes:
+        - name: freshrss-data
+          persistentVolumeClaim:
+            claimName: freshrss
