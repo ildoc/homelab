@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
       - name: adguardhome-sync
-        image: ghcr.io/bakito/adguardhome-sync:v0.6.14
+        image: ghcr.io/bakito/adguardhome-sync:v0.6.14@sha256:b541992dd9924bb0894f0b2501a0d62576c0e35a0f9bf60872e01bce2253d48b
         env:
         # Origin (Primary) AdGuard Home instance
         - name: ORIGIN_URL

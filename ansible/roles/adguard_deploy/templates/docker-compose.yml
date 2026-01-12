@@ -1,7 +1,7 @@
 ---
 services:
   traefik:
-    image: traefik:v3.6.6
+    image: traefik:v3.6.6@sha256:82d3d16dde0474a51fef00b28de143d48b67f7a27453224d5e7b5aaefff26a97
     container_name: traefik
     restart: unless-stopped
     security_opt:
@@ -19,7 +19,7 @@ services:
       - traefik
 
   adguard:
-    image: adguard/adguardhome:v0.107.71
+    image: adguard/adguardhome:v0.107.71@sha256:92929135ced2554aaf94706f766a98ad348f211df61b0704e2db7e8498cc00b7
     container_name: adguard
     hostname: adguard
     depends_on:
