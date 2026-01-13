@@ -44,7 +44,7 @@ services:
   #    - invidious-db
 
   companion:
-    image: quay.io/invidious/invidious-companion:master-2668927
+    image: quay.io/invidious/invidious-companion:master-cd52e7f
     environment:
       SERVER_SECRET_KEY: {{ invidious.companion_key }}
     restart: unless-stopped
