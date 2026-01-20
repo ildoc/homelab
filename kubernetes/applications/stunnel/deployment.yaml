@@ -43,7 +43,12 @@ spec:
               mountPath: /config
       containers:
         - name: stunnel
-          image: dweomer/stunnel:latest
+          image: alpine:latest
+          command: ["/bin/sh", "-c"]
+          args:
+          - |
+            apk add --no-cache stunnel
+            stunnel /etc/stunnel/stunnel.conf
           ports:
             - containerPort: 443
               name: stunnel
