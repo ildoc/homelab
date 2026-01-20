@@ -32,16 +32,17 @@ data:
       "outbounds": [
         {
           "type": "direct",
-          "tag": "wg-out",
-          "override_address": "192.168.0.1",
-          "override_port": 39208,
+          "tag": "wg-out"
         }
       ],
       "route": {
         "rules": [
           {
             "inbound": "vless-in",
+            "action": "route-options",
             "outbound": "wg-out",
+            "override_address": "192.168.0.1",
+            "override_port": 39208
           }
         ],
         "final": "wg-out"
