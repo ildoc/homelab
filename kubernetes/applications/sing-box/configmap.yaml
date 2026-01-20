@@ -6,14 +6,16 @@ metadata:
 data:
   config.json: |
     {
-      "log": { "level": "info" },
+      "log": { "level": "debug" },
       "inbounds": [
         {
           "type": "vless",
           "listen": "::",
           "listen_port": 443,
           "users": [
-            { "uuid": "UUID-CLIENT" }
+            { 
+              "uuid": "UUID-CLIENT"
+            }
           ],
           "tls": {
             "enabled": true,
@@ -28,7 +30,18 @@ data:
       ],
       "outbounds": [
         {
-          "type": "direct"
+          "type": "direct",
+          "tag": "direct"
         }
-      ]
+      ],
+      "route": {
+        "rules": [
+          {
+            "inbound": "vless",
+            "outbound": "direct",
+            "network": "udp"
+          }
+        ],
+        "final": "direct"
+      }
     }
