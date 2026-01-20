@@ -10,6 +10,7 @@ data:
       "inbounds": [
         {
           "type": "vless",
+          "tag": "vless-in",
           "listen": "::",
           "listen_port": 443,
           "users": [
@@ -37,7 +38,7 @@ data:
       "route": {
         "rules": [
           {
-            "inbound": "vless",
+            "inbound": "vless-in",
             "outbound": "direct",
             "network": "udp"
           }
