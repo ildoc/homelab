@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sing-box
+  namespace: apps
+spec:
+  selector:
+    matchLabels:
+      app: sing-box
+  strategy:
+    type: Recreate
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      labels:
+        app: sing-box
+    spec:
+      initContainers:
+        - name: config-generator
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              sed "s/UUID-CLIENT/${CLIENT_UUID}/g" /config-template/config.json > /config/config.json
+          env:
+            - name: CLIENT_UUID
+              valueFrom:
+                secretKeyRef:
+                  name: sing-box-secrets
+                  key: client-uuid
+          volumeMounts:
+            - name: config-template
+              mountPath: /config-template
+            - name: config
+              mountPath: /config
+      containers:
+        - name: sing-box
+          image: ghcr.io/sagernet/sing-box:latest
+          args: ["run", "-c", "/config/config.json"]
+          ports:
+            - containerPort: 443
+          volumeMounts:
+            - name: config
+              mountPath: /config
+            - name: tls
+              mountPath: /tls
+              readOnly: true
+      volumes:
+        - name: config-template
+          configMap:
+            name: sing-box-config
+        - name: config
+          emptyDir: {}
+        - name: tls
+          secret:
+            secretName: wg-ildoc-it-tls
