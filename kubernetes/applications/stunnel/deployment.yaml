@@ -1,0 +1,70 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: stunnel
+  namespace: apps
+spec:
+  selector:
+    matchLabels:
+      app: stunnel
+  strategy:
+    type: Recreate
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      labels:
+        app: stunnel
+    spec:
+      initContainers:
+        - name: config-generator
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              cat > /config/stunnel.conf << EOF
+              foreground = yes
+
+              [wireguard]
+              accept = 443
+              connect = ${WIREGUARD_TARGET}
+              cert = /etc/stunnel/certs/tls.crt
+              key = /etc/stunnel/certs/tls.key
+              EOF
+          env:
+            - name: WIREGUARD_TARGET
+              valueFrom:
+                secretKeyRef:
+                  name: stunnel-secrets
+                  key: wireguard-target
+          volumeMounts:
+            - name: stunnel-config
+              mountPath: /config
+      containers:
+        - name: stunnel
+          image: dweomer/stunnel:latest
+          ports:
+            - containerPort: 443
+              name: stunnel
+              protocol: TCP
+          volumeMounts:
+            - name: stunnel-config
+              mountPath: /etc/stunnel/stunnel.conf
+              subPath: stunnel.conf
+            - name: certs
+              mountPath: /etc/stunnel/certs
+              readOnly: true
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "50m"
+            limits:
+              memory: "128Mi"
+              cpu: "200m"
+      volumes:
+        - name: stunnel-config
+          emptyDir: {}
+        - name: certs
+          secret:
+            secretName: wg-ildoc-it-tls
