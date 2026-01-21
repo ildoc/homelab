@@ -22,13 +22,26 @@ spec:
             - sh
             - -c
             - |
-              sed "s/UUID-CLIENT/${CLIENT_UUID}/g" /config-template/config.json > /config/config.json
+              sed -e "s/UUID-CLIENT/${CLIENT_UUID}/g" \
+                  -e "s/GATEWAY-ADDRESS/${GATEWAY_ADDRESS}/g" \
+                  -e "s/GATEWAY-PORT/${GATEWAY_PORT}/g" \
+                  /config-template/config.json > /config/config.json
           env:
             - name: CLIENT_UUID
               valueFrom:
                 secretKeyRef:
                   name: sing-box-secrets
                   key: client-uuid
+            - name: GATEWAY_ADDRESS
+              valueFrom:
+                secretKeyRef:
+                  name: sing-box-secrets
+                  key: gateway-address
+            - name: GATEWAY_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: sing-box-secrets
+                  key: gateway-port
           volumeMounts:
             - name: config-template
               mountPath: /config-template
