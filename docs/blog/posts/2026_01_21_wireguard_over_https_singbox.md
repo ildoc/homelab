@@ -50,32 +50,21 @@ Per questo setup ho utilizzato:
 
 ### Architettura della soluzione
 
-```
-Beryl AX (Client)
-    |
-    v
-WireGuard Client → 127.0.0.1:51820 (UDP locale)
-    |
-    v
-sing-box client → vpn.mydomain.it:443 (VLESS/gRPC/TLS su TCP)
-    |
-    v
-Internet (traffico HTTPS, porta 443 TCP)
-    |
-    v
-Router ISP → Port Forward 443 TCP → UCG:39300
-    |
-    v
-UCG → Port Forward 39300 TCP → LoadBalancer K8s (es. 192.168.0.83:9443)
-    |
-    v
-Kubernetes Service → sing-box server pod:443
-    |
-    v
-sing-box server → decripta e forwarda → UCG:51820 (UDP)
-    |
-    v
-WireGuard Server (UCG)
+``` mermaid
+graph TB
+    A[Beryl AX Client] -->|WireGuard UDP| B[127.0.0.1:51820]
+    B -->|sing-box client| C[vpn.mydomain.it:443<br/>VLESS/gRPC/TLS]
+    C -->|HTTPS TCP 443| D[Internet]
+    D -->|Port Forward| E[Router ISP<br/>443 TCP → UCG:39300]
+    E -->|Port Forward| F[UCG<br/>39300 TCP → K8s LB:9443]
+    F -->|LoadBalancer| G[Kubernetes Service<br/>sing-box:443]
+    G -->|sing-box server| H[Decripta e forwarda<br/>UDP 51820]
+    H -->|WireGuard UDP| I[WireGuard Server<br/>UCG]
+    
+    style A fill:#e1f5ff
+    style I fill:#e1f5ff
+    style C fill:#fff4e1
+    style G fill:#fff4e1
 ```
 
 **Caratteristiche principali:**
@@ -334,7 +323,7 @@ Uso External Secrets Operator per gestire i secret da Vault. Il file completo è
 --8<-- "kubernetes/applications/sing-box/secrets.yaml"
 ```
 
-In alternativa, se non usi External Secrets, puoi creare un Secret normale con l'UUID del client. L'UUID deve corrispondere esattamente a quello configurato sul client.
+In alternativa, non usando External Secrets, si può creare un Secret normale con l'UUID del client. L'UUID deve corrispondere esattamente a quello configurato sul client.
 
 ### 3. ConfigMap configurazione sing-box
 
@@ -368,17 +357,9 @@ La porta esposta dal LoadBalancer nel mio caso è 9443, e ho usato l'annotazione
 
 ### Deploy completo
 
-Ho applicato tutte le risorse:
+Nel mio caso uso ArgoCD per il deploy in modalità GitOps, quindi le risorse vengono applicate automaticamente quando committo i file nel repository. I file sono nella cartella `kubernetes/applications/sing-box/` e vengono gestiti tramite ArgoCD.
 
-```bash
-kubectl apply -f sing-box-certificate.yaml
-kubectl apply -f sing-box-secret.yaml
-kubectl apply -f sing-box-configmap.yaml
-kubectl apply -f sing-box-deployment.yaml
-kubectl apply -f sing-box-service.yaml
-```
-
-Poi ho verificato il deployment:
+Per verificare il deployment:
 
 ```bash
 kubectl get pods -n apps -l app=sing-box
