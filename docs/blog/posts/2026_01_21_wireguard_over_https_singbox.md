@@ -61,10 +61,10 @@ graph TB
     G -->|sing-box server| H[Decripta e forwarda<br/>UDP 51820]
     H -->|WireGuard UDP| I[WireGuard Server<br/>UCG]
     
-    style A fill:#e1f5ff
-    style I fill:#e1f5ff
-    style C fill:#fff4e1
-    style G fill:#fff4e1
+    style A fill:#1976d2,stroke:#0d47a1,stroke-width:2px,color:#fff
+    style I fill:#1976d2,stroke:#0d47a1,stroke-width:2px,color:#fff
+    style C fill:#f57c00,stroke:#e65100,stroke-width:2px,color:#fff
+    style G fill:#f57c00,stroke:#e65100,stroke-width:2px,color:#fff
 ```
 
 **Caratteristiche principali:**
