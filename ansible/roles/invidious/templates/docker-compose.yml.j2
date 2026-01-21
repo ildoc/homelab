@@ -2,7 +2,7 @@
 services:
 
   invidious:
-    image: quay.io/invidious/invidious:2025.12.22-5f84a5b
+    image: quay.io/invidious/invidious:2026.01.19-7e36cfb
     restart: unless-stopped
     ports:
       - "3000:3000"
@@ -44,7 +44,7 @@ services:
   #    - invidious-db
 
   companion:
-    image: quay.io/invidious/invidious-companion:master-cd52e7f
+    image: quay.io/invidious/invidious-companion:master-d733c5a
     environment:
       SERVER_SECRET_KEY: {{ invidious.companion_key }}
     restart: unless-stopped

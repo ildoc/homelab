@@ -1,0 +1,28 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: sing-box-policy
+  namespace: apps
+spec:
+  podSelector:
+    matchLabels:
+      app: sing-box
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # Permette solo traffico TCP 443 in ingresso (dal LoadBalancer)
+  - ports:
+    - protocol: TCP
+      port: 443
+  egress:
+  # Permette solo egress UDP verso il gateway WireGuard (UCG) fuori dal cluster
+  # NOTA: La porta deve corrispondere al valore nel secret 'gateway-port' (attualmente 39208)
+  # NOTA: L'IP del gateway è nel secret 'gateway-address' (es. 192.168.0.1)
+  # Usa una subnet ristretta che include solo il gateway, oppure specifica l'IP esatto
+  - to:
+    - ipBlock:
+        cidr: 192.168.0.1/32  # IP specifico del gateway UCG - adatta se necessario
+    ports:
+    - protocol: UDP
+      port: 39208
