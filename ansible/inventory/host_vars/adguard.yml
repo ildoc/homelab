@@ -129,10 +129,6 @@ adguard:
       name: "AdAway Hosts"
       enabled: true
     
-    - url: "https://mirror1.malwaredomains.com/files/justdomains"
-      name: "Malware Domains"
-      enabled: false
-
     - url: "https://big.oisd.nl"
       name: "OISD Full"
       enabled: true
