@@ -8,6 +8,7 @@ tags:
   - kubernetes
   - vpn
   - sing-box
+  - security
 draft: false
 ---
 
@@ -68,6 +69,7 @@ graph TB
 ```
 
 **Caratteristiche principali:**
+
 - TLS reale con certificato Let's Encrypt valido
 - Protocollo gRPC (HTTP/2) con ALPN
 - Traffico indistinguibile da HTTPS normale (browser-like)
@@ -235,6 +237,7 @@ PersistentKeepalive = 25
 La differenza chiave è che l'endpoint punta a `127.0.0.1:51820` (sing-box locale) invece del server remoto.
 
 In pratica:
+
 - Da casa/hotspot → uso il profilo "Direct"
 - In ufficio/reti restrittive → uso il profilo "Office"
 
@@ -273,6 +276,7 @@ wg show
 ```
 
 Output con handshake recente:
+
 ```
 interface: wg0
   latest handshake: 5 seconds ago
@@ -284,6 +288,7 @@ interface: wg0
 ### Prerequisiti
 
 Nel mio caso avevo già:
+
 - Cluster Kubernetes funzionante
 - cert-manager configurato con Let's Encrypt
 - LoadBalancer funzionante (Cilium LB-IPAM)
@@ -333,7 +338,7 @@ Il ConfigMap completo è disponibile nel repository:
 --8<-- "kubernetes/applications/sing-box/configmap.yaml"
 ```
 
-I placeholder `UUID-CLIENT`, `GATEWAY-ADDRESS` e `GATEWAY-PORT` vengono sostituiti dall'initContainer del deployment. Il `action: "route-options"` è necessario dalla versione 1.11.0+ (nuova sintassi per override). Ho impostato il log level a `debug` per facilitare il troubleshooting, ma si può cambiare in `info` per produzione.
+I placeholder `UUID-CLIENT`, `GATEWAY-ADDRESS` e `GATEWAY-PORT` vengono sostituiti dall'initContainer del deployment. Il `action: "route-options"` è necessario dalla versione 1.11.0+ (nuova sintassi per override). Ho impostato il log level a `debug` per facilitare il troubleshooting, ma per produzione si può cambiare in `info`.
 
 ### 4. Deployment sing-box
 
@@ -345,7 +350,22 @@ Il deployment completo è disponibile nel repository:
 
 L'initContainer sostituisce i placeholder `UUID-CLIENT`, `GATEWAY-ADDRESS` e `GATEWAY-PORT` con i valori dai secret. Ho impostato `revisionHistoryLimit: 3` per limitare lo spazio occupato dalle vecchie revisioni.
 
-### 5. Service
+### 5. Network Policy per isolamento
+
+Ho aggiunto una Network Policy per limitare il traffico in ingresso e uscita dal pod sing-box:
+
+```yaml
+--8<-- "kubernetes/applications/sing-box/networkpolicy.yaml"
+```
+
+Questa policy garantisce che il pod sing-box possa:
+
+- Ricevere connessioni solo sulla porta 443
+- Comunicare solo con l'UCG sulla porta 51820 UDP (WireGuard)
+- Rispondere ai client
+- Effettuare query DNS
+
+### 6. Service
 
 Il Service completo è disponibile nel repository:
 
@@ -376,21 +396,22 @@ Ho configurato il port forwarding sul router ISP:
 ```
 Porta esterna: 443 TCP
 Porta interna: 39300 TCP
-IP destinazione: IP WAN dell'UCG (o del tuo gateway)
+IP destinazione: IP WAN dell'UCG
 ```
 
 ### 2. Port forwarding UCG (UniFi)
 
 Ho configurato il port forwarding via UI UniFi:
+
 - Settings → Internet → Port Forwarding
 - Creata nuova regola:
-  - Name: `sing-box-to-k8s`
-  - Enabled: ✅
-  - From: WAN
-  - Port: 39300
-  - Protocol: TCP
-  - Forward IP: `192.168.0.83` (IP del LoadBalancer K8s)
-  - Forward Port: 9443
+    - Name: `sing-box-to-k8s`
+    - Enabled: ✅
+    - From: WAN
+    - Port: 39300
+    - Protocol: TCP
+    - Forward IP: `192.168.0.83` (IP del LoadBalancer K8s)
+    - Forward Port: 9443
 
 Ho verificato la regola attiva:
 
@@ -404,6 +425,7 @@ iptables-save | grep 39300
 Ho configurato le regole firewall sull'UCG per permettere:
 
 **Regola 1 - WAN → K8s (TCP):**
+
 - Type: LAN In
 - Action: Accept
 - Protocol: TCP
@@ -412,6 +434,7 @@ Ho configurato le regole firewall sull'UCG per permettere:
 - Port: 9443
 
 **Regola 2 - K8s → UCG WireGuard (UDP):**
+
 - Type: LAN In
 - Action: Accept
 - Protocol: UDP
@@ -419,7 +442,176 @@ Ho configurato le regole firewall sull'UCG per permettere:
 - Destination: IP UCG
 - Port: 51820
 
-## Parte 4 – Test end-to-end
+## Parte 4 – Sicurezza e hardening
+
+Esporre la porta 443 su Internet è sempre un rischio, soprattutto perché è una delle porte più bersagliate. Ho implementato diverse misure di sicurezza per proteggere il setup.
+
+### 1. Country Restrictions sul gateway
+
+Dato che mi connetto principalmente dall'Italia, ho configurato una whitelist geografica sull'UCG:
+
+**Settings → Security → Protection → Country Restrictions**
+
+Ho creato una restriction group che blocca tutti i paesi tranne l'Italia per il traffico inbound. Questo elimina circa l'80% del traffico malevolo automatizzato.
+
+!!! warning "Attenzione quando si viaggia"
+    Se viaggio all'estero, devo ricordarmi di aggiungere temporaneamente il paese dove mi trovo, altrimenti non riesco a connettermi. Potrei anche disabilitare temporaneamente la restriction.
+
+### 2. IPS/IDS su UniFi Cloud Gateway
+
+Ho abilitato l'Intrusion Prevention System sull'UCG:
+
+**Settings → Security → Protection**
+
+- Attivato **Intrusion Prevention** (toggle su ON)
+- Selezionate le **Active Detections** per categoria "Hacking and Exploits"
+- Abilitata la categoria **Malicious User Agents**
+- Scelto livello **Balanced** (buon compromesso tra sicurezza e performance)
+
+L'IPS analizza il traffico in tempo reale e blocca pattern di attacco noti. L'UCG supporta fino a 1 Gbps con IPS attivo, più che sufficiente per il mio caso.
+
+### 3. CrowdSec su Kubernetes
+
+Ho deployato CrowdSec come sistema di protezione aggiuntivo. CrowdSec è superiore a fail2ban tradizionale perché:
+
+- È progettato nativamente per Kubernetes
+- Usa threat intelligence condivisa da migliaia di utenti
+- Blocca automaticamente IP con comportamenti malevoli
+- Non richiede IP stabili del client
+
+Ho installato CrowdSec tramite ArgoCD usando un chart Helm personalizzato. Il chart è nella cartella `kubernetes/charts/crowdsec/` e viene gestito in modalità GitOps insieme a tutte le altre applicazioni del cluster.
+
+ArgoCD monitora il repository e applica automaticamente le modifiche quando committo i file. Il chart è basato su quello ufficiale di CrowdSec ma con configurazioni personalizzate per il mio ambiente, incluso l'acquisition dei log del pod sing-box.
+
+Poi ho aggiunto un sidecar container al deployment di sing-box per bloccare IP malevoli prima che raggiungano l'applicazione:
+
+```yaml
+# Aggiunto al deployment sing-box
+containers:
+  # ... container sing-box esistente ...
+  
+  # Sidecar CrowdSec Firewall Bouncer
+  - name: crowdsec-bouncer
+    image: davidbcn86/crowdsec-firewall-bouncer-docker:latest-nftables
+    securityContext:
+      capabilities:
+        add:
+          - NET_ADMIN
+    env:
+      - name: CROWDSEC_LAPI_URL
+        value: "http://crowdsec-service.crowdsec.svc.cluster.local:8080"
+      - name: CROWDSEC_LAPI_KEY
+        valueFrom:
+          secretKeyRef:
+            name: crowdsec-bouncer-key
+            key: api-key
+```
+
+Il sidecar bouncer intercetta il traffico prima che arrivi a sing-box e droppa le connessioni da IP nella blocklist di CrowdSec.
+
+Per generare l'API key del bouncer:
+
+```bash
+# Shell nel pod LAPI
+kubectl -n crowdsec exec -it deployment/crowdsec-lapi -- sh
+
+# Genera bouncer key
+cscli bouncers add sing-box-bouncer
+
+# Salvo la key in un Secret
+kubectl create secret generic crowdsec-bouncer-key \
+  --from-literal=api-key=API-KEY-GENERATA \
+  --namespace=apps
+```
+
+Ho anche installato la collezione di scenari HTTP per rilevare pattern di attacco:
+
+```bash
+kubectl -n crowdsec exec -it deployment/crowdsec-lapi -- sh
+cscli collections install crowdsecurity/base-http-scenarios
+```
+
+### 4. Security Context nel deployment
+
+Ho configurato security context restrittivi per il pod sing-box:
+
+```yaml
+spec:
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    runAsGroup: 1000
+    fsGroup: 1000
+    seccompProfile:
+      type: RuntimeDefault
+  
+  containers:
+    - name: sing-box
+      securityContext:
+        allowPrivilegeEscalation: false
+        readOnlyRootFilesystem: true
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        capabilities:
+          drop:
+            - ALL
+          add:
+            - NET_BIND_SERVICE  # Solo per bind porta 443
+```
+
+Questo garantisce che il container:
+
+- Non giri come root
+- Non possa escalare privilegi
+- Abbia filesystem read-only
+- Abbia solo la capability minima necessaria
+
+### 5. Monitoring e alerting
+
+Ho abilitato le notifiche UniFi per eventi di sicurezza:
+
+**Settings → Notifications**
+
+- ✅ Gateway Events
+- ✅ IPS/IDS Threats
+- ✅ Unauthorized Access Attempts
+
+Per monitorare le connessioni attive sulla porta configurata:
+
+```bash
+# SSH sull'UCG
+watch -n 5 'netstat -tn | grep :39300 | wc -l'
+```
+
+Per vedere i top IP sorgenti:
+
+```bash
+netstat -tn | grep :39300 | awk '{print $5}' | cut -d: -f1 | sort | uniq -c | sort -rn
+```
+
+### 6. Protezione avanzata UCG
+
+Ho abilitato anche le protezioni avanzate disponibili su UniFi:
+
+**Settings → Security → Protection → Advanced**
+
+- ✅ **Restrict Access to Malicious IP Addresses**: Blocca IP noti per traffico malevolo
+- ✅ **Restrict Access to Tor**: Blocca nodi Tor (non mi servono)
+
+### Strategia di sicurezza a livelli
+
+La mia strategia di protezione funziona su più livelli:
+
+1. **Country Restrictions** → Prima linea di difesa, blocca ~80% del traffico malevolo
+2. **IPS/IDS** → Analisi DPI per rilevare attacchi noti
+3. **CrowdSec** → Blocco automatico IP con comportamenti sospetti
+4. **Network Policy** → Isolamento del pod sing-box
+5. **Security Context** → Principio del minimo privilegio
+
+Questo approccio difensivo mi protegge dalla maggior parte degli attacchi automatizzati senza richiedere IP statici o whitelist manuali.
+
+## Parte 5 – Test end-to-end
 
 ### 1. Test connettività base
 
@@ -438,6 +630,7 @@ curl -vk --http2 https://vpn.mydomain.it:443
 ```
 
 Nell'output ho verificato:
+
 - `SSL connection using TLSv1.3`
 - `ALPN: server accepted h2` (HTTP/2)
 - Certificato valido per `vpn.mydomain.it`
@@ -451,6 +644,7 @@ wg show
 ```
 
 Output:
+
 ```
 interface: wg0
   public key: ...
@@ -483,6 +677,20 @@ tcpdump -i eth0 port 443 -nn
 ```
 
 Vedo solo pacchetti TCP con payload criptato TLS.
+
+### 5. Test CrowdSec
+
+Per verificare che CrowdSec funzioni, ho controllato i log:
+
+```bash
+kubectl logs -f -n apps deployment/sing-box -c crowdsec-bouncer
+```
+
+E ho verificato le decisioni attive:
+
+```bash
+kubectl -n crowdsec exec -it deployment/crowdsec-lapi -- cscli decisions list
+```
 
 ## Troubleshooting
 
@@ -523,6 +731,7 @@ kubectl describe pod -l app=sing-box -n apps
 ```
 
 Errori che ho incontrato:
+
 - `certificate_path` o `key_path` errati
 - UUID non sostituito correttamente
 - `override_address` sintassi deprecata (ho usato `action: route-options`)
@@ -555,15 +764,37 @@ nc -zu IP_UCG 51820  # Test UDP
 
 Se fallisce, verifico routing e firewall.
 
+### CrowdSec
+
+Se CrowdSec non blocca correttamente:
+
+```bash
+# Verifica che LAPI sia raggiungibile dal bouncer
+kubectl -n apps exec -it deployment/sing-box -c crowdsec-bouncer -- sh
+wget -O- http://crowdsec-service.crowdsec.svc.cluster.local:8080/health
+
+# Controlla decisioni attive
+kubectl -n crowdsec exec -it deployment/crowdsec-lapi -- cscli decisions list
+
+# Testa manualmente un ban
+kubectl -n crowdsec exec -it deployment/crowdsec-lapi -- cscli decisions add --ip 1.2.3.4 --duration 1h
+```
+
 ## Note operative e best practices
 
 ### Sicurezza
 
-Uso un UUID univoco per ogni dispositivo. cert-manager rinnova automaticamente Let's Encrypt ogni 60 giorni. Per ora non ho limitato l'accesso alla porta 443, ma sarebbe possibile limitarlo solo da IP fidati. Dovrei configurare alert per handshake WireGuard falliti o certificati in scadenza.
+Uso un UUID univoco per ogni dispositivo. cert-manager rinnova automaticamente Let's Encrypt ogni 60 giorni. CrowdSec fornisce protezione automatica contro IP malevoli senza bisogno di IP stabili per il client.
+
+Dovrei configurare alert più sofisticati per:
+
+- Handshake WireGuard falliti ripetuti
+- Certificati in scadenza
+- Decisioni CrowdSec per IP che tentano attacchi
 
 ### Performance
 
-Il valore `1280` nel profilo WireGuard tiene conto dell'overhead di gRPC/TLS. sing-box è leggero ma l'overhead TLS+gRPC aumenta l'uso CPU del ~10-20%. La latenza è aumentata di +5-15ms rispetto a WireGuard diretto a causa dell'incapsulamento.
+Il valore `1280` nel profilo WireGuard tiene conto dell'overhead di gRPC/TLS. sing-box è leggero ma l'overhead TLS+gRPC aumenta l'uso CPU del ~10-20%. La latenza è aumentata di +5-15ms rispetto a WireGuard diretto a causa dell'incapsulamento. CrowdSec aggiunge un overhead minimo (<1ms) grazie alla sua implementazione efficiente.
 
 ### Manutenzione
 
@@ -584,25 +815,33 @@ Per aggiornare sing-box server:
 kubectl rollout restart deployment/sing-box -n apps
 ```
 
+Per aggiornare CrowdSec, modifico il chart nella cartella `kubernetes/charts/crowdsec/` e committo le modifiche. ArgoCD applica automaticamente gli aggiornamenti quando rileva i cambiamenti nel repository.
+
 Per i backup:
+
 - Client: `/etc/sing-box/config.json`
 - Kubernetes: Export YAML con `kubectl get -o yaml`
+- CrowdSec decisions: `cscli decisions list -o json`
 
 ### Limitazioni note
 
 Il doppio incapsulamento (WireGuard in gRPC in TLS) riduce leggermente il throughput. Richiede sing-box 1.11.0+ per la nuova sintassi `route-options`. Il traffico criptato rende difficile il troubleshooting senza accesso ai log.
 
+La country restriction blocca le connessioni se viaggio all'estero, quindi devo ricordarmi di aggiungere temporaneamente il paese o disabilitare la restrizione.
+
 ## Conclusione
 
 Questo setup mi permette di:
 
-✅ Bypassare firewall aziendali che bloccano VPN  
-✅ Mascherare completamente WireGuard come HTTPS normale  
-✅ Utilizzare certificati TLS validi e standard HTTP/2  
-✅ Mantenere flessibilità con due profili (diretto e mascherato)  
-✅ Implementare una soluzione stabile e mantenibile  
+✅ Bypassare firewall aziendali che bloccano VPN
+✅ Mascherare completamente WireGuard come HTTPS normale
+✅ Utilizzare certificati TLS validi e standard HTTP/2
+✅ Mantenere flessibilità con due profili (diretto e mascherato)
+✅ Implementare una soluzione stabile e mantenibile
+✅ Proteggere il servizio esposto con difesa a più livelli
 
-Il traffico risultante è **indistinguibile da una normale navigazione HTTPS** e supera anche i più sofisticati sistemi DPI. Funziona bene e per ora sono soddisfatto del risultato.
+Il traffico risultante è **indistinguibile da una normale navigazione HTTPS** e supera anche i più sofisticati sistemi DPI. La combinazione di country restrictions, IPS/IDS e CrowdSec fornisce una protezione robusta contro attacchi automatizzati, senza richiedere IP statici del client.
+Sembra funzionare e per ora sono soddisfatto del risultato. 
 
 ## Riferimenti
 
@@ -611,3 +850,5 @@ Il traffico risultante è **indistinguibile da una normale navigazione HTTPS** e
 - [WireGuard Official](https://www.wireguard.com/)
 - [OpenWrt procd](https://openwrt.org/docs/guide-developer/procd-init-scripts)
 - [cert-manager](https://cert-manager.io/)
+- [CrowdSec Documentation](https://docs.crowdsec.net/)
+- [CrowdSec Kubernetes](https://docs.crowdsec.net/docs/getting_started/install_crowdsec_kubernetes)
