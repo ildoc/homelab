@@ -5,5 +5,5 @@ version: 0.1.0
 description: Cilium CNI with Gateway API and L2 IPAM
 dependencies:
   - name: cilium
-    version: "1.18.6"
+    version: "1.19.0"
     repository: https://helm.cilium.io/
