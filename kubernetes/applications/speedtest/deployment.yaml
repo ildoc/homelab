@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
         - name: speedtest
-          image: ghcr.io/linuxserver/speedtest-tracker:1.13.8@sha256:661d666afc3cab668abdb3509583a841822015045e50ee94d4133faff44310ce
+          image: ghcr.io/linuxserver/speedtest-tracker:1.13.9@sha256:d681fae50e16908a9a392c3d07f990d52d5f773aca07dd2818bd1c50dbe93462
           env:
             - name: PUID
               value: "1000"
