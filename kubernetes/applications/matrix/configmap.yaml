@@ -12,7 +12,7 @@ data:
     public_baseurl: "https://matrix.ildoc.it"
     
     presence:
-      enabled: false
+      enabled: true
 
     listeners:
       - port: 8008
