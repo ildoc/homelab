@@ -20,6 +20,7 @@ spec:
     spec:
       securityContext:
         fsGroup: 991
+        fsGroupChangePolicy: "OnRootMismatch"
       
       initContainers:
         # Init container unificato: templating config + generazione chiavi
