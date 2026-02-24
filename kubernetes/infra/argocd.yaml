@@ -30,3 +30,12 @@ spec:
       jsonPointers:
         - /status
         - /operation
+    # Il CRD ApplicationSet è troppo grande (1.38MB) per essere applicato
+    # via client-side apply. Con SSA abilitato ArgoCD non riesce a migrare
+    # i field manager esistenti. Il CRD viene gestito separatamente via SSA.
+    - group: apiextensions.k8s.io
+      kind: CustomResourceDefinition
+      name: applicationsets.argoproj.io
+      jsonPointers:
+        - /spec
+        - /metadata/annotations
