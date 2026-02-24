@@ -14,7 +14,7 @@ argo-cd:
     replicas: 2
     ingress:
       enabled: false
-    httpRoute:
+    httproute:
       enabled: true
       parentRefs:
         - name: cilium-gateway
@@ -22,6 +22,11 @@ argo-cd:
           sectionName: https
       hostnames:
         - argocd.local.ildoc.it
+      rules:
+        - matches:
+            - path:
+                type: PathPrefix
+                value: /
 
   repoServer:
     replicas: 2
