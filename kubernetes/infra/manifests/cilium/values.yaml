@@ -28,6 +28,8 @@ cilium:
   operator:
     image:
       suffix: ""
+    unmanagedPodWatcher:
+      intervalSeconds: 15
 
   # Gateway API configuration
   gatewayAPI:
