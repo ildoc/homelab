@@ -25,7 +25,7 @@ spec:
             claimName: adventurelog-journal-db
       containers:
         - name: adventure-frontend
-          image: ghcr.io/seanmorley15/adventurelog-frontend:v0.11.0
+          image: ghcr.io/seanmorley15/adventurelog-frontend:v0.12.0@sha256:9aa653603eb1305f3c34c61bc99b40a394295aed3fecd8c9777a9e5c04c7155e
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 3000
@@ -67,7 +67,7 @@ spec:
               memory: 1Gi
 
         - name: adventure-backend
-          image: ghcr.io/seanmorley15/adventurelog-backend:v0.11.0
+          image: ghcr.io/seanmorley15/adventurelog-backend:v0.12.0@sha256:68725d6a3692333e0049607f32078e865e95ebdb8a13e0c5512a01ef766770ae
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 80
