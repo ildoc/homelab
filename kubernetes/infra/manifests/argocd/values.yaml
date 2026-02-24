@@ -42,12 +42,14 @@ argo-cd:
         - config:
             issuer: https://auth.ildoc.it/application/o/argocd/
             clientID: QJvMPH0bco4sp7NvqtvfWJLUZQJaVYDHt0Dtow4Z
-            clientSecret: $dex.authentik.clientSecret
+            clientSecret: $argocd-dex-secrets:dex.authentik.clientSecret
             insecureEnableGroups: true
+            getUserInfo: true
             scopes:
               - openid
               - profile
               - email
+              - groups
           name: authentik
           type: oidc
           id: authentik
@@ -70,11 +72,10 @@ argo-cd:
         g, argocd-admins, role:admin
         g, argocd-readonly, role:readonly
     
-    # Secret contenente le credenziali DEX
+    # ArgoCD non deve gestire secret locali per DEX:
+    # il clientSecret arriva da ExternalSecret dedicato.
     secret:
       createSecret: false
-      extra:
-        dex.authentik.clientSecret: ""
     
     # Inclusione ristretta solo al namespace external-routes
     resource.inclusions: |
