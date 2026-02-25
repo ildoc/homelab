@@ -29,7 +29,6 @@ kube-prometheus-stack:
       replicas: 2
       retention: 30d
       retentionSize: 15GB
-      enableOTLPReceiver: false
       
       resources:
         requests:

@@ -12,7 +12,7 @@ spec:
   project: default
   source:
     repoURL: https://github.com/prometheus-operator/prometheus-operator
-    targetRevision: v0.77.0  # Versione che corrisponde al chart 77.11.0
+    targetRevision: v0.89.0  # Versione che corrisponde al chart 82.2.1 / operator v0.89.0
     path: example/prometheus-operator-crd
   destination:
     server: https://kubernetes.default.svc
