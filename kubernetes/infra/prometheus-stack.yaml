@@ -20,6 +20,7 @@ spec:
     syncOptions:
       - CreateNamespace=true
       - RespectIgnoreDifferences=true
+      - ServerSideApply=true
     automated:
       prune: true
       selfHeal: true
