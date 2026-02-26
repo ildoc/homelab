@@ -27,6 +27,7 @@ adguard:
     - { ip: "192.168.0.25", domain: "gitlab.local.ildoc.it" }
     - { ip: "192.168.0.25", domain: "registry.gitlab.local.ildoc.it" }
       
+    - { ip: "192.168.0.81", domain: "adventurelog.local.ildoc.it" }
     - { ip: "192.168.0.81", domain: "alertmanager.local.ildoc.it" }
     - { ip: "192.168.0.81", domain: "argocd.local.ildoc.it" }
     - { ip: "192.168.0.81", domain: "audiobookshelf.local.ildoc.it" }
@@ -34,7 +35,10 @@ adguard:
     - { ip: "192.168.0.81", domain: "bazarr.local.ildoc.it" }
     - { ip: "192.168.0.81", domain: "flaresolverr.local.ildoc.it" }
     - { ip: "192.168.0.81", domain: "grafana.local.ildoc.it" }
+    - { ip: "192.168.0.81", domain: "immich.local.ildoc.it" }
+    - { ip: "192.168.0.81", domain: "miniflux.local.ildoc.it" }
     - { ip: "192.168.0.81", domain: "nut.local.ildoc.it" }
+    - { ip: "192.168.0.81", domain: "pdf.local.ildoc.it" }
     - { ip: "192.168.0.81", domain: "prometheus.local.ildoc.it" }
     - { ip: "192.168.0.81", domain: "prowlarr.local.ildoc.it" }
     - { ip: "192.168.0.81", domain: "radarr.local.ildoc.it" }
@@ -43,9 +47,6 @@ adguard:
     - { ip: "192.168.0.81", domain: "sonarr.local.ildoc.it" }
     - { ip: "192.168.0.81", domain: "speedtest.local.ildoc.it" }
     - { ip: "192.168.0.81", domain: "tools.local.ildoc.it" }
-    - { ip: "192.168.0.81", domain: "immich.local.ildoc.it" }
-    - { ip: "192.168.0.81", domain: "pdf.local.ildoc.it" }
-    - { ip: "192.168.0.81", domain: "miniflux.local.ildoc.it" }
     - { ip: "192.168.0.81", domain: "wakapi.local.ildoc.it" }
     
     - { ip: "192.168.0.81", domain: "pocmanager.local.ildoc.it" }
