@@ -113,6 +113,10 @@ spec:
                 secretKeyRef:
                   name: adventurelog-secrets
                   key: admin-email
+            - name: DISABLE_REGISTRATION
+              value: "False"
+            - name: SOCIALACCOUNT_ALLOW_SIGNUP
+              value: "true"
             - name: DEBUG
               value: "True"
           resources:
