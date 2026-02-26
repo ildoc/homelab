@@ -338,8 +338,9 @@ monitoring:
   routes:
     enabled: true
     gateway:
-      name: "traefik-gateway"
-      namespace: "traefik"
+      name: "cilium-gateway"
+      namespace: "kube-system"
+      sectionName: "https"
     grafana:
       enabled: true
       hostname: "grafana.local.ildoc.it"

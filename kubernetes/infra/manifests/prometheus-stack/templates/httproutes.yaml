@@ -8,9 +8,10 @@ metadata:
   namespace: monitoring
 spec:
   parentRefs:
-    - name: {{ .Values.monitoring.routes.gateway.name | default "traefik-gateway" }}
+    - name: {{ .Values.monitoring.routes.gateway.name | default "cilium-gateway" }}
       kind: Gateway
-      namespace: {{ .Values.monitoring.routes.gateway.namespace | default "traefik" }}
+      namespace: {{ .Values.monitoring.routes.gateway.namespace | default "kube-system" }}
+      sectionName: {{ .Values.monitoring.routes.gateway.sectionName | default "https" }}
   hostnames:
     - "{{ .Values.monitoring.routes.grafana.hostname | default "grafana.local.ildoc.it" }}"
   rules:
@@ -32,9 +33,10 @@ metadata:
   namespace: monitoring
 spec:
   parentRefs:
-    - name: {{ .Values.monitoring.routes.gateway.name | default "traefik-gateway" }}
+    - name: {{ .Values.monitoring.routes.gateway.name | default "cilium-gateway" }}
       kind: Gateway
-      namespace: {{ .Values.monitoring.routes.gateway.namespace | default "traefik" }}
+      namespace: {{ .Values.monitoring.routes.gateway.namespace | default "kube-system" }}
+      sectionName: {{ .Values.monitoring.routes.gateway.sectionName | default "https" }}
   hostnames:
     - "{{ .Values.monitoring.routes.prometheus.hostname | default "prometheus.local.ildoc.it" }}"
   rules:
@@ -56,9 +58,10 @@ metadata:
   namespace: monitoring
 spec:
   parentRefs:
-    - name: {{ .Values.monitoring.routes.gateway.name | default "traefik-gateway" }}
+    - name: {{ .Values.monitoring.routes.gateway.name | default "cilium-gateway" }}
       kind: Gateway
-      namespace: {{ .Values.monitoring.routes.gateway.namespace | default "traefik" }}
+      namespace: {{ .Values.monitoring.routes.gateway.namespace | default "kube-system" }}
+      sectionName: {{ .Values.monitoring.routes.gateway.sectionName | default "https" }}
   hostnames:
     - "{{ .Values.monitoring.routes.alertmanager.hostname | default "alertmanager.local.ildoc.it" }}"
   rules:
