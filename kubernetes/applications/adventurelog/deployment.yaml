@@ -31,7 +31,7 @@ spec:
             - containerPort: 3000
           env:
             - name: PUBLIC_SERVER_URL
-              value: "https://adventurelog.local.ildoc.it"
+              value: "http://adventurelog:8000"
             - name: ORIGIN
               value: "https://adventurelog.local.ildoc.it"
             - name: BODY_SIZE_LIMIT
