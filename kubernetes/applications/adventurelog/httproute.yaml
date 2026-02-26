@@ -24,6 +24,9 @@ spec:
             value: /auth/
         - path:
             type: PathPrefix
+            value: /accounts/
+        - path:
+            type: PathPrefix
             value: /static/
         - path:
             type: PathPrefix
