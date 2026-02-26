@@ -26,7 +26,7 @@ kube-prometheus-stack:
   ## Configurazione Prometheus
   prometheus:
     prometheusSpec:
-      replicas: 2
+      replicas: 1
       retention: 30d
       retentionSize: 15GB
       
@@ -90,6 +90,24 @@ kube-prometheus-stack:
             - source_labels: [__address__]
               target_label: instance
               replacement: gitlab-workhorse
+
+        # Proxmox VE Exporter - proxy pattern per multi-host
+        - job_name: 'proxmox'
+          static_configs:
+            - targets:
+              - '192.168.0.10'  # pve01
+              - '192.168.0.11'  # pve02
+              - '192.168.0.12'  # pve03
+          metrics_path: /pve
+          params:
+            module: [default]
+          relabel_configs:
+            - source_labels: [__address__]
+              target_label: __param_target
+            - source_labels: [__param_target]
+              target_label: instance
+            - target_label: __address__
+              replacement: pve-exporter.monitoring.svc.cluster.local:9221
 
   ## Configurazione Grafana
   grafana:
@@ -346,13 +364,15 @@ monitoring:
       - "https://gitlab.local.ildoc.it"
       # Applicazioni
       - "https://audiobookshelf.local.ildoc.it"
+      - "https://adventurelog.local.ildoc.it"
       - "https://bazarr.local.ildoc.it"
+      - "https://freshrss.local.ildoc.it"
       - "https://mealie.local.ildoc.it"
-      - "https://n8n.local.ildoc.it"
+      - "https://pdf.local.ildoc.it"
       - "https://speedtest.local.ildoc.it"
       - "https://tools.local.ildoc.it"
       - "https://uptime.local.ildoc.it"
-      - "https://pdf.local.ildoc.it"
+      - "https://wakapi.local.ildoc.it"
       - "https://nut.local.ildoc.it"
   
   # ServiceMonitors per servizi interni

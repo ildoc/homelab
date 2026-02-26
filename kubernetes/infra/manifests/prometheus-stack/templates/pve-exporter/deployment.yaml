@@ -15,14 +15,21 @@ spec:
       labels:
         app: pve-exporter
     spec:
-      containers:
-      - name: pve-exporter
-        image: {{ .Values.monitoring.pveExporter.image | default "prompve/prometheus-pve-exporter:3.4.5" }}
-        ports:
-        - containerPort: 9221
-          name: metrics
+      initContainers:
+      - name: init-config
+        image: busybox:1.37
+        command:
+          - sh
+          - -c
+          - |
+            cat > /config/pve.yml <<EOF
+            default:
+              user: "$PVE_USER"
+              password: "$PVE_PASSWORD"
+              verify_ssl: {{ .Values.monitoring.pveExporter.verifySsl | default false }}
+              timeout: 5
+            EOF
         env:
-        # Credenziali dal secret
         - name: PVE_USER
           valueFrom:
             secretKeyRef:
@@ -33,15 +40,21 @@ spec:
             secretKeyRef:
               name: pve-credentials
               key: password
-        # Configurazione PVE
-        - name: PVE_VERIFY_SSL
-          value: "{{ .Values.monitoring.pveExporter.verifySsl | default false }}"
-        # IMPORTANTE: Per questa versione dell'exporter, devi specificare i nodi individualmente
-        # con variabili d'ambiente PVE_NODE_<nome>
-        {{- range $index, $target := .Values.monitoring.pveExporter.targets }}
-        - name: PVE_NODE_{{ $index }}
-          value: "{{ $target }}"
-        {{- end }}
+        volumeMounts:
+        - name: config
+          mountPath: /config
+      containers:
+      - name: pve-exporter
+        image: {{ .Values.monitoring.pveExporter.image | default "prompve/prometheus-pve-exporter:3.4.5" }}
+        args:
+          - "--config.file=/config/pve.yml"
+        ports:
+        - containerPort: 9221
+          name: metrics
+        volumeMounts:
+        - name: config
+          mountPath: /config
+          readOnly: true
         resources:
           limits:
             cpu: {{ .Values.monitoring.pveExporter.resources.limits.cpu | default "100m" }}
@@ -49,4 +62,7 @@ spec:
           requests:
             cpu: {{ .Values.monitoring.pveExporter.resources.requests.cpu | default "50m" }}
             memory: {{ .Values.monitoring.pveExporter.resources.requests.memory | default "64Mi" }}
+      volumes:
+      - name: config
+        emptyDir: {}
 {{- end }}
