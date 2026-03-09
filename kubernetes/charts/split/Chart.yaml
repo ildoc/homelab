@@ -4,5 +4,5 @@ name: split
 version: 1.0.0
 dependencies:
   - name: split-backend
-    version: "v0.0.0-alpha001"
+    version: "0.0.0-alpha001"
     repository: oci://registry.gitlab.local.ildoc.it/ildoc/split
