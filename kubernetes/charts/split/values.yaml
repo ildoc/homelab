@@ -2,7 +2,7 @@ split-backend:
 
   # ── Gateway API ──────────────────────────────────────────────────────────────
   httpRoute:
-    enabled: true
+    enabled: false
     gatewayName: prod-gateway
     gatewayNamespace: gateway-system
     hostname: split.ildoc.it
@@ -16,9 +16,9 @@ split-backend:
   config:
     appBaseUrl: "https://split.ildoc.it"
     db:
-      host: "postgres.db.svc.cluster.local"
-      name: "splitdb"
-      user: "split"
+      host: "192.168.0.30"
+      name: "split_db"
+      user: "split_user"
     jwtIssuer: "https://split.ildoc.it"
     jwtAudience: "split-app"
     resendFromEmail: "Split <noreply@split.ildoc.it>"
