@@ -1,7 +1,4 @@
 split-backend:
-  # ── Immagine ─────────────────────────────────────────────────────────────────
-  image:
-    tag: ""   # sovrascritta dalla pipeline: --set split-backend.image.tag=$APP_VERSION
 
   # ── Gateway API ──────────────────────────────────────────────────────────────
   httpRoute:
@@ -9,13 +6,11 @@ split-backend:
     gatewayName: prod-gateway
     gatewayNamespace: gateway-system
     hostname: split.ildoc.it
-    singleDomain: false
+    singleDomain: true
 
   # ── WebApp ────────────────────────────────────────────────────────────────────
   webapp:
     enabled: true
-    image:
-      tag: ""   # sovrascritta dalla pipeline: --set split-backend.webapp.image.tag=$APP_VERSION
 
   # ── Configurazione applicativa ────────────────────────────────────────────────
   config:
@@ -26,9 +21,8 @@ split-backend:
       user: "split"
     jwtIssuer: "https://split.ildoc.it"
     jwtAudience: "split-app"
-    resendFromEmail: "Split App <noreply@split.ildoc.it>"
-    corsWebAppOrigins:
-      - "https://split.ildoc.it"
+    resendFromEmail: "Split <noreply@split.ildoc.it>"
+    corsWebAppOrigins: []
   # ── Secrets (gestiti dall'ExternalSecret nel wrapper chart) ─────────────────
   secrets:
     dbPassword:

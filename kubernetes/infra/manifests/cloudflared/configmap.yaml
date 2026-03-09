@@ -45,6 +45,17 @@ data:
           tlsTimeout: 10s
       
       # =========================================================================
+      # SPLIT - Expense sharing app
+      # =========================================================================
+
+      # Split (single-domain: nginx webapp proxia /api/* al backend internamente)
+      - hostname: split.ildoc.it
+        service: http://split-split-backend-webapp.apps.svc.cluster.local:80
+        originRequest:
+          noTLSVerify: false
+          connectTimeout: 30s
+
+      # =========================================================================
       # CATCH-ALL (obbligatorio)
       # =========================================================================
       - service: http_status:404
