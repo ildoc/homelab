@@ -1,0 +1,46 @@
+split-backend:
+  # ── Immagine ─────────────────────────────────────────────────────────────────
+  image:
+    tag: ""   # sovrascritta dalla pipeline: --set split-backend.image.tag=$APP_VERSION
+
+  # ── Gateway API ──────────────────────────────────────────────────────────────
+  httpRoute:
+    enabled: true
+    gatewayName: prod-gateway
+    gatewayNamespace: gateway-system
+    hostname: split.ildoc.it
+    singleDomain: false
+
+  # ── WebApp ────────────────────────────────────────────────────────────────────
+  webapp:
+    enabled: true
+    image:
+      tag: ""   # sovrascritta dalla pipeline: --set split-backend.webapp.image.tag=$APP_VERSION
+
+  # ── Configurazione applicativa ────────────────────────────────────────────────
+  config:
+    appBaseUrl: "https://split.ildoc.it"
+    db:
+      host: "postgres.db.svc.cluster.local"
+      name: "splitdb"
+      user: "split"
+    jwtIssuer: "https://split.ildoc.it"
+    jwtAudience: "split-app"
+    resendFromEmail: "Split App <noreply@split.ildoc.it>"
+    corsWebAppOrigins:
+      - "https://split.ildoc.it"
+  # ── Secrets (gestiti dall'ExternalSecret nel wrapper chart) ─────────────────
+  secrets:
+    dbPassword:
+      secretName: split-secret
+      secretKey: db-password
+    jwtKey:
+      secretName: split-secret
+      secretKey: jwt-key
+    resendApiKey:
+      secretName: split-secret
+      secretKey: resend-api-key
+    adminCredentials:
+      secretName: split-secret
+      emailKey: admin-email
+      passwordKey: admin-password

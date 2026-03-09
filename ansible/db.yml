@@ -16,7 +16,8 @@
         sonarqube: "cross/data/apps/sonarqube:postgres_password"
         immich: "cross/data/apps/immich:postgres_password"
         miniflux: "cross/data/apps/miniflux:postgres_password"
-  
+        split: "cross/data/apps/split:postgres_password"
+
   tasks:
     - name: Include vault secrets loading task
       ansible.builtin.include_tasks: "{{ playbook_dir }}/tasks/vault/load-secrets.yaml"
@@ -26,6 +27,6 @@
   gather_facts: true
   vars:
     _secrets: "{{ hostvars['localhost']['vault_secrets_loaded'] }}"
-  
+
   roles:
     - role: db
