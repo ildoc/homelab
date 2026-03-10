@@ -39,7 +39,8 @@ db:
         lc_collate: en_US.UTF-8
         lc_ctype: en_US.UTF-8
         extensions:
-          - vector
+          - name: vector
+            version: "0.8.2"
           - cube
           - earthdistance
 
