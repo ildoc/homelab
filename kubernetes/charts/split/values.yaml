@@ -1,8 +1,5 @@
 split-backend:
 
-  image:
-    tag: "0.0.0-alpha007@sha256:7e5a6f53212f3ccf0a9ad012c0084af3b7bc4b74e3a4d2c009a9d63cfb918919"
-
   # ── Gateway API ──────────────────────────────────────────────────────────────
   httpRoute:
     enabled: false
