@@ -1,7 +1,7 @@
 ---
 services:
   traefik:
-    image: traefik:v3.6.9@sha256:66a872e081b55d1d3641d898f4cd993f5db613095ca71350989ef6a14a188643
+    image: traefik:v3.7.1@sha256:6b9cbca6fac42ab0075f5437d8dc1685cfd188626d8d515839ea94f8b6271c42
     container_name: traefik
     restart: unless-stopped
     security_opt:
@@ -21,7 +21,7 @@ services:
       - traefik
 
   gitlab:
-    image: gitlab/gitlab-ce:18.11.0-ce.0@sha256:035d67a011c3724ff869231c0d856b8eddf0051c66234ebae25052cb630a746f
+    image: gitlab/gitlab-ce:19.0.0-ce.0@sha256:6be09696da6d3e85f98b90e290163524854c0783a9f2ab0b8672fe1c086a8da9
     container_name: gitlab
     hostname: 'gitlab'
     depends_on:

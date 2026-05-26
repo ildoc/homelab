@@ -226,9 +226,6 @@ sidekiq['memory_killer_max_memory_growth_kb'] = 300000  # ~300MB
 ################################################################################
 # Disabilita componenti di monitoring non essenziali per risparmiare risorse
 
-# Mattermost (chat integrata) - disabilitato
-mattermost['enable'] = false
-
 # Prometheus monitoring - disabilitato per risparmiare ~400-500MB RAM
 prometheus_monitoring['enable'] = false
 
