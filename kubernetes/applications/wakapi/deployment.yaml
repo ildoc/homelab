@@ -18,7 +18,7 @@ spec:
     spec:
       initContainers:
         - name: fix-permissions
-          image: busybox:1.37
+          image: busybox:1.38@sha256:b6762ddf4a50aabb5f4d21aa6f447d05d5633fb09f09c08b33f22356a2f98be0
           command: ["sh", "-c", "chown -R 65532:65532 /data"]
           securityContext:
             runAsUser: 0

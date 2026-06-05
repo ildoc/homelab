@@ -20,7 +20,7 @@ spec:
     spec:
       containers:
         - name: redis
-          image: redis:8.4.0-alpine@sha256:6cbef353e480a8a6e7f10ec545f13d7d3fa85a212cdcc5ffaf5a1c818b9d3798
+          image: redis:8.8.0-alpine@sha256:09160599abd229764c0fb44cb6be640294e1d360a54b19985ab4843dcf2d90f1
           args:
             - redis-server
             - --requirepass
