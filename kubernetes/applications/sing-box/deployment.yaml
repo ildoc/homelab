@@ -64,7 +64,7 @@ spec:
               mountPath: /config
       containers:
         - name: sing-box
-          image: ghcr.io/sagernet/sing-box:latest
+          image: ghcr.io/sagernet/sing-box:latest@sha256:c8b67944345dc84a226b648a71f854818606eae0813c4e6a452f192ef821b5b8
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
