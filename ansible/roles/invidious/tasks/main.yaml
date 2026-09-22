@@ -19,3 +19,10 @@
     cleanup_resources: true
     pull_retries: 3
     pull_delay: 15
+
+- name: Create cronjob to restart docker compose
+  ansible.builtin.cron:
+    name: "restart invidious docker compose"
+    minute: "0"
+    hour: "8,13,19"
+    job: "cd {{ project_path }} && docker compose restart"

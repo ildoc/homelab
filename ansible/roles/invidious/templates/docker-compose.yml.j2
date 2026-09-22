@@ -2,7 +2,7 @@
 services:
 
   invidious:
-    image: quay.io/invidious/invidious:2026.06.15-73a1bac
+    image: quay.io/invidious/invidious:2026.06.30-9c62c8b
     restart: unless-stopped
     ports:
       - "3000:3000"
@@ -25,8 +25,10 @@ services:
         external_port: 443
         statistic_enabled: true
         admins: ["filippo"]
-        channel_threads: 1
-        feed_threads: 1
+        channel_threads: 8
+        feed_threads: 4
+        channel_refresh_interval: 20m
+        full_refresh: false
         default_user_preferences:
           dark_mode: "dark"
           feed_menu: ["Subscriptions", "Trending", "Popular", "Playlists"]
@@ -44,7 +46,7 @@ services:
   #    - invidious-db
 
   companion:
-    image: quay.io/invidious/invidious-companion:master-d3544b4
+    image: quay.io/invidious/invidious-companion:master-5652eda
     environment:
       SERVER_SECRET_KEY: {{ invidious.companion_key }}
     restart: unless-stopped

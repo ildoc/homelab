@@ -1,0 +1,103 @@
+# Configurazione CrowdSec per monitorare sing-box
+# Basato sulla documentazione: https://docs.crowdsec.net/u/getting_started/installation/kubernetes
+# Chart version: 0.21.1
+
+## @section Global
+## Container runtime: containerd o docker
+container_runtime: containerd
+
+## @section Agent
+agent:
+  # Abilita l'agent (default: true)
+  enabled: true
+  
+  # Specifica i pod i cui log vuoi processare
+  acquisition:
+    # Namespace dove si trova il pod sing-box
+    - namespace: apps
+      # Nome del pod (pattern supportato)
+      podName: sing-box-*
+      # Program name per trovare il parser corrispondente
+      # NOTA: sing-box potrebbe non avere un parser specifico nel CrowdSec Hub
+      # Potrebbe essere necessario creare un parser custom o usare un parser generico
+      # Per ora usiamo 'sing-box' come program name - potrebbe essere necessario
+      # configurare un parser custom se non esiste uno specifico
+      program: sing-box
+  
+  # Environment variables
+  env:
+    # Collections da installare
+    # Per sing-box, iniziamo con collezioni generiche per Linux
+    # Potrebbe essere necessario aggiungere collezioni custom o generiche per log JSON
+    - name: COLLECTIONS
+      value: "crowdsecurity/linux"
+  
+  # Resources per agent
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+  
+  # Persistenza per agent (opzionale, di default disabilitata)
+  persistentVolume:
+    config:
+      enabled: false
+  
+  # Abilita metrics per Prometheus
+  metrics:
+    enabled: true
+
+## @section LAPI
+lapi:
+  # Abilita LAPI (default: true)
+  enabled: true
+  
+  # Replicas
+  replicas: 1
+  
+  # Environment variables
+  env:
+    # Per enrollare il Security Engine alla console (opzionale)
+    # - name: ENROLL_KEY
+    #   value: "<enroll-key>"
+    # - name: ENROLL_INSTANCE_NAME
+    #   value: "my-k8s-cluster"
+    # - name: ENROLL_TAGS
+    #   value: "k8s linux sing-box"
+  
+  # Resources per LAPI
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+    requests:
+      cpu: 200m
+      memory: 256Mi
+  
+  # Persistenza per LAPI (consigliato per production)
+  persistentVolume:
+    # Persistent volume per data folder (stores bouncer API keys)
+    data:
+      enabled: true
+      storageClassName: "nfs-csi"
+      size: 10Gi
+      accessModes:
+        - ReadWriteOnce
+    # Persistent volume per config folder (stores API credentials)
+    config:
+      enabled: true
+      storageClassName: "nfs-csi"
+      size: 100Mi
+      accessModes:
+        - ReadWriteOnce
+  
+  # Abilita metrics per Prometheus
+  metrics:
+    enabled: true
+
+## @section TLS
+tls:
+  enabled: false
