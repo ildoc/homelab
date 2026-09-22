@@ -47,6 +47,14 @@
   ],
   "packageRules": [
     {
+      "description": "Tag Invidious basati su data con hash build",
+      "matchPackageNames": [
+        "quay.io/invidious/invidious",
+        "quay.io/invidious/invidious-companion"
+      ],
+      "versioning": "regex:^(?<major>\\d{4})\\.(?<minor>\\d{1,2})\\.(?<patch>\\d{1,2})-[a-f0-9]+$"
+    },
+    {
       "description": "Aggiornamenti GitHub Actions",
       "matchDatasources": ["github-tags"],
       "matchManagers": ["github-actions"],
