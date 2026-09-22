@@ -255,46 +255,23 @@ kube-prometheus-stack:
       
       route:
         group_by: ['alertname', 'cluster', 'service']
-        group_wait: 10s
-        group_interval: 10s
+        group_wait: 30s
+        group_interval: 5m
         repeat_interval: 12h
-        # Solo critical/warning → Telegram; il resto (none/info) silenzioso
+        # Telegram disattivato: nessuna notifica in uscita
         receiver: 'null'
-        routes:
-          - match:
-              severity: critical
-            receiver: 'telegram'
-            repeat_interval: 1h
-          - match:
-              severity: warning
-            receiver: 'telegram'
-            repeat_interval: 4h
-          # Alert "meta" di kube-prometheus: non devono notificare
-          - match:
-              alertname: Watchdog
-            receiver: 'null'
-          - match:
-              alertname: InfoInhibitor
-            receiver: 'null'
+        routes: []
       
       receivers:
         - name: 'null'
-        
-        - name: 'telegram'
-          telegram_configs:
-            - bot_token_file: '/etc/alertmanager/secrets/alertmanager-telegram-secret/telegram-bot-token'
-              chat_id_file: '/etc/alertmanager/secrets/alertmanager-telegram-secret/telegram-chat-id'
-              api_url: 'https://api.telegram.org'
-              parse_mode: 'HTML'
-              send_resolved: true
-              message: |
-                {{ if eq .Status "firing" }}🔴{{ else }}✅{{ end }} <b>{{ .GroupLabels.alertname }}</b>
-                <b>Status:</b> {{ .Status }}
-                {{ range .Alerts }}
-                ━━━━━━━━━━━━━━━━━━
-                📍 <b>Instance:</b> {{ .Labels.instance | reReplaceAll ":.*" "" }}
-                {{ if .Annotations.summary }}<b>Summary:</b> {{ .Annotations.summary }}{{ end }}
-                {{ end }}
+        # Per riattivare: decommenta e punta critical/warning a 'telegram'
+        # - name: 'telegram'
+        #   telegram_configs:
+        #     - bot_token_file: '/etc/alertmanager/secrets/alertmanager-telegram-secret/telegram-bot-token'
+        #       chat_id_file: '/etc/alertmanager/secrets/alertmanager-telegram-secret/telegram-chat-id'
+        #       api_url: 'https://api.telegram.org'
+        #       parse_mode: 'HTML'
+        #       send_resolved: true
       
       inhibit_rules:
         - source_match:
@@ -304,7 +281,6 @@ kube-prometheus-stack:
           equal:
             - 'alertname'
             - 'instance'
-        # InfoInhibitor silenzia gli alert severity=info (uso previsto dalla rule)
         - source_match:
             alertname: 'InfoInhibitor'
           target_match:
