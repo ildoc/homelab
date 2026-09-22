@@ -2,69 +2,66 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "description": "Configurazione Renovate per aggiornamenti automatici di Docker, Helm, Terraform e altro",
   "extends": [
-    "config:recommended",
-    ":disableRateLimiting",
-    ":dependencyDashboard",
-    ":semanticCommits",
-    ":timezone(Europe/Rome)",
+    "local>renovate/renovate-config",
     "docker:pinDigests"
   ],
-  "assignees": ["ildoc"],
-  "automerge": false,
-  "platformAutomerge": false,
-  "prConcurrentLimit": 50,
-  "prHourlyLimit": 0,
-  "internalChecksFilter": "flexible",
+  "separateMajorMinor": false,
   "ignorePaths": [
+    "**/node_modules/**",
+    "**/bower_components/**",
+    "**/vendor/**",
+    "**/examples/**",
+    "**/__tests__/**",
+    "**/test/**",
+    "**/tests/**",
+    "**/__fixtures__/**",
     "**/archived/**",
     "docs/**"
   ],
   "kubernetes": {
-    "fileMatch": [
-      "(^|/)kubernetes/.*\\.ya?ml$",
-      "(^|/)(deployment|statefulset|daemonset|job|cronjob)\\.ya?ml$"
+    "managerFilePatterns": [
+      "kubernetes/**/*.yaml",
+      "kubernetes/**/*.yml"
     ]
   },
+  "argocd": {
+    "managerFilePatterns": [
+      "kubernetes/root-applications.yaml",
+      "kubernetes/groups/*.yaml",
+      "kubernetes/infra/*.yaml"
+    ]
+  },
+  "customManagers": [
+    {
+      "customType": "regex",
+      "managerFilePatterns": [
+        "ansible/roles/**/templates/docker-compose.yaml.j2",
+        "ansible/roles/**/templates/docker-compose.yml.j2"
+      ],
+      "matchStrings": [
+        "(?:^|\\n)[ \\t]*image:[ \\t]*[\"']?(?<depName>[^\\s\"']+?):(?<currentValue>[^\\s@\"']+)(?:@(?<currentDigest>sha256:[a-f0-9]+))?[\"']?"
+      ],
+      "datasourceTemplate": "docker",
+      "versioningTemplate": "docker"
+    }
+  ],
   "packageRules": [
-    {
-      "description": "Raggruppa tutti gli aggiornamenti digest Docker in una singola PR",
-      "matchDatasources": ["docker"],
-      "matchUpdateTypes": ["digest"],
-      "groupName": "Docker digest pins",
-      "groupSlug": "docker-digests"
-    },
-    {
-      "description": "Aggiornamenti non-major Docker - una PR con l'ultima versione disponibile",
-      "matchDatasources": ["docker"],
-      "matchUpdateTypes": ["minor", "patch"]
-    },
-    {
-      "description": "Aggiornamenti major Docker - una PR separata per immagine",
-      "matchDatasources": ["docker"],
-      "matchUpdateTypes": ["major"]
-    },
-    {
-      "description": "Aggiornamenti Helm charts",
-      "matchDatasources": ["helm"],
-      "enabled": true
-    },
     {
       "description": "Aggiornamenti GitHub Actions",
       "matchDatasources": ["github-tags"],
       "matchManagers": ["github-actions"],
-      "enabled": true,
       "pinDigests": true
     },
     {
       "description": "Aggiornamenti Terraform/OpenTofu",
       "matchDatasources": ["terraform-provider", "terraform-module"],
-      "enabled": true,
       "rangeStrategy": "bump"
     },
     {
-      "description": "Aggiornamenti Ansible Galaxy",
-      "matchDatasources": ["galaxy", "galaxy-collection"],
-      "enabled": true
+      "description": "Una MR per dipendenza, sempre verso la versione più recente",
+      "matchPackageNames": ["*"],
+      "groupName": null,
+      "separateMajorMinor": false
     }
   ]
 }

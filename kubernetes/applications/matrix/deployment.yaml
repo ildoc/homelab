@@ -152,6 +152,9 @@ spec:
             - containerPort: 8448
               name: federation
               protocol: TCP
+            - containerPort: 9000
+              name: metrics
+              protocol: TCP
           volumeMounts:
             - name: data
               mountPath: /data

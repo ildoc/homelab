@@ -393,6 +393,16 @@ monitoring:
       endpoints:
         - port: "metrics"
           interval: "30s"
+
+    matrix-synapse:
+      enabled: true
+      namespace: "apps"
+      selector:
+        app: "matrix-synapse"
+      endpoints:
+        - port: "metrics"
+          interval: "30s"
+          path: "/_synapse/metrics"
   
   # Proxmox VE Exporter (opzionale)
   pveExporter:

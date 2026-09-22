@@ -4,6 +4,8 @@ kind: Service
 metadata:
   name: matrix-synapse
   namespace: apps
+  labels:
+    app: matrix-synapse
   annotations:
     argocd.argoproj.io/sync-wave: "4"
 spec:
@@ -17,5 +19,9 @@ spec:
       targetPort: 8448
       protocol: TCP
       name: federation
+    - port: 9000
+      targetPort: 9000
+      protocol: TCP
+      name: metrics
   selector:
     app: matrix-synapse
