@@ -100,7 +100,7 @@ data:
               "editorMode": "code",
               "expr": "node_memory_MemTotal_bytes{instance=~\"192.168.0.*\"}",
               "instant": false,
-              "legendFormat": "{{instance}}",
+              "legendFormat": "{{ "{{instance}}" }}",
               "range": true,
               "refId": "A"
             }
@@ -326,7 +326,7 @@ data:
               "editorMode": "code",
               "expr": "(1 - node_memory_MemAvailable_bytes{instance=~\"192.168.0.*\"} / node_memory_MemTotal_bytes{instance=~\"192.168.0.*\"}) * 100",
               "instant": false,
-              "legendFormat": "{{instance}}",
+              "legendFormat": "{{ "{{instance}}" }}",
               "range": true,
               "refId": "A"
             }
@@ -387,7 +387,7 @@ data:
               "editorMode": "code",
               "expr": "sum(irate(node_disk_reads_completed_total{instance=~\"192.168.0.*\"}[$__rate_interval])) by (device, instance)",
               "instant": false,
-              "legendFormat": "{{device}} @ {{instance}}",
+              "legendFormat": "{{ "{{device}}" }} @ {{ "{{instance}}" }}",
               "range": true,
               "refId": "A"
             }

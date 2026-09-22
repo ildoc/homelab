@@ -97,7 +97,7 @@ data:
               "editorMode": "code",
               "expr": "avg by (id)(pve_memory_size_bytes{id=~\"node/.*\"})",
               "instant": false,
-              "legendFormat": "{{id}}",
+              "legendFormat": "{{ "{{id}}" }}",
               "range": true,
               "refId": "A"
             }
@@ -320,7 +320,7 @@ data:
               "editorMode": "code",
               "expr": "avg by (id)(pve_memory_usage_bytes{id=~\"node/.*\"} / pve_memory_size_bytes{id=~\"node/.*\"}) * 100",
               "instant": false,
-              "legendFormat": "{{id}}",
+              "legendFormat": "{{ "{{id}}" }}",
               "range": true,
               "refId": "A"
             }
@@ -381,7 +381,7 @@ data:
               "editorMode": "code",
               "expr": "avg by (id)(irate(pve_network_receive_bytes_total{id=~\"node/.*\"}[$__rate_interval]))",
               "instant": false,
-              "legendFormat": "RX {{id}}",
+              "legendFormat": "RX {{ "{{id}}" }}",
               "range": true,
               "refId": "A"
             },
@@ -390,7 +390,7 @@ data:
               "editorMode": "code",
               "expr": "avg by (id)(irate(pve_network_transmit_bytes_total{id=~\"node/.*\"}[$__rate_interval]))",
               "instant": false,
-              "legendFormat": "TX {{id}}",
+              "legendFormat": "TX {{ "{{id}}" }}",
               "range": true,
               "refId": "B"
             }

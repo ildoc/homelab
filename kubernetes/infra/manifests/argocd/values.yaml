@@ -4,8 +4,10 @@ argo-cd:
 
   redis-ha:
     enabled: true
+    hardAntiAffinity: false
     haproxy:
       enabled: true
+      hardAntiAffinity: false
       deploymentStrategy:
         type: RollingUpdate
         rollingUpdate:
