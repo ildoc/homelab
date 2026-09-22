@@ -1,0 +1,15 @@
+---
+- name: Install curl
+  ansible.builtin.apt:
+    name:
+      - curl
+      - ca-certificates
+    state: present
+    update_cache: true
+
+- name: Install or update Technitium with the official script
+  ansible.builtin.shell: curl -sSL '{{ technitium_install_url }}' | bash
+  args:
+    executable: /bin/bash
+  register: technitium_install
+  changed_when: true

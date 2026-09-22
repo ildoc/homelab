@@ -1,0 +1,27 @@
+---
+- name: Install keepalived
+  ansible.builtin.apt:
+    name: keepalived
+    state: present
+    update_cache: true
+
+- name: Install the Technitium health check
+  ansible.builtin.template:
+    src: check_technitium.sh.j2
+    dest: /usr/local/bin/check_technitium.sh
+    mode: "0755"
+  notify: Reload keepalived
+
+- name: Install the keepalived configuration
+  ansible.builtin.template:
+    src: keepalived.conf.j2
+    dest: /etc/keepalived/keepalived.conf
+    mode: "0644"
+    validate: keepalived -t -f %s
+  notify: Reload keepalived
+
+- name: Enable keepalived
+  ansible.builtin.systemd:
+    name: keepalived
+    enabled: true
+    state: started

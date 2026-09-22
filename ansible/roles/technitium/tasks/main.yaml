@@ -1,0 +1,12 @@
+---
+- name: Prepare the host for Technitium
+  ansible.builtin.include_tasks: prerequisites.yaml
+
+- name: Dist-upgrade the host
+  ansible.builtin.include_tasks: upgrade.yaml
+
+- name: Install or update Technitium
+  ansible.builtin.include_tasks: deploy.yaml
+
+- name: Set the admin password
+  ansible.builtin.include_tasks: account.yaml

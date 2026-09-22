@@ -1,0 +1,7 @@
+---
+technitium_vip: 192.168.0.5
+technitium_vip_prefix: 24
+technitium_virtual_router_id: 51
+technitium_keepalived_priority: 100
+technitium_http_port: 5380
+technitium_unicast_peers: []

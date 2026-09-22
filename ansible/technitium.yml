@@ -1,0 +1,72 @@
+---
+- name: Load secrets from Vault
+  hosts: localhost
+  gather_facts: false
+  vars:
+    vault_secrets_map:
+      technitium:
+        admin_password: "ansible/data/technitium:admin_password"
+
+  tasks:
+    - name: Include vault secrets loading task
+      ansible.builtin.include_tasks: "{{ playbook_dir }}/tasks/vault/load-secrets.yaml"
+
+- name: Deploy Technitium
+  hosts: technitium_dns
+  become: true
+  gather_facts: false
+  serial: 1
+  vars:
+    _secrets: "{{ hostvars['localhost']['vault_secrets_loaded'] }}"
+  pre_tasks:
+    - name: Gather facts
+      ansible.builtin.setup:
+      become: false
+  roles:
+    - role: technitium
+
+- name: Initialize the Technitium cluster on the primary
+  hosts: technitium_dns
+  become: true
+  gather_facts: false
+  vars:
+    _secrets: "{{ hostvars['localhost']['vault_secrets_loaded'] }}"
+  pre_tasks:
+    - name: Gather facts
+      ansible.builtin.setup:
+      become: false
+  tasks:
+    - name: Initialize the cluster
+      ansible.builtin.include_role:
+        name: technitium
+        tasks_from: cluster.yaml
+      when: technitium_node_role == "primary"
+
+- name: Join the Technitium cluster
+  hosts: technitium_dns
+  become: true
+  gather_facts: false
+  vars:
+    _secrets: "{{ hostvars['localhost']['vault_secrets_loaded'] }}"
+  pre_tasks:
+    - name: Gather facts
+      ansible.builtin.setup:
+      become: false
+  tasks:
+    - name: Join the cluster
+      ansible.builtin.include_role:
+        name: technitium
+        tasks_from: cluster.yaml
+      when: technitium_node_role == "secondary"
+
+- name: Configure keepalived
+  hosts: technitium_dns
+  become: true
+  gather_facts: false
+  serial: 1
+  pre_tasks:
+    - name: Gather facts
+      ansible.builtin.setup:
+      become: false
+  roles:
+    - role: keepalived

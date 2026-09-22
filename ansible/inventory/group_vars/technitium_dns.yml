@@ -1,0 +1,11 @@
+---
+# Cluster Technitium. Il dominio di cluster non si può cambiare dopo il primo init.
+technitium_cluster_domain: technitium-cluster.local.ildoc.it
+technitium_http_port: 5380
+technitium_https_port: 53443
+technitium_install_url: https://download.technitium.com/dns/install.sh
+technitium_dhcp_enabled: false
+
+technitium_vip: 192.168.0.5
+technitium_vip_prefix: 24
+technitium_virtual_router_id: 51

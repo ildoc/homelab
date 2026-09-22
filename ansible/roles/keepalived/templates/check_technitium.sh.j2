@@ -1,0 +1,4 @@
+#!/bin/bash
+set -euo pipefail
+timeout 2 bash -c 'echo > /dev/tcp/127.0.0.1/53'
+timeout 2 bash -c 'echo > /dev/tcp/127.0.0.1/{{ technitium_http_port }}'

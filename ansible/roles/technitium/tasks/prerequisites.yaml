@@ -1,0 +1,39 @@
+---
+- name: Collect service facts
+  ansible.builtin.service_facts:
+
+- name: Disable the systemd-resolved stub listener
+  when: "'systemd-resolved.service' in ansible_facts.services"
+  block:
+    - name: Stop systemd-resolved from binding port 53
+      ansible.builtin.lineinfile:
+        path: /etc/systemd/resolved.conf
+        regexp: '^#?DNSStubListener='
+        line: 'DNSStubListener=no'
+        state: present
+
+    - name: Stop and disable systemd-resolved
+      ansible.builtin.systemd:
+        name: systemd-resolved
+        state: stopped
+        enabled: false
+
+- name: Inspect /etc/resolv.conf
+  ansible.builtin.stat:
+    path: /etc/resolv.conf
+  register: technitium_resolv_conf
+
+- name: Remove the systemd-resolved resolv.conf symlink
+  ansible.builtin.file:
+    path: /etc/resolv.conf
+    state: absent
+  when: technitium_resolv_conf.stat.islnk | default(false)
+
+- name: Point the host resolver at upstream DNS
+  ansible.builtin.copy:
+    dest: /etc/resolv.conf
+    mode: "0644"
+    content: |
+      nameserver 1.1.1.1
+      nameserver 9.9.9.9
+  when: technitium_resolv_conf.stat.islnk | default(false) or not (technitium_resolv_conf.stat.exists | default(false))

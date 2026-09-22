@@ -1,0 +1,8 @@
+---
+technitium_node_role: primary
+technitium_node_domain: technitium.local.ildoc.it
+technitium_keepalived_priority: 150
+# LXC Ubuntu
+technitium_vip_interface: eth0
+technitium_unicast_peers:
+  - 192.168.0.4

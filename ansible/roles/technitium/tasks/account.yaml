@@ -1,0 +1,45 @@
+---
+- name: Wait for the Technitium API
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ technitium_http_port }}/api/sso/status"
+    method: GET
+    status_code: 200
+  register: technitium_api
+  until: technitium_api.status == 200
+  retries: 30
+  delay: 2
+
+- name: Login with the Vault admin password
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ technitium_http_port }}/api/user/login?user=admin&pass={{ _secrets.technitium.admin_password | urlencode }}&includeInfo=true"
+    method: GET
+    return_content: true
+    status_code: [200, 401, 403]
+  register: technitium_login_configured
+  failed_when: false
+  no_log: true
+
+- name: Replace the default admin password
+  when: technitium_login_configured.json.token is not defined
+  block:
+    - name: Login with the default admin password
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:{{ technitium_http_port }}/api/user/login?user=admin&pass=admin&includeInfo=true"
+        method: GET
+        return_content: true
+        status_code: [200, 401, 403]
+      register: technitium_login_default
+      failed_when: technitium_login_default.json.token is not defined
+      no_log: true
+
+    - name: Set the admin password from Vault
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:{{ technitium_http_port }}/api/user/changePassword?pass=admin&newPass={{ _secrets.technitium.admin_password | urlencode }}"
+        method: GET
+        headers:
+          Authorization: "Bearer {{ technitium_login_default.json.token }}"
+        return_content: true
+      register: technitium_password_change
+      changed_when: technitium_password_change.json.status == "ok"
+      failed_when: technitium_password_change.json.status != "ok"
+      no_log: true

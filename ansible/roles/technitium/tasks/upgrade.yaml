@@ -1,0 +1,16 @@
+---
+- name: Update apt cache and dist-upgrade
+  ansible.builtin.apt:
+    update_cache: true
+    upgrade: dist
+
+- name: Check if a reboot is required
+  ansible.builtin.stat:
+    path: /var/run/reboot-required
+    get_checksum: false
+  register: technitium_reboot_required
+
+- name: Report a pending reboot
+  ansible.builtin.debug:
+    msg: "Riavvio necessario su {{ inventory_hostname }} dopo il dist-upgrade."
+  when: technitium_reboot_required.stat.exists
