@@ -1,8 +1,9 @@
 ---
-technitium_cluster_domain: cluster.local.ildoc.it
+technitium_cluster_domain: dns.local.ildoc.it
 technitium_http_port: 5380
 technitium_https_port: 53443
 technitium_install_url: https://download.technitium.com/dns/install.sh
 technitium_dhcp_enabled: false
-technitium_node_domain: "{{ inventory_hostname }}.local.ildoc.it"
+# Deve essere un sottodominio di technitium_cluster_domain (vincolo Technitium).
+technitium_node_domain: "{{ inventory_hostname }}.{{ technitium_cluster_domain }}"
 technitium_node_role: secondary

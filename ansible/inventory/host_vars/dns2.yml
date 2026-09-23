@@ -1,6 +1,5 @@
 ---
 technitium_node_role: secondary
-technitium_node_domain: technitium2.local.ildoc.it
 technitium_keepalived_priority: 100
 # Raspberry Pi OS (Raspbian)
 technitium_vip_interface: wlan0
