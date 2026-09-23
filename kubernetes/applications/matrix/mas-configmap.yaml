@@ -86,6 +86,10 @@ data:
             localpart:
               action: require
               template: "{{ user.preferred_username }}"
+              # Utenti già migrati da Synapse (syn2mas) + nuovo client Authentik:
+              # il subject OIDC può differire dall'app legacy → collega al localpart esistente
+              # https://element-hq.github.io/matrix-authentication-service/setup/sso.html
+              on_conflict: replace
             displayname:
               action: suggest
               template: "{{ user.name|default(user.preferred_username) }}"
