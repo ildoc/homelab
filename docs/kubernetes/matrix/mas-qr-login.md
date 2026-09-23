@@ -65,6 +65,10 @@ spec:
 
 ### Migrazione syn2mas (unico apply da git)
 
+> Se il Job fallisce su *Password scheme version '1' … Bcrypt*: assicurati che
+> `mas-configmap.yaml` abbia `passwords.schemes` con v1=`bcrypt` (già nel repo),
+> synca ArgoCD, poi ri-lancia il Job.
+
 ```bash
 kubectl -n apps delete job matrix-mas-syn2mas --ignore-not-found
 kubectl apply -f docs/kubernetes/matrix/manifests/mas-syn2mas-job.yaml

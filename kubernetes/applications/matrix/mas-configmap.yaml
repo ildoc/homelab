@@ -45,8 +45,16 @@ data:
       reply_to: '"Matrix Auth" <mas@ildoc.it>'
       transport: blackhole
 
+    # syn2mas richiede scheme v1=bcrypt (Synapse). enabled:false → solo SSO Authentik
+    # https://element-hq.github.io/matrix-authentication-service/setup/migration.html
     passwords:
       enabled: false
+      schemes:
+        - version: 1
+          algorithm: bcrypt
+          unicode_normalization: true
+        - version: 2
+          algorithm: argon2id
 
     account:
       password_registration_enabled: false
