@@ -1,0 +1,136 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: matrix-mas
+  namespace: apps
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+spec:
+  selector:
+    matchLabels:
+      app: matrix-mas
+  strategy:
+    type: Recreate
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      labels:
+        app: matrix-mas
+    spec:
+      securityContext:
+        fsGroup: 65532
+      initContainers:
+        # MAS image is distroless (no shell); template config with alpine
+        - name: prepare-config
+          image: alpine:3.21@sha256:ce64758a109eb420d874a118f87920e625e12d3634e03b4a5573fd9f6e5d3507
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -e
+              echo "=== Preparing MAS configuration ==="
+              apk add --no-cache gettext >/dev/null
+              export MAS_POSTGRES_PASSWORD MAS_OIDC_CLIENT_SECRET
+              envsubst '${MAS_POSTGRES_PASSWORD} ${MAS_OIDC_CLIENT_SECRET}' \
+                < /config-template/config.yaml > /data/config.yaml
+
+              # Overlay secrets (encryption + signing keys + shared matrix secret)
+              umask 077
+              {
+                printf '%s\n' "secrets:"
+                printf '%s\n' "  encryption: ${MAS_ENCRYPTION}"
+                printf '%s\n' "  keys:"
+                sed 's/^/    /' /raw-secrets/keys.yaml
+                printf '%s\n' "matrix:"
+                printf '%s\n' "  secret: ${MAS_MATRIX_SECRET}"
+              } > /data/secrets.yaml
+
+              chown -R 65532:65532 /data
+              echo "✓ config.yaml and secrets.yaml written"
+          env:
+            - name: MAS_POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: matrix-mas-cross-secrets
+                  key: postgres-password
+            - name: MAS_OIDC_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: matrix-mas-secrets
+                  key: oidc-client-secret
+            - name: MAS_ENCRYPTION
+              valueFrom:
+                secretKeyRef:
+                  name: matrix-mas-secrets
+                  key: encryption
+            - name: MAS_MATRIX_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: matrix-mas-secrets
+                  key: matrix-secret
+          securityContext:
+            runAsUser: 0
+          volumeMounts:
+            - name: config-template
+              mountPath: /config-template
+              readOnly: true
+            - name: raw-secrets
+              mountPath: /raw-secrets
+              readOnly: true
+            - name: data
+              mountPath: /data
+      containers:
+        - name: mas
+          image: ghcr.io/element-hq/matrix-authentication-service:1.23.0@sha256:e82b2e4a5f9c7ca74096743349160795f5b5a792556fb85c6b5166a9180a5985
+          args:
+            - server
+            - --config=/data/config.yaml
+            - --config=/data/secrets.yaml
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65532
+            runAsGroup: 65532
+            allowPrivilegeEscalation: false
+          ports:
+            - containerPort: 8080
+              name: http
+              protocol: TCP
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          resources:
+            limits:
+              cpu: 500m
+              memory: 512Mi
+            requests:
+              cpu: 50m
+              memory: 128Mi
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+      volumes:
+        - name: config-template
+          configMap:
+            name: matrix-mas-config
+        - name: raw-secrets
+          secret:
+            secretName: matrix-mas-secrets
+            items:
+              - key: keys.yaml
+                path: keys.yaml
+        - name: data
+          emptyDir: {}

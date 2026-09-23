@@ -1,0 +1,52 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: matrix-gateway-config
+  namespace: apps
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+data:
+  nginx.conf: |
+    worker_processes auto;
+    error_log /dev/stderr warn;
+    pid /tmp/nginx.pid;
+
+    events {
+      worker_connections 1024;
+    }
+
+    http {
+      access_log /dev/stdout;
+      client_max_body_size 50M;
+      proxy_http_version 1.1;
+      proxy_set_header Host $host;
+      proxy_set_header X-Real-IP $remote_addr;
+      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+      proxy_set_header X-Forwarded-Proto https;
+      proxy_set_header X-Forwarded-Host $host;
+      proxy_read_timeout 60s;
+
+      upstream synapse {
+        server matrix-synapse.apps.svc.cluster.local:8008;
+      }
+
+      upstream mas {
+        server matrix-mas.apps.svc.cluster.local:8080;
+      }
+
+      server {
+        listen 8080;
+        server_name matrix.ildoc.it;
+
+        # Compatibility layer: login/logout/refresh devono andare a MAS
+        # https://element-hq.github.io/matrix-authentication-service/setup/reverse-proxy.html
+        location ~ ^/_matrix/client/(r0|v1|v3|unstable)/(login|logout|refresh)$ {
+          proxy_pass http://mas;
+        }
+
+        location / {
+          proxy_pass http://synapse;
+        }
+      }
+    }

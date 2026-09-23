@@ -7,6 +7,7 @@ metadata:
   annotations:
     argocd.argoproj.io/sync-wave: "4"
 spec:
+  replicas: 1
   selector:
     matchLabels:
       app: matrix-synapse
@@ -53,7 +54,7 @@ spec:
               sed "s|\${FORM_SECRET}|${FORM_SECRET}|g" \
                   -i /data/homeserver.yaml
               
-              sed "s|\${OIDC_CLIENT_SECRET}|${OIDC_CLIENT_SECRET}|g" \
+              sed "s|\${MAS_MATRIX_SECRET}|${MAS_MATRIX_SECRET}|g" \
                   -i /data/homeserver.yaml
               
               # Copia log.config
@@ -61,8 +62,9 @@ spec:
               
               echo "✓ Configuration templating complete"
               
-              echo "OIDC configuration:"
-              grep -A20 "oidc_providers:" /data/homeserver.yaml || echo "No OIDC config found"
+              echo "MAS configuration:"
+              grep -A5 "matrix_authentication_service:" /data/homeserver.yaml || echo "No MAS config found"
+              grep -A3 "experimental_features:" /data/homeserver.yaml || true
           
               # Step 2: Generazione chiavi
               echo ""
@@ -118,11 +120,11 @@ spec:
                 secretKeyRef:
                   name: matrix-k8s-secrets
                   key: form-secret
-            - name: OIDC_CLIENT_SECRET
+            - name: MAS_MATRIX_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: matrix-k8s-secrets
-                  key: oidc-client-secret
+                  name: matrix-mas-secrets
+                  key: matrix-secret
           volumeMounts:
             - name: data
               mountPath: /data

@@ -58,6 +58,7 @@ data:
     
     # =========================================================================
     # REGISTRAZIONE E PASSWORD
+    # (password/OIDC locali incompatibili con MAS — auth delegata)
     # =========================================================================
     enable_registration: false
     enable_registration_without_verification: false
@@ -66,28 +67,18 @@ data:
     password_config:
       enabled: false
       localdb_enabled: false
-    
+
     # =========================================================================
-    # CONFIGURAZIONE OIDC CON AUTHENTIK
-    # FASE 1 (pre-cutover MAS): login via Synapse→Authentik.
-    # Dopo syn2mas sostituire con i file in docs/kubernetes/matrix/manifests/cutover/
+    # MATRIX AUTHENTICATION SERVICE (QR / MSC4108)
+    # https://element-hq.github.io/matrix-authentication-service/setup/homeserver.html
     # =========================================================================
-    oidc_providers:
-      - idp_id: oidc-authentik
-        idp_name: "Authentik"
-        discover: true
-        issuer: "https://auth.ildoc.it/application/o/matrix-synapse/"
-        client_id: "matrix-synapse"
-        client_secret: ${OIDC_CLIENT_SECRET}
-        scopes: ["openid", "profile", "email"]
-        enable_device_authorization: true
-        user_mapping_provider:
-          config:
-            localpart_template: "{{ user.preferred_username }}"
-            display_name_template: "{{ user.name|default(user.preferred_username) }}"
-            email_template: "{{ user.email }}"
-            subject_claim: "sub"
-        allow_existing_users: true
+    matrix_authentication_service:
+      enabled: true
+      endpoint: "http://matrix-mas.apps.svc.cluster.local:8080/"
+      secret: ${MAS_MATRIX_SECRET}
+
+    experimental_features:
+      msc4108_enabled: true
     
     # =========================================================================
     # SECRET E CONFIGURAZIONI

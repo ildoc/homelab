@@ -1,0 +1,87 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: matrix-mas-config
+  namespace: apps
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+data:
+  config.yaml: |
+    http:
+      public_base: "https://mas.ildoc.it/"
+      issuer: "https://mas.ildoc.it/"
+      listeners:
+        - name: web
+          resources:
+            - name: discovery
+            - name: human
+            - name: oauth
+            - name: compat
+            - name: graphql
+            - name: assets
+            - name: health
+          binds:
+            - address: "[::]:8080"
+          proxy_protocol: false
+      trusted_proxies:
+        - 192.168.0.0/16
+        - 172.16.0.0/12
+        - 10.0.0.0/8
+        - 127.0.0.1/8
+        - fd00::/8
+        - ::1/128
+
+    database:
+      uri: "postgres://matrix_mas_user:${MAS_POSTGRES_PASSWORD}@192.168.0.30:5432/matrix_mas_db"
+      max_connections: 10
+      min_connections: 0
+      connect_timeout: 30
+      idle_timeout: 600
+      max_lifetime: 1800
+
+    email:
+      from: '"Matrix Auth" <mas@ildoc.it>'
+      reply_to: '"Matrix Auth" <mas@ildoc.it>'
+      transport: blackhole
+
+    passwords:
+      enabled: false
+
+    account:
+      password_registration_enabled: false
+      password_change_allowed: false
+      password_recovery_enabled: false
+      login_with_email_allowed: false
+
+    matrix:
+      kind: synapse
+      homeserver: "matrix.ildoc.it"
+      endpoint: "http://matrix-synapse.apps.svc.cluster.local:8008/"
+      # secret is provided via /secrets/secrets.yaml overlay
+
+    oauth:
+      device_code_grant_enabled: true
+
+    upstream_oauth2:
+      providers:
+        # ULID stabile: non cambiare dopo la migrazione syn2mas
+        - id: 01M36BMBEJ574P140G5TQ8NYBA
+          synapse_idp_id: oidc-oidc-authentik
+          human_name: Authentik
+          issuer: "https://auth.ildoc.it/application/o/matrix-mas/"
+          client_id: "matrix-mas"
+          client_secret: "${MAS_OIDC_CLIENT_SECRET}"
+          token_endpoint_auth_method: client_secret_basic
+          scope: "openid profile email"
+          claims_imports:
+            localpart:
+              action: require
+              template: "{{ user.preferred_username }}"
+            displayname:
+              action: suggest
+              template: "{{ user.name|default(user.preferred_username) }}"
+            email:
+              action: suggest
+              template: "{{ user.email }}"
+              set_email_verification: always

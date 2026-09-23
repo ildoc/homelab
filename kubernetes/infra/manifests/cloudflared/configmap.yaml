@@ -35,8 +35,16 @@ data:
         originRequest:
           noTLSVerify: false
           connectTimeout: 30s
+
+      # Matrix Authentication Service (issuer; cutover login ancora su Synapse OIDC)
+      - hostname: mas.ildoc.it
+        service: http://matrix-mas.apps.svc.cluster.local:8080
+        originRequest:
+          noTLSVerify: false
+          connectTimeout: 30s
+          tlsTimeout: 10s
       
-      # Matrix Synapse
+      # Matrix Synapse (FASE 1: diretto. Dopo syn2mas → matrix-gateway, vedi cutover/)
       - hostname: matrix.ildoc.it
         service: http://matrix-synapse.apps.svc.cluster.local:8008
         originRequest:
