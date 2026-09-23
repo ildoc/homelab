@@ -78,7 +78,7 @@ data:
           synapse_idp_id: oidc-oidc-authentik
           human_name: Authentik
           issuer: "https://auth.ildoc.it/application/o/matrix-mas/"
-          client_id: "matrix-mas"
+          client_id: "jeNJsBY1UuTYpbsvnyZ9fIhCVJtI2C7sRqAqPcRh"
           client_secret: "${MAS_OIDC_CLIENT_SECRET}"
           token_endpoint_auth_method: client_secret_basic
           scope: "openid profile email"
