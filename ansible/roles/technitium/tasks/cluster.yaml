@@ -54,8 +54,26 @@
     status_code: 200
   register: technitium_api_after_domain
   until: technitium_api_after_domain.status == 200
-  retries: 15
+  retries: 30
   delay: 2
+  when: technitium_domain_set is changed
+
+- name: Re-login after the domain change
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ technitium_http_port }}/api/user/login?user=admin&pass={{ _secrets.technitium.admin_password | urlencode }}&includeInfo=true"
+    method: GET
+    return_content: true
+  register: technitium_login
+  retries: 10
+  delay: 2
+  until: technitium_login.json.token is defined
+  no_log: true
+  when: technitium_domain_set is changed
+
+- name: Refresh the Technitium session token after the domain change
+  ansible.builtin.set_fact:
+    technitium_token: "{{ technitium_login.json.token }}"
+  no_log: true
   when: technitium_domain_set is changed
 
 - name: Initialize the cluster on the primary
@@ -81,6 +99,17 @@
   ansible.builtin.set_fact:
     technitium_primary_name: "{{ groups['technitium_dns'] | map('extract', hostvars) | selectattr('technitium_node_role', 'equalto', 'primary') | map(attribute='inventory_hostname') | first }}"
 
+- name: Check that the primary HTTPS endpoint is reachable from the secondary
+  ansible.builtin.uri:
+    url: "https://{{ hostvars[technitium_primary_name]['ansible_host'] }}:{{ technitium_https_port }}/"
+    method: GET
+    validate_certs: false
+    status_code: [200, 302, 401, 403]
+    timeout: 15
+  when:
+    - technitium_node_role == "secondary"
+    - not technitium_cluster_state.json.response.clusterInitialized
+
 - name: Join the cluster on a secondary
   ansible.builtin.uri:
     url: "http://127.0.0.1:{{ technitium_http_port }}/api/admin/cluster/initJoin"
@@ -90,7 +119,7 @@
     body_format: form-urlencoded
     body:
       secondaryNodeIpAddresses: "{{ ansible_host }}"
-      primaryNodeUrl: "https://{{ hostvars[technitium_primary_name]['ansible_host'] }}:{{ technitium_https_port }}/"
+      primaryNodeUrl: "https://{{ technitium_primary_name }}.{{ technitium_cluster_domain }}:{{ technitium_https_port }}/"
       primaryNodeIpAddress: "{{ hostvars[technitium_primary_name]['ansible_host'] }}"
       ignoreCertificateErrors: "true"
       primaryNodeUsername: admin
@@ -98,12 +127,26 @@
     return_content: true
     timeout: 180
   register: technitium_cluster_join
-  changed_when: technitium_cluster_join.json.status == "ok"
-  failed_when: technitium_cluster_join.json.status != "ok"
+  changed_when: technitium_cluster_join.json.status | default('') == "ok"
+  failed_when: false
   no_log: true
   when:
     - technitium_node_role == "secondary"
     - not technitium_cluster_state.json.response.clusterInitialized
+
+- name: Fail with the Technitium cluster join error
+  ansible.builtin.fail:
+    msg: >-
+      Cluster join failed:
+      {{ (technitium_cluster_join.json | default({})).errorMessage
+         | default((technitium_cluster_join.json | default({})).errorMessageId
+         | default((technitium_cluster_join.json | default({})).status
+         | default(technitium_cluster_join.msg | default('unknown error')))) }}
+  when:
+    - technitium_node_role == "secondary"
+    - not technitium_cluster_state.json.response.clusterInitialized
+    - technitium_cluster_join is not skipped
+    - (technitium_cluster_join.json | default({})).status | default('error') != "ok"
 
 - name: List DHCP scopes
   ansible.builtin.uri:
