@@ -18,4 +18,4 @@ spec:
             value: /
       backendRefs:
         - name: calibre-web-automated
-          port: 80
+          port: 8083
