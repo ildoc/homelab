@@ -1,0 +1,118 @@
+---
+# StatefulSet: una sola istanza (multi-replica non supportato dal bridge)
+# https://docs.mau.fi/bridges/general/docker-setup.html?bridge=discord
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mautrix-discord
+  namespace: apps
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+spec:
+  serviceName: mautrix-discord
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mautrix-discord
+  template:
+    metadata:
+      labels:
+        app: mautrix-discord
+    spec:
+      securityContext:
+        fsGroup: 1337
+      initContainers:
+        - name: prepare-config
+          image: alpine:3.21@sha256:ce64758a109eb420d874a118f87920e625e12d3634e03b4a5573fd9f6e5d3507
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -e
+              apk add --no-cache gettext >/dev/null
+              export DISCORD_POSTGRES_PASSWORD DISCORD_AS_TOKEN DISCORD_HS_TOKEN
+              export DISCORD_PROVISIONING_SECRET DISCORD_AVATAR_PROXY_KEY
+              envsubst '${DISCORD_POSTGRES_PASSWORD} ${DISCORD_AS_TOKEN} ${DISCORD_HS_TOKEN} ${DISCORD_PROVISIONING_SECRET} ${DISCORD_AVATAR_PROXY_KEY}' \
+                < /config-template/config.yaml > /data/config.yaml
+              chown 1337:1337 /data/config.yaml
+              echo "✓ mautrix-discord config ready"
+          env:
+            - name: DISCORD_POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mautrix-discord-cross-secrets
+                  key: postgres-password
+            - name: DISCORD_AS_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: mautrix-discord-secrets
+                  key: as-token
+            - name: DISCORD_HS_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: mautrix-discord-secrets
+                  key: hs-token
+            - name: DISCORD_PROVISIONING_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: mautrix-discord-secrets
+                  key: provisioning-secret
+            - name: DISCORD_AVATAR_PROXY_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: mautrix-discord-secrets
+                  key: avatar-proxy-key
+          securityContext:
+            runAsUser: 0
+          volumeMounts:
+            - name: config-template
+              mountPath: /config-template
+              readOnly: true
+            - name: data
+              mountPath: /data
+      containers:
+        - name: mautrix-discord
+          image: dock.mau.dev/mautrix/discord:v0.7.7@sha256:065405ca2f961b2687ca577c4eb65592c139d641342a9611d98b5394f30cf84a
+          # Bypass entrypoint script; --no-update evita rewrite della config
+          command: ["/usr/bin/mautrix-discord"]
+          args: ["-c", "/data/config.yaml", "-n"]
+          securityContext:
+            runAsUser: 1337
+            runAsGroup: 1337
+            allowPrivilegeEscalation: false
+          ports:
+            - containerPort: 29334
+              name: appservice
+              protocol: TCP
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          resources:
+            limits:
+              cpu: 500m
+              memory: 512Mi
+            requests:
+              cpu: 50m
+              memory: 128Mi
+          livenessProbe:
+            httpGet:
+              path: /_matrix/mau/live
+              port: appservice
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /_matrix/mau/ready
+              port: appservice
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 6
+      volumes:
+        - name: config-template
+          configMap:
+            name: mautrix-discord-config
+        - name: data
+          emptyDir: {}

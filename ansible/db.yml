@@ -14,6 +14,7 @@
         authentik: "cross/data/apps/authentik:postgres_password"
         matrix: "cross/data/apps/matrix:postgres_password"
         matrix_mas: "cross/data/apps/matrix:mas_postgres_password"
+        matrix_discord: "cross/data/apps/mautrix-discord:postgres_password"
         sonarqube: "cross/data/apps/sonarqube:postgres_password"
         immich: "cross/data/apps/immich:postgres_password"
         miniflux: "cross/data/apps/miniflux:postgres_password"
