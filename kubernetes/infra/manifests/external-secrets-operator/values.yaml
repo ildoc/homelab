@@ -15,6 +15,6 @@ external-secrets:
 apiServer: https://192.168.0.80:6443
 
 vault:
-  address: http://vault:8200
+  address: http://192.168.0.50:8200
   roleName: external-secrets
   policyName: kubernetes-secrets
