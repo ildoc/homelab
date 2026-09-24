@@ -28,6 +28,11 @@ spec:
               value: "Europe/Rome"
             - name: NETWORK_SHARE_MODE
               value: "true"
+            - name: HARDCOVER_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: cwa-k8s-secrets
+                  key: hardcover-token
           volumeMounts:
             - name: data
               mountPath: /config
