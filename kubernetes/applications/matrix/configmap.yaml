@@ -86,6 +86,11 @@ data:
     registration_shared_secret: ${REGISTRATION_SHARED_SECRET}
     macaroon_secret_key: ${MACAROON_SECRET_KEY}
     form_secret: ${FORM_SECRET}
+
+    # Application services (bridges)
+    # https://docs.mau.fi/bridges/general/registering-appservices.html
+    app_service_config_files:
+      - /data/appservices/mautrix-discord-registration.yaml
     
     enable_3pid_lookup: false
     allow_public_rooms_without_auth: false

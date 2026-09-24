@@ -57,6 +57,11 @@ spec:
               sed "s|\${MAS_MATRIX_SECRET}|${MAS_MATRIX_SECRET}|g" \
                   -i /data/homeserver.yaml
               
+              # Appservice registrations
+              mkdir -p /data/appservices
+              cp /appservices/mautrix-discord-registration.yaml \
+                 /data/appservices/mautrix-discord-registration.yaml
+              
               # Copia log.config
               cp /config-template/log.config /data/log.config
               
@@ -65,6 +70,8 @@ spec:
               echo "MAS configuration:"
               grep -A5 "matrix_authentication_service:" /data/homeserver.yaml || echo "No MAS config found"
               grep -A3 "experimental_features:" /data/homeserver.yaml || true
+              echo "Appservices:"
+              ls -la /data/appservices/
           
               # Step 2: Generazione chiavi
               echo ""
@@ -131,6 +138,9 @@ spec:
             - name: config-template
               mountPath: /config-template
               readOnly: true
+            - name: appservices
+              mountPath: /appservices
+              readOnly: true
       
       containers:
         - name: synapse
@@ -190,3 +200,9 @@ spec:
         - name: config-template
           configMap:
             name: matrix-config
+        - name: appservices
+          secret:
+            secretName: mautrix-discord-secrets
+            items:
+              - key: registration.yaml
+                path: mautrix-discord-registration.yaml
