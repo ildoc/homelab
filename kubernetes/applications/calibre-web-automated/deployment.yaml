@@ -46,7 +46,7 @@ spec:
               mountPath: /cwa-book-ingest
           resources:
             limits:
-              cpu: 50m
+              cpu: 100m
               memory: 1Gi
       volumes:
         - name: data
