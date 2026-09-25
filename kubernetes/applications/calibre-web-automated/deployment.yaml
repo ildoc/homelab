@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
         - name: calibre-web-automated
-          image: crocodilestick/calibre-web-automated
+          image: crocodilestick/calibre-web-automated@sha256:c31a738b6d5ec6982c050063dd3f063b6943eb1051fc81144789f840d9093a8d
           env:
             - name: PUID
               value: "1000"
