@@ -57,6 +57,15 @@ spec:
                   key: hardcover-token
             - name: OPENLIBRARY_ENABLED
               value: "true"
+            - name: PROWLARR_ENABLED
+              value: "true"
+            - name: PROWLARR_URL
+              value: "http://prowlarr:9696"
+            - name: PROWLARR_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: shelfmark-secrets
+                  key: prowlarr-api-key
           volumeMounts:
             - name: config
               mountPath: /config
