@@ -1,0 +1,208 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: matrix-synapse
+  namespace: apps
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: matrix-synapse
+  strategy:
+    type: Recreate
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      labels:
+        app: matrix-synapse
+    spec:
+      securityContext:
+        fsGroup: 991
+        fsGroupChangePolicy: "OnRootMismatch"
+      
+      initContainers:
+        # Init container unificato: templating config + generazione chiavi
+        - name: prepare-synapse
+          image: ghcr.io/element-hq/synapse:v1.161.0@sha256:6b95dd129e35e97e8032cb759e5db4a516a5f7ef6c98d34d716fea1ae239b62a
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -e
+              
+              echo "=== Matrix Synapse Preparation ==="
+              
+              # Step 1: Template della configurazione
+              echo "Step 1: Templating configuration files..."
+              
+              # Sostituisci le variabili nel homeserver.yaml
+              sed "s|\${POSTGRES_PASSWORD}|${POSTGRES_PASSWORD}|g" \
+                  /config-template/homeserver.yaml > /data/homeserver.yaml
+              
+              sed "s|\${SYNAPSE_REDIS_PASSWORD}|${SYNAPSE_REDIS_PASSWORD}|g" \
+                  -i /data/homeserver.yaml
+              
+              sed "s|\${REGISTRATION_SHARED_SECRET}|${REGISTRATION_SHARED_SECRET}|g" \
+                  -i /data/homeserver.yaml
+              
+              sed "s|\${MACAROON_SECRET_KEY}|${MACAROON_SECRET_KEY}|g" \
+                  -i /data/homeserver.yaml
+              
+              sed "s|\${FORM_SECRET}|${FORM_SECRET}|g" \
+                  -i /data/homeserver.yaml
+              
+              sed "s|\${MAS_MATRIX_SECRET}|${MAS_MATRIX_SECRET}|g" \
+                  -i /data/homeserver.yaml
+              
+              # Appservice registrations
+              mkdir -p /data/appservices
+              cp /appservices/mautrix-discord-registration.yaml \
+                 /data/appservices/mautrix-discord-registration.yaml
+              
+              # Copia log.config
+              cp /config-template/log.config /data/log.config
+              
+              echo "✓ Configuration templating complete"
+              
+              echo "MAS configuration:"
+              grep -A5 "matrix_authentication_service:" /data/homeserver.yaml || echo "No MAS config found"
+              grep -A3 "experimental_features:" /data/homeserver.yaml || true
+              echo "Appservices:"
+              ls -la /data/appservices/
+          
+              # Step 2: Generazione chiavi
+              echo ""
+              echo "Step 2: Checking signing keys..."
+              
+              if [ -f /data/keys/signing.key ]; then
+                echo "✓ Signing key already exists"
+              else
+                echo "Generating signing key..."
+                mkdir -p /data/keys
+                python -m synapse.app.homeserver \
+                  --server-name=matrix.ildoc.it \
+                  --config-path=/data/homeserver.yaml \
+                  --generate-keys
+                echo "✓ Signing key generated successfully"
+              fi
+              
+              echo ""
+              echo "=== Preparation Complete ==="
+          env:
+            - name: SYNAPSE_SERVER_NAME
+              value: "matrix.ildoc.it"
+            - name: SYNAPSE_REPORT_STATS
+              value: "no"
+            
+            # Database password
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: matrix-cross-secrets
+                  key: postgres-password
+            
+            # Redis password
+            - name: SYNAPSE_REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: matrix-redis-secret
+                  key: password
+            
+            # Synapse secrets
+            - name: REGISTRATION_SHARED_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: matrix-k8s-secrets
+                  key: registration-shared-secret
+            - name: MACAROON_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: matrix-k8s-secrets
+                  key: macaroon-secret-key
+            - name: FORM_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: matrix-k8s-secrets
+                  key: form-secret
+            - name: MAS_MATRIX_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: matrix-mas-secrets
+                  key: matrix-secret
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: config-template
+              mountPath: /config-template
+              readOnly: true
+            - name: appservices
+              mountPath: /appservices
+              readOnly: true
+      
+      containers:
+        - name: synapse
+          image: ghcr.io/element-hq/synapse:v1.161.0@sha256:6b95dd129e35e97e8032cb759e5db4a516a5f7ef6c98d34d716fea1ae239b62a
+          env:
+            - name: SYNAPSE_SERVER_NAME
+              value: "matrix.ildoc.it"
+            - name: SYNAPSE_REPORT_STATS
+              value: "no"
+            - name: UID
+              value: "991"
+            - name: GID
+              value: "991"
+            - name: TZ
+              value: "Europe/Rome"
+          ports:
+            - containerPort: 8008
+              name: http
+              protocol: TCP
+            - containerPort: 8448
+              name: federation
+              protocol: TCP
+            - containerPort: 9000
+              name: metrics
+              protocol: TCP
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          resources:
+            limits:
+              cpu: 2000m
+              memory: 4Gi
+            requests:
+              cpu: 500m
+              memory: 1Gi
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+      
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: matrix-synapse
+        - name: config-template
+          configMap:
+            name: matrix-config
+        - name: appservices
+          secret:
+            secretName: mautrix-discord-secrets
+            items:
+              - key: registration.yaml
+                path: mautrix-discord-registration.yaml
