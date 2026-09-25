@@ -1,0 +1,106 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: shelfmark
+  namespace: apps
+spec:
+  selector:
+    matchLabels:
+      app: shelfmark
+  strategy:
+    type: Recreate
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      labels:
+        app: shelfmark
+    spec:
+      containers:
+        - name: shelfmark
+          image: ghcr.io/calibrain/shelfmark-lite:latest
+          ports:
+            - containerPort: 8084
+              name: http
+          env:
+            - name: PUID
+              value: "1000"
+            - name: PGID
+              value: "1000"
+            - name: TZ
+              value: "Europe/Rome"
+            - name: FLASK_PORT
+              value: "8084"
+            - name: SESSION_COOKIE_SECURE
+              value: "true"
+            - name: SEARCH_MODE
+              value: "universal"
+            - name: INGEST_DIR
+              value: "/books"
+            # Lite image sets USING_EXTERNAL_BYPASSER=true; point it at cluster FlareSolverr
+            - name: USING_EXTERNAL_BYPASSER
+              value: "true"
+            - name: EXT_BYPASSER_URL
+              value: "http://flaresolverr:8191"
+            - name: CALIBRE_WEB_URL
+              value: "https://calibre.local.ildoc.it"
+            - name: AUDIOBOOK_LIBRARY_URL
+              value: "https://audiobookshelf.local.ildoc.it"
+            - name: BOOK_LANGUAGE
+              value: "it,en"
+            - name: HARDCOVER_ENABLED
+              value: "true"
+            - name: HARDCOVER_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: cwa-k8s-secrets
+                  key: hardcover-token
+            - name: OPENLIBRARY_ENABLED
+              value: "true"
+          volumeMounts:
+            - name: config
+              mountPath: /config
+            - name: books-ingest
+              mountPath: /books
+            # Same container path as *arr apps; if Transmission reports host paths,
+            # add a Remote Path Mapping in Shelfmark Settings → Advanced
+            - name: downloads
+              mountPath: /downloads
+          # Docker HEALTHCHECK uses --start-period=90s; give the app time before probes kill it
+          startupProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            periodSeconds: 5
+            timeoutSeconds: 10
+            failureThreshold: 18
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 10
+            failureThreshold: 3
+          resources:
+            limits:
+              cpu: 500m
+              memory: 1Gi
+      volumes:
+        - name: config
+          persistentVolumeClaim:
+            claimName: shelfmark
+        - name: books-ingest
+          nfs:
+            server: 192.168.0.123
+            path: /mnt/mediadisk/books-ingest
+        - name: downloads
+          nfs:
+            server: 192.168.0.123
+            path: /mnt/mediadisk/downloads
