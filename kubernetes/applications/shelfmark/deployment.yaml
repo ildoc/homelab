@@ -59,22 +59,13 @@ spec:
               value: "true"
             # README: annas-archive.is does not work; prefer .gl
             - name: AA_BASE_URL
-              value: "https://annas-archive.pk"
+              value: "https://annas-archive.gl"
             - name: AA_MIRROR_URLS
-              value: "https://annas-archive.pk,https://annas-archive.gd,https://annas-archive.gl"
-            - name: PROWLARR_ENABLED
+              value: "https://annas-archive.gl,https://annas-archive.gd,https://annas-archive.pk"
+            - name: DIRECT_DOWNLOAD_ENABLED
               value: "true"
-            - name: PROWLARR_URL
-              value: "http://prowlarr:9696"
-            - name: PROWLARR_API_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: shelfmark-secrets
-                  key: prowlarr-api-key
-            - name: PROWLARR_TORRENT_CLIENT
-              value: "qbittorrent"
-            - name: QBITTORRENT_URL
-              value: "http://192.168.0.123:30024"
+            - name: PROWLARR_ENABLED
+              value: "false"
           volumeMounts:
             - name: config
               mountPath: /config
