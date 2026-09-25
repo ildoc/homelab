@@ -68,8 +68,20 @@
     {
       "description": "Una MR per dipendenza, sempre verso la versione più recente",
       "matchPackageNames": ["*"],
-      "groupName": null,
-      "separateMajorMinor": false
+      "groupName": null
+    },
+    {
+      "description": "GitLab: priorità alta e una MR per ogni minor (upgrade path obbligatori)",
+      "matchPackageNames": ["gitlab/gitlab-ce"],
+      "prPriority": 10,
+      "separateMajorMinor": true,
+      "separateMultipleMinor": true
+    },
+    {
+      "description": "Pin e digest in un'unica MR con automerge",
+      "matchUpdateTypes": ["pin", "pinDigest", "digest"],
+      "groupName": "docker digests",
+      "automerge": true
     }
   ]
 }
