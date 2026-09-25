@@ -16,7 +16,7 @@ spec:
       automountServiceAccountToken: true
       containers:
         - name: vault-config
-          image: alpine/k8s:1.36.1@sha256:692239d739589247c4a791205ed9619c28ae85a21286e19a6211c04a62c56668
+          image: alpine/k8s:1.37.0@sha256:b421c2e9419edb98db39b6ab641669f4db7bb2acf354f22450c6b7e7176d1ff4
           command: ["/bin/sh", "-c"]
           args:
             - |
