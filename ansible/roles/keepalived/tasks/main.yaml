@@ -1,9 +1,16 @@
 ---
+- name: Check whether keepalived is already installed
+  ansible.builtin.command: dpkg-query -W -f='${Status}' keepalived
+  register: keepalived_pkg
+  changed_when: false
+  failed_when: false
+
 - name: Install keepalived
   ansible.builtin.apt:
     name: keepalived
     state: present
-    update_cache: true
+    lock_timeout: 60
+  when: "'install ok installed' not in keepalived_pkg.stdout"
 
 - name: Install the Technitium health check
   ansible.builtin.template:

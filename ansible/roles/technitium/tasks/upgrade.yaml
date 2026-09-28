@@ -3,14 +3,18 @@
   ansible.builtin.apt:
     update_cache: true
     upgrade: dist
+  when: technitium_host_dist_upgrade | bool
 
 - name: Check if a reboot is required
   ansible.builtin.stat:
     path: /var/run/reboot-required
     get_checksum: false
   register: technitium_reboot_required
+  when: technitium_host_dist_upgrade | bool
 
 - name: Report a pending reboot
   ansible.builtin.debug:
     msg: "Riavvio necessario su {{ inventory_hostname }} dopo il dist-upgrade."
-  when: technitium_reboot_required.stat.exists
+  when:
+    - technitium_host_dist_upgrade | bool
+    - technitium_reboot_required.stat.exists | default(false)

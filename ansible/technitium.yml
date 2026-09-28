@@ -2,6 +2,7 @@
 - name: Load secrets from Vault
   hosts: localhost
   gather_facts: false
+  tags: [always]
   vars:
     vault_secrets_map:
       technitium:
@@ -11,14 +12,42 @@
     - name: Include vault secrets loading task
       ansible.builtin.include_tasks: "{{ playbook_dir }}/tasks/vault/load-secrets.yaml"
 
-- name: Deploy Technitium
+# Upgrade order per documentazione ufficiale Technitium (clustering):
+# aggiornare prima tutti i secondary, poi il primary.
+# Ref: https://blog.technitium.com/2017/11/running-dns-server-on-ubuntu-linux.html
+# Ref: https://github.com/TechnitiumSoftware/DnsServer/discussions/1978
+- name: Deploy Technitium on secondary nodes
   hosts: technitium_dns
   become: true
   gather_facts: false
   serial: 1
+  tags: [technitium]
   vars:
     _secrets: "{{ hostvars['localhost']['vault_secrets_loaded'] }}"
   pre_tasks:
+    - name: Skip hosts that are not secondary
+      ansible.builtin.meta: end_host
+      when: (technitium_node_role | default('secondary')) != "secondary"
+
+    - name: Gather facts
+      ansible.builtin.setup:
+      become: false
+  roles:
+    - role: technitium
+
+- name: Deploy Technitium on primary nodes
+  hosts: technitium_dns
+  become: true
+  gather_facts: false
+  serial: 1
+  tags: [technitium]
+  vars:
+    _secrets: "{{ hostvars['localhost']['vault_secrets_loaded'] }}"
+  pre_tasks:
+    - name: Skip hosts that are not primary
+      ansible.builtin.meta: end_host
+      when: (technitium_node_role | default('secondary')) != "primary"
+
     - name: Gather facts
       ansible.builtin.setup:
       become: false
@@ -29,6 +58,7 @@
   hosts: technitium_dns
   become: true
   gather_facts: false
+  tags: [technitium, cluster]
   vars:
     _secrets: "{{ hostvars['localhost']['vault_secrets_loaded'] }}"
   pre_tasks:
@@ -46,6 +76,7 @@
   hosts: technitium_dns
   become: true
   gather_facts: false
+  tags: [technitium, cluster]
   vars:
     _secrets: "{{ hostvars['localhost']['vault_secrets_loaded'] }}"
   pre_tasks:
@@ -64,6 +95,7 @@
   become: true
   gather_facts: false
   serial: 1
+  tags: [keepalived]
   pre_tasks:
     - name: Gather facts
       ansible.builtin.setup:

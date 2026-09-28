@@ -1,15 +1,25 @@
 ---
+- name: Check whether curl is already present
+  ansible.builtin.command: which curl
+  register: technitium_curl
+  changed_when: false
+  failed_when: false
+
 - name: Install curl
   ansible.builtin.apt:
     name:
       - curl
       - ca-certificates
     state: present
-    update_cache: true
+  when: technitium_curl.rc != 0
 
 - name: Install or update Technitium with the official script
   ansible.builtin.shell: curl -sSL '{{ technitium_install_url }}' | bash
   args:
     executable: /bin/bash
   register: technitium_install
-  changed_when: true
+  # Lo script ufficiale, se dns.service esiste già, riestrae il pacchetto e fa sempre restart.
+  changed_when: >-
+    'Updating Technitium DNS Server' in technitium_install.stdout
+    or 'Installing Technitium DNS Server' in technitium_install.stdout
+    or 'Restarting systemd' in technitium_install.stdout

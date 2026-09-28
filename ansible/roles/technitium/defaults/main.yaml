@@ -7,3 +7,5 @@ technitium_dhcp_enabled: false
 # Deve essere un sottodominio di technitium_cluster_domain (vincolo Technitium).
 technitium_node_domain: "{{ inventory_hostname }}.{{ technitium_cluster_domain }}"
 technitium_node_role: secondary
+# Dist-upgrade dell'host OS: opt-in, non serve a ogni run del playbook.
+technitium_host_dist_upgrade: false
