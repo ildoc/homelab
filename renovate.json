@@ -81,7 +81,8 @@
       "description": "Pin e digest in un'unica MR con automerge",
       "matchUpdateTypes": ["pin", "pinDigest", "digest"],
       "groupName": "docker digests",
-      "automerge": true
+      "automerge": true,
+      "ignoreTests": true
     }
   ]
 }

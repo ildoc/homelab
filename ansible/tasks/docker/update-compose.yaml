@@ -12,6 +12,7 @@
 #   - pull_delay: delay between pull retries in seconds (default: 20)
 #   - validate_compose: validate docker-compose syntax before deployment (default: true)
 #   - cleanup_resources: cleanup unused Docker resources after deployment (default: true)
+#   - full_recreate: run docker compose down before up instead of recreating only changed services (default: false)
 
 - name: Validate required variables
   ansible.builtin.assert:
@@ -28,6 +29,7 @@
     pull_delay: "{{ pull_delay | default(20) | int }}"
     validate_compose: "{{ validate_compose | default(true) | bool }}"
     cleanup_resources: "{{ cleanup_resources | default(true) | bool }}"
+    full_recreate: "{{ full_recreate | default(false) | bool }}"
 
 - name: Display operation mode
   ansible.builtin.debug:
@@ -94,13 +96,14 @@
 - name: Execute Docker operations
   when: should_update
   block:
-    # Validation step
-    - name: Create temporary docker-compose file for validation
-      when: contents_different and validate_compose
+    # The temporary file is used both for validation and for pulling the new
+    # images while the current containers are still running
+    - name: Prepare temporary docker-compose file
+      when: contents_different
       block:
         - name: Generate temporary filename
           ansible.builtin.set_fact:
-            temp_compose_file: "{{ update_compose_remote_path }}.tmp.{{ ansible_date_time.epoch }}"
+            temp_compose_file: "{{ update_compose_remote_path }}.tmp.{{ now(fmt='%Y%m%d%H%M%S') }}"
 
         - name: Copy file to temporary location (copy mode)
           ansible.builtin.copy:
@@ -123,25 +126,16 @@
           register: compose_validation
           failed_when: compose_validation.rc != 0
           changed_when: false
+          when: validate_compose
 
-        - name: Remove temporary file
-          ansible.builtin.file:
-            path: "{{ temp_compose_file }}"
-            state: absent
-          when: temp_compose_file is defined
-
-    - name: Stop existing containers
-      community.docker.docker_compose_v2:
+    - name: Pull Docker images with retry
+      community.docker.docker_compose_v2_pull:
         project_src: "{{ update_compose_project_path }}"
-        state: absent
-      when: remote_file.stat.exists
-      register: compose_down_result
-      failed_when: false  # Don't fail if containers are already stopped
-
-    - name: Display stop result
-      ansible.builtin.debug:
-        msg: "Docker compose down result: {{ compose_down_result.rc | default('N/A') }}"
-      when: remote_file.stat.exists
+        files: "{{ [temp_compose_file | basename] if temp_compose_file is defined else omit }}"
+      register: pull_result
+      retries: "{{ pull_retries | int }}"
+      delay: "{{ pull_delay | int }}"
+      until: pull_result is succeeded
 
     - name: Copy docker-compose file (copy mode)
       ansible.builtin.copy:
@@ -157,24 +151,21 @@
         mode: '0644'
       when: contents_different and operation_mode == 'template'
 
-    - name: Pull Docker images with retry
-      community.docker.docker_compose_v2_pull:
+    - name: Stop existing containers (full recreate)
+      community.docker.docker_compose_v2:
         project_src: "{{ update_compose_project_path }}"
-      register: pull_result
-      retries: "{{ pull_retries | int }}"
-      delay: "{{ pull_delay | int }}"
-      until: not pull_result.failed
-      failed_when: false
+        state: absent
+        remove_orphans: true
+      when: remote_file.stat.exists and full_recreate
+      register: compose_down_result
+      failed_when: false  # Don't fail if containers are already stopped
 
-    - name: Check pull result
-      ansible.builtin.fail:
-        msg: "Failed to pull Docker images after {{ pull_retries }} attempts"
-      when: pull_result.failed
-
-    - name: Start containers
+    - name: Start containers (recreate only changed services)
       community.docker.docker_compose_v2:
         project_src: "{{ update_compose_project_path }}"
         state: present
+        pull: never
+        remove_orphans: true
       register: compose_up_result
 
     # Cleanup resources after successful deployment
@@ -215,6 +206,13 @@
           Docker Compose update completed successfully. 
           Mode: {{ operation_mode }}. 
           Updated: {{ should_update }}
+
+  always:
+    - name: Remove temporary file
+      ansible.builtin.file:
+        path: "{{ temp_compose_file }}"
+        state: absent
+      when: temp_compose_file is defined
 
 # Report when no update is needed
 - name: Report no update needed
