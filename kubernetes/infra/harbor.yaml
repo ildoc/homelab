@@ -12,7 +12,7 @@
 # spec:
 #   project: default
 #   source:
-#     repoURL: https://gitlab.local.ildoc.it/ildoc/homelab.git
+#     repoURL: https://gitlab.ildoc.it/ildoc/homelab.git
 #     targetRevision: HEAD
 #     path: kubernetes/infra/manifests/harbor
 #   destination:

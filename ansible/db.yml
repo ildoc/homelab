@@ -17,6 +17,7 @@
         matrix_discord: "cross/data/apps/mautrix-discord:postgres_password"
         sonarqube: "cross/data/apps/sonarqube:postgres_password"
         immich: "cross/data/apps/immich:postgres_password"
+        homemanager: "cross/data/apps/homemanager:postgres_password"
         miniflux: "cross/data/apps/miniflux:postgres_password"
         split: "cross/data/apps/split:postgres_password"
 

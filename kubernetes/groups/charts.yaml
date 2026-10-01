@@ -9,7 +9,7 @@ spec:
   goTemplateOptions: ["missingkey=error"]
   generators:
   - git:
-      repoURL: https://gitlab.local.ildoc.it/ildoc/homelab.git
+      repoURL: https://gitlab.ildoc.it/ildoc/homelab.git
       revision: HEAD
       directories:
       - path: kubernetes/charts/*
@@ -24,7 +24,7 @@ spec:
     spec:
       project: default
       source:
-        repoURL: https://gitlab.local.ildoc.it/ildoc/homelab.git
+        repoURL: https://gitlab.ildoc.it/ildoc/homelab.git
         targetRevision: HEAD
         path: '{{.path.path}}'
         helm:

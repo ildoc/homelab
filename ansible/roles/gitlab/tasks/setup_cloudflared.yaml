@@ -1,0 +1,39 @@
+---
+- name: Normalize cloudflared credentials
+  ansible.builtin.set_fact:
+    gitlab_cloudflared_credentials: "{{ gitlab.cloudflared.credentials if gitlab.cloudflared.credentials is mapping else gitlab.cloudflared.credentials | from_json }}"
+
+- name: Reject Cloudflare install tokens as credentials
+  ansible.builtin.assert:
+    that:
+      - gitlab_cloudflared_credentials.AccountTag is defined
+      - gitlab_cloudflared_credentials.TunnelID is defined
+      - gitlab_cloudflared_credentials.TunnelSecret is defined
+      - gitlab_cloudflared_credentials.TunnelSecret is string
+      - "'.' not in gitlab_cloudflared_credentials.TunnelSecret"
+    fail_msg: >-
+      ansible/data/gitlab:tunnel_credentials must be the JSON file from
+      `cloudflared tunnel create` (keys AccountTag, TunnelID, TunnelSecret),
+      not the Zero Trust install token.
+
+- name: Create cloudflared config folder
+  ansible.builtin.file:
+    path: ~/cloudflared
+    state: directory
+    mode: '0755'
+
+- name: Template cloudflared config
+  ansible.builtin.template:
+    src: cloudflared-config.yml.j2
+    dest: ~/cloudflared/config.yml
+    mode: '0644'
+  notify: Restart cloudflared
+
+- name: Write cloudflared credentials
+  ansible.builtin.copy:
+    content: "{{ gitlab_cloudflared_credentials | to_json }}"
+    dest: ~/cloudflared/credentials.json
+    owner: '65532'
+    mode: '0400'
+  no_log: true
+  notify: Restart cloudflared

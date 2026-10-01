@@ -23,8 +23,14 @@ entryPoints:
         certResolver: cloudflare
         domains:
           - main: "{{ gitlab.domain }}"
+{% if gitlab.legacy_domain | default('') | length > 0 %}
+          - main: "{{ gitlab.legacy_domain }}"
             sans:
-              - "*.{{ gitlab.domain }}"
+              - "*.{{ gitlab.legacy_domain }}"
+{% endif %}
+{% if gitlab.registry_domain | default('') | length > 0 %}
+          - main: "{{ gitlab.registry_domain }}"
+{% endif %}
 
 providers:
   docker:

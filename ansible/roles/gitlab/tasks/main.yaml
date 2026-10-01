@@ -7,5 +7,8 @@
 - name: Setup Traefik config
   ansible.builtin.include_tasks: setup_traefik.yaml
 
+- name: Setup cloudflared
+  ansible.builtin.include_tasks: setup_cloudflared.yaml
+
 - name: Setup GitLab
   ansible.builtin.include_tasks: setup_gitlab.yaml

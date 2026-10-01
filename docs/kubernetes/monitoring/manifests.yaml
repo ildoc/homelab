@@ -14,7 +14,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://gitlab.local.ildoc.it/ildoc/homelab.git
+    repoURL: https://gitlab.ildoc.it/ildoc/homelab.git
     targetRevision: HEAD
     path: kubernetes/infra/manifests/prometheus-stack
   destination:
@@ -454,7 +454,7 @@ spec:
         - "https://grafana.local.ildoc.it"
         - "https://argocd.local.ildoc.it"
         - "https://rancher.local.ildoc.it"
-        - "https://gitlab.local.ildoc.it"
+        - "https://gitlab.ildoc.it"
         # Apps
         - "https://audiobookshelf.local.ildoc.it"
         - "https://bazarr.local.ildoc.it"

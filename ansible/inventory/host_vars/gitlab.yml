@@ -1,7 +1,14 @@
 gitlab:
-  domain: gitlab.local.ildoc.it
+  domain: gitlab.ildoc.it
+  # Accettato da Traefik durante la migrazione dei client (ArgoCD, runner, git remote).
+  legacy_domain: gitlab.ildoc.it
+  # Registry solo interno: URL invariato, non esposto sul tunnel.
+  registry_domain: registry.gitlab.local.ildoc.it
   letsencrypt_email: "{{ _secrets.gitlab.letsencrypt_email }}"
   cloudflare_token: "{{ _secrets.gitlab.cloudflare_token }}"
+  cloudflared:
+    # JSON intero da `cloudflared tunnel create`, non il token JWT di installazione.
+    credentials: "{{ _secrets.gitlab.tunnel_credentials }}"
   cleanup:
     interval_hours: 6
     aggressive_hour: 2

@@ -4,6 +4,13 @@
     project_src: .
     state: restarted
 
+- name: Restart cloudflared
+  community.docker.docker_compose_v2:
+    project_src: .
+    services:
+      - cloudflared
+    state: restarted
+
 - name: Restart docker
   ansible.builtin.systemd:
     name: docker

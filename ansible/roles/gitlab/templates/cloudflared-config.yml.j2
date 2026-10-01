@@ -1,0 +1,11 @@
+---
+tunnel: {{ gitlab_cloudflared_credentials.TunnelID }}
+credentials-file: /etc/cloudflared/credentials.json
+metrics: 0.0.0.0:2000
+
+ingress:
+  - hostname: {{ gitlab.domain }}
+    service: http://gitlab:80
+    originRequest:
+      connectTimeout: 30s
+  - service: http_status:404

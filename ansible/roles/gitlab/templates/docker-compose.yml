@@ -42,7 +42,7 @@ services:
       - "traefik.enable=true"
       
       # GitLab main - router HTTP
-      - "traefik.http.routers.gitlab.rule=Host(`{{ gitlab.domain }}`)"
+      - "traefik.http.routers.gitlab.rule=Host(`{{ gitlab.domain }}`){% if gitlab.legacy_domain | default('') | length > 0 %} || Host(`{{ gitlab.legacy_domain }}`){% endif %}"
       - "traefik.http.routers.gitlab.entrypoints=websecure"
       - "traefik.http.routers.gitlab.tls.certresolver=cloudflare"
       - "traefik.http.routers.gitlab.service=gitlab"
@@ -50,14 +50,31 @@ services:
       # GitLab main - service
       - "traefik.http.services.gitlab.loadbalancer.server.port=80"
       
-      # GitLab Registry - router
-      - "traefik.http.routers.gitlab-registry.rule=Host(`registry.{{ gitlab.domain }}`)"
+      # GitLab Registry - solo interno, URL invariato
+      - "traefik.http.routers.gitlab-registry.rule=Host(`{{ gitlab.registry_domain }}`)"
       - "traefik.http.routers.gitlab-registry.entrypoints=websecure"
       - "traefik.http.routers.gitlab-registry.tls.certresolver=cloudflare"
       - "traefik.http.routers.gitlab-registry.service=gitlab-registry"
       
       # GitLab Registry - service
       - "traefik.http.services.gitlab-registry.loadbalancer.server.port=5000"
+
+  cloudflared:
+    image: cloudflare/cloudflared:2026.9.3@sha256:072c067d25ccbe61d46e18f0d0723255f2bb5304f7317caa95b27031520ff92c
+    container_name: cloudflared
+    restart: unless-stopped
+    command:
+      - tunnel
+      - --no-autoupdate
+      - --config
+      - /etc/cloudflared/config.yml
+      - run
+    volumes:
+      - ./cloudflared:/etc/cloudflared:ro
+    depends_on:
+      - gitlab
+    networks:
+      - traefik
 
   # runner:
   #   image: 'gitlab/gitlab-runner:latest'

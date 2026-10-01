@@ -7,6 +7,7 @@
       gitlab:
         letsencrypt_email: "ansible/data/gitlab:letsencrypt_email"
         cloudflare_token: "ansible/data/gitlab:cloudflare_token"
+        tunnel_credentials: "ansible/data/gitlab:tunnel_credentials"
   
   tasks:
     - name: Include vault secrets loading task

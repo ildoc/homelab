@@ -1,3 +1,3 @@
 ---
 argocd:
-  git_repo: https://gitlab.local.ildoc.it/ildoc/homelab-test
+  git_repo: https://gitlab.ildoc.it/ildoc/homelab-test

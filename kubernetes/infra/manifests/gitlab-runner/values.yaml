@@ -1,6 +1,6 @@
 ---
 gitlab-runner:
-  gitlabUrl: http://gitlab.local.ildoc.it/
+  gitlabUrl: http://gitlab.ildoc.it/
   
   replicas: 2
   concurrent: 10

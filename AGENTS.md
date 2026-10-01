@@ -5,7 +5,7 @@ Istruzioni operative per agenti AI e operatori umani. Questo file è vincolante.
 ## 0. Identità del repository
 
 - **Nome:** homelab
-- **Source of truth assoluta:** GitLab privato `https://gitlab.local.ildoc.it/ildoc/homelab.git` (branch tipico: `HEAD` / `master`).
+- **Source of truth assoluta:** GitLab privato `https://gitlab.ildoc.it/ildoc/homelab.git` (branch tipico: `HEAD` / `master`).
 - **GitHub** (`ildoc/homelab`) è solo un **mirror pulito**, non autoritativo. Non usare GitHub come destinazione di sync ArgoCD né come riferimento per lo stato reale.
 - Stack: **Ansible** (host/VM/servizi Docker e lifecycle cluster) + **ArgoCD GitOps** (tutto ciò che vive su Kubernetes) + **HashiCorp Vault** (secret) + **Renovate** (dipendenze).
 
@@ -83,7 +83,7 @@ GitLab homelab (SoT)
 Sync policy tipica: `automated.prune: true`, `automated.selfHeal: true`.  
 Cartella `archived/` sotto `applications/` o `charts/` = esclusa dai generator → non deployata ma resta in git (soft-delete).
 
-Repo ArgoCD: **sempre** `https://gitlab.local.ildoc.it/ildoc/homelab.git`, `targetRevision: HEAD`.
+Repo ArgoCD: **sempre** `https://gitlab.ildoc.it/ildoc/homelab.git`, `targetRevision: HEAD`.
 
 ---
 

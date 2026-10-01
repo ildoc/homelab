@@ -24,7 +24,7 @@ adguard:
     - { ip: "192.168.0.6", domain: "adguard2.local.ildoc.it" }
     - { ip: "192.168.0.183", domain: "ubuntu.local.ildoc.it" }
       
-    - { ip: "192.168.0.25", domain: "gitlab.local.ildoc.it" }
+    - { ip: "192.168.0.25", domain: "gitlab.ildoc.it" }
     - { ip: "192.168.0.25", domain: "registry.gitlab.local.ildoc.it" }
       
     - { ip: "192.168.0.81", domain: "adventurelog.local.ildoc.it" }

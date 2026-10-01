@@ -336,7 +336,7 @@ monitoring:
       - "https://grafana.local.ildoc.it"
       - "https://argocd.local.ildoc.it"
       - "https://rancher.local.ildoc.it"
-      - "https://gitlab.local.ildoc.it"
+      - "https://gitlab.ildoc.it"
       # Applicazioni
       - "https://audiobookshelf.local.ildoc.it"
       - "https://adventurelog.local.ildoc.it"

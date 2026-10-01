@@ -104,6 +104,18 @@
       async: 300
       poll: 10
 
+    - name: Fix GitLab socket and data permissions
+      ansible.builtin.command: docker exec -t gitlab update-permissions
+      when: gitlab_container_running.stdout != ""
+      async: 180
+      poll: 10
+
+    - name: Restart GitLab services after reconfigure
+      ansible.builtin.command: docker exec -t gitlab gitlab-ctl restart
+      when: gitlab_container_running.stdout != ""
+      async: 180
+      poll: 10
+
     - name: Report reconfigure result
       ansible.builtin.debug:
         msg: "GitLab reconfigured successfully"

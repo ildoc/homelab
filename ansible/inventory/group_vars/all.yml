@@ -23,7 +23,7 @@ kubernetes:
 
 argocd:
   namespace: argocd
-  git_repo: https://gitlab.local.ildoc.it/ildoc/homelab
+  git_repo: https://gitlab.ildoc.it/ildoc/homelab
   git_user: ildoc
   git_password: "{{ lookup('community.hashi_vault.hashi_vault', 'ansible/data/argocd:git_password') }}"
 

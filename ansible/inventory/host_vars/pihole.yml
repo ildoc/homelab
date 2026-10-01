@@ -23,7 +23,7 @@ pihole:
     - { ip: 192.168.0.145, domain: "pihole.local.ildoc.it"}
     - { ip: 192.168.0.183, domain: "ubuntu.local.ildoc.it"}
       
-    - { ip: 192.168.0.25, domain: "gitlab.local.ildoc.it"}
+    - { ip: 192.168.0.25, domain: "gitlab.ildoc.it"}
     - { ip: 192.168.0.25, domain: "registry.gitlab.local.ildoc.it"}
       
     - { ip: 192.168.0.81, domain: "alertmanager.local.ildoc.it"}

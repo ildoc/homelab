@@ -12,8 +12,8 @@
 # URL principale di accesso a GitLab (richiesto)
 external_url 'https://{{ gitlab.domain }}'
 
-# URL per il Container Registry
-registry_external_url 'https://registry.{{ gitlab.domain }}'
+# URL per il Container Registry (solo interno, dominio invariato)
+registry_external_url 'https://{{ gitlab.registry_domain }}'
 
 ################################################################################
 ## SSH Configuration
@@ -66,6 +66,13 @@ nginx['proxy_set_headers'] = {
   "X-Forwarded-Proto" => "https",
   "X-Forwarded-Ssl" => "on"
 }
+
+# IP reale dei client dietro Traefik (LAN) e cloudflared (internet).
+# 172.16.0.0/12 copre le reti Docker Compose senza dover fissare la subnet.
+gitlab_rails['trusted_proxies'] = ['172.16.0.0/12']
+nginx['real_ip_trusted_addresses'] = ['172.16.0.0/12']
+nginx['real_ip_header'] = 'X-Forwarded-For'
+nginx['real_ip_recursive'] = 'on'
 
 ################################################################################
 ## GitLab Rails Settings

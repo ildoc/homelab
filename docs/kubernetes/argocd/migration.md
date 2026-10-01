@@ -125,7 +125,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://gitlab.local.ildoc.it/ildoc/homelab.git
+    repoURL: https://gitlab.ildoc.it/ildoc/homelab.git
     targetRevision: HEAD
     path: kubernetes/infra/manifests/argocd
   destination:
@@ -201,7 +201,7 @@ kubectl get configmap argocd-cm -n argocd -o yaml | grep reconciliation
 
 ```bash
 # 1. Clona il repository GitOps
-git clone https://gitlab.local.ildoc.it/ildoc/homelab.git
+git clone https://gitlab.ildoc.it/ildoc/homelab.git
 cd homelab
 
 # 2. Installa ArgoCD con Helm
@@ -251,7 +251,7 @@ vault kv put kubernetes/argocd \
   gitlab-ssh-key=@~/.ssh/argocd_gitlab
 
 # 4. Ottieni l'host key di GitLab
-ssh-keyscan gitlab.local.ildoc.it
+ssh-keyscan gitlab.ildoc.it
 
 # 5. Aggiungi le known hosts al values.yaml
 vim kubernetes/infra/manifests/argocd/values.yaml
@@ -263,7 +263,7 @@ argo-cd:
   configs:
     ssh:
       knownHosts: |
-        gitlab.local.ildoc.it ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAA...
+        gitlab.ildoc.it ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAA...
 ```
 
 ```bash
@@ -295,7 +295,7 @@ spec:
           argocd.argoproj.io/secret-type: repository
       data:
         type: git
-        url: git@gitlab.local.ildoc.it:ildoc/homelab.git
+        url: git@gitlab.ildoc.it:ildoc/homelab.git
         sshPrivateKey: "{{ .sshKey }}"
   data:
     - secretKey: sshKey
@@ -417,7 +417,7 @@ kubectl get secret -n argocd -l argocd.argoproj.io/secret-type=repository
 
 # Test connessione
 kubectl exec -n argocd deployment/argocd-repo-server -- \
-  ssh -T git@gitlab.local.ildoc.it
+  ssh -T git@gitlab.ildoc.it
 ```
 
 **Namespace bloccato in Terminating:**
