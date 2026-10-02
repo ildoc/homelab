@@ -60,7 +60,7 @@ kube-prometheus-stack:
       additionalScrapeConfigs:
         - job_name: 'gitlab-omnibus'
           static_configs:
-            - targets: ['gitlab.local.ildoc.it:9090']
+            - targets: ['gitlab.ildoc.it:9090']
           relabel_configs:
             - source_labels: [__address__]
               target_label: instance
@@ -68,7 +68,7 @@ kube-prometheus-stack:
         
         - job_name: 'gitlab-exporter'
           static_configs:
-            - targets: ['gitlab.local.ildoc.it:9168']
+            - targets: ['gitlab.ildoc.it:9168']
           metrics_path: /metrics
           relabel_configs:
             - source_labels: [__address__]
@@ -77,7 +77,7 @@ kube-prometheus-stack:
         
         - job_name: 'gitlab-sidekiq'
           static_configs:
-            - targets: ['gitlab.local.ildoc.it:8082']
+            - targets: ['gitlab.ildoc.it:8082']
           relabel_configs:
             - source_labels: [__address__]
               target_label: instance
@@ -85,7 +85,7 @@ kube-prometheus-stack:
         
         - job_name: 'gitlab-workhorse'
           static_configs:
-            - targets: ['gitlab.local.ildoc.it:9229']
+            - targets: ['gitlab.ildoc.it:9229']
           relabel_configs:
             - source_labels: [__address__]
               target_label: instance
