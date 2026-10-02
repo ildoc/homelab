@@ -18,6 +18,9 @@ spec:
     spec:
       containers:
         - name: shelfmark
+          # Lite: no bundled Chromium; relies on cluster FlareSolverr/Byparr.
+          # AA Direct Download needs a bypasser that can clear DDoS-Guard —
+          # stock FlareSolverr reports success but still returns the challenge.
           image: ghcr.io/calibrain/shelfmark-lite:latest
           ports:
             - containerPort: 8084
@@ -37,11 +40,16 @@ spec:
               value: "universal"
             - name: INGEST_DIR
               value: "/books"
-            # Lite image sets USING_EXTERNAL_BYPASSER=true; point it at cluster FlareSolverr
+            - name: USE_CF_BYPASS
+              value: "true"
             - name: USING_EXTERNAL_BYPASSER
               value: "true"
             - name: EXT_BYPASSER_URL
               value: "http://flaresolverr:8191"
+            - name: EXT_BYPASSER_PATH
+              value: "/v1"
+            - name: EXT_BYPASSER_TIMEOUT
+              value: "120000"
             - name: CALIBRE_WEB_URL
               value: "https://calibre.local.ildoc.it"
             - name: AUDIOBOOK_LIBRARY_URL
