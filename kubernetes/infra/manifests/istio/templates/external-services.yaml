@@ -66,9 +66,9 @@ spec:
         maxRequestsPerConnection: {{ $config.connectionPool.maxRequestsPerConnection | default 10 }}
     
     {{- if and $config.outlierDetection $config.outlierDetection.enabled }}
-    # Outlier detection — consecutiveErrors è deprecato/ignorato su Istio recenti
+    # Outlier detection — consecutiveErrors è deprecato; consecutiveGatewayFailures
+    # viene droppato dall'API Istio di questo cluster e lascia Argo OutOfSync.
     outlierDetection:
-      consecutiveGatewayFailures: {{ $config.outlierDetection.consecutiveGatewayFailures | default 2 }}
       consecutiveLocalOriginFailures: {{ $config.outlierDetection.consecutiveLocalOriginFailures | default 2 }}
       interval: {{ $config.outlierDetection.interval | default "5s" | quote }}
       baseEjectionTime: {{ $config.outlierDetection.baseEjectionTime | default "30s" | quote }}

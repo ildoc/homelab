@@ -46,7 +46,6 @@ externalServices:
     # Health checking (eject rapido se un nodo torna in pool ma è down)
     outlierDetection:
       enabled: true
-      consecutiveGatewayFailures: 2
       consecutiveLocalOriginFailures: 2
       interval: "5s"
       baseEjectionTime: "30s"
