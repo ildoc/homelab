@@ -29,23 +29,28 @@ externalServices:
     skipVerify: true
     loadBalancer: ROUND_ROBIN
     
-    # Multiple endpoints = automatic load balancing
+    # pve02/pve03 (.11/.12) attualmente down: lasciarli in pool fa fare
+    # ROUND_ROBIN verso host morti e porta la UI a ~6s di latenza.
+    # Riabilitare quando i nodi tornano up.
     endpoints:
       - address: "192.168.0.10"
-      - address: "192.168.0.11"
-      - address: "192.168.0.12"
+      # - address: "192.168.0.11"
+      # - address: "192.168.0.12"
     
     # Connection pool settings
     connectionPool:
       maxPendingRequests: 1024
       maxRequestsPerConnection: 10
+      connectTimeout: "1s"
     
-    # Health checking
+    # Health checking (eject rapido se un nodo torna in pool ma è down)
     outlierDetection:
       enabled: true
-      consecutiveErrors: 5
-      interval: "30s"
+      consecutiveGatewayFailures: 2
+      consecutiveLocalOriginFailures: 2
+      interval: "5s"
       baseEjectionTime: "30s"
+      maxEjectionPercent: 90
   
   # TrueNAS
   truenas:

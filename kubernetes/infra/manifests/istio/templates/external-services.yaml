@@ -59,16 +59,21 @@ spec:
     
     # Connection pool settings
     connectionPool:
+      tcp:
+        connectTimeout: {{ $config.connectionPool.connectTimeout | default "1s" | quote }}
       http:
         http1MaxPendingRequests: {{ $config.connectionPool.maxPendingRequests | default 512 }}
         maxRequestsPerConnection: {{ $config.connectionPool.maxRequestsPerConnection | default 10 }}
     
     {{- if and $config.outlierDetection $config.outlierDetection.enabled }}
-    # Outlier detection (health checking)
+    # Outlier detection — consecutiveErrors è deprecato/ignorato su Istio recenti
     outlierDetection:
-      consecutiveErrors: {{ $config.outlierDetection.consecutiveErrors | default 5 }}
-      interval: {{ $config.outlierDetection.interval | default "30s" }}
-      baseEjectionTime: {{ $config.outlierDetection.baseEjectionTime | default "30s" }}
+      consecutiveGatewayFailures: {{ $config.outlierDetection.consecutiveGatewayFailures | default 2 }}
+      consecutiveLocalOriginFailures: {{ $config.outlierDetection.consecutiveLocalOriginFailures | default 2 }}
+      interval: {{ $config.outlierDetection.interval | default "5s" | quote }}
+      baseEjectionTime: {{ $config.outlierDetection.baseEjectionTime | default "30s" | quote }}
+      maxEjectionPercent: {{ $config.outlierDetection.maxEjectionPercent | default 90 }}
+      splitExternalLocalOriginErrors: true
     {{- end }}
 
 ---
