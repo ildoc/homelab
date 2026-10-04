@@ -1,0 +1,655 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-apps-resources
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  apps-resources.json: |-
+    {
+      "title": "Apps — CPU & RAM (capacity)",
+      "uid": "homelab-apps-cpu-ram",
+      "description": "Utilizzo CPU/RAM per workload, confrontato con request/limit. Usa range lunghi (7d/30d) per ottimizzare le risorse.",
+      "editable": true,
+      "graphTooltip": 1,
+      "refresh": "30s",
+      "schemaVersion": 39,
+      "tags": ["homelab", "kubernetes", "apps", "capacity"],
+      "time": { "from": "now-24h", "to": "now" },
+      "timepicker": {
+        "refresh_intervals": ["10s", "30s", "1m", "5m"],
+        "time_options": ["5m", "15m", "1h", "6h", "12h", "24h", "7d", "30d"]
+      },
+      "timezone": "browser",
+      "weekStart": "",
+      "annotations": {
+        "list": [
+          {
+            "builtIn": 1,
+            "datasource": { "type": "grafana", "uid": "-- Grafana --" },
+            "enable": true,
+            "hide": true,
+            "iconColor": "rgba(0, 211, 255, 1)",
+            "name": "Annotations & Alerts",
+            "type": "dashboard"
+          }
+        ]
+      },
+      "templating": {
+        "list": [
+          {
+            "current": { "selected": false, "text": "apps", "value": "apps" },
+            "datasource": { "type": "prometheus", "uid": "prometheus" },
+            "definition": "label_values(kube_pod_info, namespace)",
+            "hide": 0,
+            "includeAll": false,
+            "multi": false,
+            "name": "namespace",
+            "options": [],
+            "query": {
+              "qryType": 1,
+              "query": "label_values(kube_pod_info, namespace)",
+              "refId": "PrometheusVariableQueryEditor-VariableQuery"
+            },
+            "refresh": 1,
+            "regex": "",
+            "sort": 1,
+            "type": "query"
+          },
+          {
+            "allValue": ".*",
+            "current": { "selected": true, "text": ["All"], "value": ["$__all"] },
+            "datasource": { "type": "prometheus", "uid": "prometheus" },
+            "definition": "query_result(count by (workload) (label_replace(kube_pod_owner{namespace=~\"$namespace\",owner_kind=\"ReplicaSet\"},\"workload\",\"$1\",\"owner_name\",\"^(.*)-[a-z0-9]{5,10}$\") or label_replace(kube_pod_owner{namespace=~\"$namespace\",owner_kind=~\"StatefulSet|DaemonSet\"},\"workload\",\"$1\",\"owner_name\",\"(.*)\")))",
+            "hide": 0,
+            "includeAll": true,
+            "multi": true,
+            "name": "workload",
+            "options": [],
+            "query": {
+              "qryType": 3,
+              "query": "query_result(count by (workload) (label_replace(kube_pod_owner{namespace=~\"$namespace\",owner_kind=\"ReplicaSet\"},\"workload\",\"$1\",\"owner_name\",\"^(.*)-[a-z0-9]{5,10}$\") or label_replace(kube_pod_owner{namespace=~\"$namespace\",owner_kind=~\"StatefulSet|DaemonSet\"},\"workload\",\"$1\",\"owner_name\",\"(.*)\")))",
+              "refId": "PrometheusVariableQueryEditor-VariableQuery"
+            },
+            "refresh": 2,
+            "regex": "/workload=\"([^\"]+)\"/",
+            "sort": 1,
+            "type": "query"
+          }
+        ]
+      },
+      "panels": [
+        {
+          "type": "text",
+          "title": "",
+          "gridPos": { "h": 3, "w": 24, "x": 0, "y": 0 },
+          "id": 100,
+          "options": {
+            "mode": "markdown",
+            "content": "**Come leggere:** `CPU%/lim` o `Mem%/lim` vicino a 100% → alza i limit. Valori stabilmente molto bassi (es. <20%) → puoi ridurre request/limit. `Throttle%` alto → il limit CPU strozza il container (come sonarr/prowlarr a 50m). Filtra un workload per il dettaglio usage vs request vs limit."
+          }
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "title": "Overview — usage vs request/limit (now)",
+          "description": "Snapshot attuale per ottimizzare. Ordina per CPU%/lim o Mem%/lim per trovare pressione o spreco.",
+          "type": "table",
+          "gridPos": { "h": 12, "w": 24, "x": 0, "y": 3 },
+          "id": 1,
+          "fieldConfig": {
+            "defaults": {
+              "custom": { "align": "auto", "cellOptions": { "type": "auto" }, "inspect": false },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green", "value": null },
+                  { "color": "yellow", "value": 70 },
+                  { "color": "red", "value": 90 }
+                ]
+              }
+            },
+            "overrides": [
+              {
+                "matcher": { "id": "byName", "options": "Workload" },
+                "properties": [{ "id": "custom.width", "value": 220 }]
+              },
+              {
+                "matcher": { "id": "byRegexp", "options": "CPU.*|Mem.*" },
+                "properties": [{ "id": "decimals", "value": 1 }]
+              },
+              {
+                "matcher": { "id": "byRegexp", "options": "CPU$|CPU req|CPU lim" },
+                "properties": [{ "id": "unit", "value": "cpucores" }]
+              },
+              {
+                "matcher": { "id": "byRegexp", "options": "Mem$|Mem req|Mem lim" },
+                "properties": [{ "id": "unit", "value": "bytes" }]
+              },
+              {
+                "matcher": { "id": "byRegexp", "options": "%.*" },
+                "properties": [
+                  { "id": "unit", "value": "percent" },
+                  { "id": "min", "value": 0 },
+                  { "id": "max", "value": 100 },
+                  {
+                    "id": "custom.cellOptions",
+                    "value": { "type": "gauge", "mode": "basic", "valueDisplayMode": "text" }
+                  }
+                ]
+              }
+            ]
+          },
+          "options": {
+            "showHeader": true,
+            "cellHeight": "sm",
+            "footer": { "show": false, "reducer": ["sum"], "countRows": false, "fields": "" },
+            "sortBy": [{ "displayName": "% CPU lim", "desc": true }]
+          },
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "editorMode": "code",
+              "expr": "sum by (workload) (sum by (namespace, pod) (rate(container_cpu_usage_seconds_total{namespace=~\"$namespace\",container!=\"\",container!=\"POD\"}[$__rate_interval])) * on(namespace,pod) group_left(workload) (label_replace(kube_pod_owner{namespace=~\"$namespace\",owner_kind=\"ReplicaSet\"},\"workload\",\"$1\",\"owner_name\",\"^(.*)-[a-z0-9]{5,10}$\") or label_replace(kube_pod_owner{namespace=~\"$namespace\",owner_kind=~\"StatefulSet|DaemonSet\"},\"workload\",\"$1\",\"owner_name\",\"(.*)\")))",
+              "format": "table",
+              "instant": true,
+              "refId": "A"
+            },
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "editorMode": "code",
+              "expr": "sum by (workload) (sum by (namespace, pod, container) (kube_pod_container_resource_requests{namespace=~\"$namespace\",resource=\"cpu\"}) * on(namespace,pod) group_left(workload) (label_replace(kube_pod_owner{namespace=~\"$namespace\",owner_kind=\"ReplicaSet\"},\"workload\",\"$1\",\"owner_name\",\"^(.*)-[a-z0-9]{5,10}$\") or label_replace(kube_pod_owner{namespace=~\"$namespace\",owner_kind=~\"StatefulSet|DaemonSet\"},\"workload\",\"$1\",\"owner_name\",\"(.*)\")))",
+              "format": "table",
+              "instant": true,
+              "refId": "B"
+            },
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "editorMode": "code",
+              "expr": "sum by (workload) (sum by (namespace, pod, container) (kube_pod_container_resource_limits{namespace=~\"$namespace\",resource=\"cpu\"}) * on(namespace,pod) group_left(workload) (label_replace(kube_pod_owner{namespace=~\"$namespace\",owner_kind=\"ReplicaSet\"},\"workload\",\"$1\",\"owner_name\",\"^(.*)-[a-z0-9]{5,10}$\") or label_replace(kube_pod_owner{namespace=~\"$namespace\",owner_kind=~\"StatefulSet|DaemonSet\"},\"workload\",\"$1\",\"owner_name\",\"(.*)\")))",
+              "format": "table",
+              "instant": true,
+              "refId": "C"
+            },
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "editorMode": "code",
+              "expr": "(sum by (workload) (sum by (namespace, pod) (rate(container_cpu_usage_seconds_total{namespace=~\"$namespace\",container!=\"\",container!=\"POD\"}[$__rate_interval])) * on(namespace,pod) group_left(workload) (label_replace(kube_pod_owner{namespace=~\"$namespace\",owner_kind=\"ReplicaSet\"},\"workload\",\"$1\",\"owner_name\",\"^(.*)-[a-z0-9]{5,10}$\") or label_replace(kube_pod_owner{namespace=~\"$namespace\",owner_kind=~\"StatefulSet|DaemonSet\"},\"workload\",\"$1\",\"owner_name\",\"(.*)\")))) / clamp_min(sum by (workload) (sum by (namespace, pod, container) (kube_pod_container_resource_limits{namespace=~\"$namespace\",resource=\"cpu\"}) * on(namespace,pod) group_left(workload) (label_replace(kube_pod_owner{namespace=~\"$namespace\",owner_kind=\"ReplicaSet\"},\"workload\",\"$1\",\"owner_name\",\"^(.*)-[a-z0-9]{5,10}$\") or label_replace(kube_pod_owner{namespace=~\"$namespace\",owner_kind=~\"StatefulSet|DaemonSet\"},\"workload\",\"$1\",\"owner_name\",\"(.*)\"))), 1e-9) * 100",
+              "format": "table",
+              "instant": true,
+              "refId": "D"
+            },
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "editorMode": "code",
+              "expr": "sum by (workload) (sum by (namespace, pod) (container_memory_working_set_bytes{namespace=~\"$namespace\",container!=\"\",container!=\"POD\"}) * on(namespace,pod) group_left(workload) (label_replace(kube_pod_owner{namespace=~\"$namespace\",owner_kind=\"ReplicaSet\"},\"workload\",\"$1\",\"owner_name\",\"^(.*)-[a-z0-9]{5,10}$\") or label_replace(kube_pod_owner{namespace=~\"$namespace\",owner_kind=~\"StatefulSet|DaemonSet\"},\"workload\",\"$1\",\"owner_name\",\"(.*)\")))",
+              "format": "table",
+              "instant": true,
+              "refId": "E"
+            },
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "editorMode": "code",
+              "expr": "sum by (workload) (sum by (namespace, pod, container) (kube_pod_container_resource_requests{namespace=~\"$namespace\",resource=\"memory\"}) * on(namespace,pod) group_left(workload) (label_replace(kube_pod_owner{namespace=~\"$namespace\",owner_kind=\"ReplicaSet\"},\"workload\",\"$1\",\"owner_name\",\"^(.*)-[a-z0-9]{5,10}$\") or label_replace(kube_pod_owner{namespace=~\"$namespace\",owner_kind=~\"StatefulSet|DaemonSet\"},\"workload\",\"$1\",\"owner_name\",\"(.*)\")))",
+              "format": "table",
+              "instant": true,
+              "refId": "F"
+            },
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "editorMode": "code",
+              "expr": "sum by (workload) (sum by (namespace, pod, container) (kube_pod_container_resource_limits{namespace=~\"$namespace\",resource=\"memory\"}) * on(namespace,pod) group_left(workload) (label_replace(kube_pod_owner{namespace=~\"$namespace\",owner_kind=\"ReplicaSet\"},\"workload\",\"$1\",\"owner_name\",\"^(.*)-[a-z0-9]{5,10}$\") or label_replace(kube_pod_owner{namespace=~\"$namespace\",owner_kind=~\"StatefulSet|DaemonSet\"},\"workload\",\"$1\",\"owner_name\",\"(.*)\")))",
+              "format": "table",
+              "instant": true,
+              "refId": "G"
+            },
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "editorMode": "code",
+              "expr": "(sum by (workload) (sum by (namespace, pod) (container_memory_working_set_bytes{namespace=~\"$namespace\",container!=\"\",container!=\"POD\"}) * on(namespace,pod) group_left(workload) (label_replace(kube_pod_owner{namespace=~\"$namespace\",owner_kind=\"ReplicaSet\"},\"workload\",\"$1\",\"owner_name\",\"^(.*)-[a-z0-9]{5,10}$\") or label_replace(kube_pod_owner{namespace=~\"$namespace\",owner_kind=~\"StatefulSet|DaemonSet\"},\"workload\",\"$1\",\"owner_name\",\"(.*)\")))) / clamp_min(sum by (workload) (sum by (namespace, pod, container) (kube_pod_container_resource_limits{namespace=~\"$namespace\",resource=\"memory\"}) * on(namespace,pod) group_left(workload) (label_replace(kube_pod_owner{namespace=~\"$namespace\",owner_kind=\"ReplicaSet\"},\"workload\",\"$1\",\"owner_name\",\"^(.*)-[a-z0-9]{5,10}$\") or label_replace(kube_pod_owner{namespace=~\"$namespace\",owner_kind=~\"StatefulSet|DaemonSet\"},\"workload\",\"$1\",\"owner_name\",\"(.*)\"))), 1) * 100",
+              "format": "table",
+              "instant": true,
+              "refId": "H"
+            },
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "editorMode": "code",
+              "expr": "(sum by (workload) (rate(container_cpu_cfs_throttled_periods_total{namespace=~\"$namespace\",container!=\"\",container!=\"POD\"}[$__rate_interval]) * on(namespace,pod) group_left(workload) (label_replace(kube_pod_owner{namespace=~\"$namespace\",owner_kind=\"ReplicaSet\"},\"workload\",\"$1\",\"owner_name\",\"^(.*)-[a-z0-9]{5,10}$\") or label_replace(kube_pod_owner{namespace=~\"$namespace\",owner_kind=~\"StatefulSet|DaemonSet\"},\"workload\",\"$1\",\"owner_name\",\"(.*)\")))) / clamp_min(sum by (workload) (rate(container_cpu_cfs_periods_total{namespace=~\"$namespace\",container!=\"\",container!=\"POD\"}[$__rate_interval]) * on(namespace,pod) group_left(workload) (label_replace(kube_pod_owner{namespace=~\"$namespace\",owner_kind=\"ReplicaSet\"},\"workload\",\"$1\",\"owner_name\",\"^(.*)-[a-z0-9]{5,10}$\") or label_replace(kube_pod_owner{namespace=~\"$namespace\",owner_kind=~\"StatefulSet|DaemonSet\"},\"workload\",\"$1\",\"owner_name\",\"(.*)\"))), 1e-9) * 100",
+              "format": "table",
+              "instant": true,
+              "refId": "I"
+            }
+          ],
+          "transformations": [
+            { "id": "filterFieldsByName", "options": { "include": { "names": ["workload", "Value #A", "Value #B", "Value #C", "Value #D", "Value #E", "Value #F", "Value #G", "Value #H", "Value #I"] } } },
+            {
+              "id": "joinByField",
+              "options": { "byField": "workload", "mode": "outer" }
+            },
+            {
+              "id": "filterByValue",
+              "options": {
+                "filters": [
+                  {
+                    "fieldName": "workload",
+                    "config": { "id": "regex", "options": { "value": "^($workload)$" } }
+                  }
+                ],
+                "match": "any",
+                "type": "include"
+              }
+            },
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": { "Time": true, "Time 1": true, "Time 2": true, "Time 3": true, "Time 4": true, "Time 5": true, "Time 6": true, "Time 7": true, "Time 8": true, "Time 9": true },
+                "indexByName": {
+                  "workload": 0,
+                  "Value #A": 1,
+                  "Value #B": 2,
+                  "Value #C": 3,
+                  "Value #D": 4,
+                  "Value #E": 5,
+                  "Value #F": 6,
+                  "Value #G": 7,
+                  "Value #H": 8,
+                  "Value #I": 9
+                },
+                "renameByName": {
+                  "workload": "Workload",
+                  "Value #A": "CPU",
+                  "Value #B": "CPU req",
+                  "Value #C": "CPU lim",
+                  "Value #D": "% CPU lim",
+                  "Value #E": "Mem",
+                  "Value #F": "Mem req",
+                  "Value #G": "Mem lim",
+                  "Value #H": "% Mem lim",
+                  "Value #I": "% Throttle"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "title": "CPU usage by workload",
+          "description": "Rate CPU aggregata per Deployment/StatefulSet",
+          "type": "timeseries",
+          "gridPos": { "h": 9, "w": 12, "x": 0, "y": 15 },
+          "id": 2,
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "lineWidth": 1,
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": { "group": "A", "mode": "none" }
+              },
+              "unit": "cpucores",
+              "min": 0
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true, "sortBy": "Max", "sortDesc": true },
+            "tooltip": { "mode": "multi", "sort": "desc" }
+          },
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "editorMode": "code",
+              "expr": "sum by (workload) (sum by (namespace, pod) (rate(container_cpu_usage_seconds_total{namespace=~\"$namespace\",container!=\"\",container!=\"POD\"}[$__rate_interval])) * on(namespace,pod) group_left(workload) (label_replace(kube_pod_owner{namespace=~\"$namespace\",owner_kind=\"ReplicaSet\"},\"workload\",\"$1\",\"owner_name\",\"^(.*)-[a-z0-9]{5,10}$\") or label_replace(kube_pod_owner{namespace=~\"$namespace\",owner_kind=~\"StatefulSet|DaemonSet\"},\"workload\",\"$1\",\"owner_name\",\"(.*)\")))",
+              "legendFormat": "{{ "{{workload}}" }}",
+              "range": true,
+              "refId": "A"
+            }
+          ],
+          "transformations": [
+            {
+              "id": "filterFieldsByName",
+              "options": { "include": { "pattern": "^(Time|($workload))$" } }
+            }
+          ]
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "title": "Memory working set by workload",
+          "description": "RSS/working set per workload",
+          "type": "timeseries",
+          "gridPos": { "h": 9, "w": 12, "x": 12, "y": 15 },
+          "id": 3,
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "lineWidth": 1,
+                "showPoints": "never",
+                "spanNulls": false
+              },
+              "unit": "bytes",
+              "min": 0
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true, "sortBy": "Max", "sortDesc": true },
+            "tooltip": { "mode": "multi", "sort": "desc" }
+          },
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "editorMode": "code",
+              "expr": "sum by (workload) (sum by (namespace, pod) (container_memory_working_set_bytes{namespace=~\"$namespace\",container!=\"\",container!=\"POD\"}) * on(namespace,pod) group_left(workload) (label_replace(kube_pod_owner{namespace=~\"$namespace\",owner_kind=\"ReplicaSet\"},\"workload\",\"$1\",\"owner_name\",\"^(.*)-[a-z0-9]{5,10}$\") or label_replace(kube_pod_owner{namespace=~\"$namespace\",owner_kind=~\"StatefulSet|DaemonSet\"},\"workload\",\"$1\",\"owner_name\",\"(.*)\")))",
+              "legendFormat": "{{ "{{workload}}" }}",
+              "range": true,
+              "refId": "A"
+            }
+          ],
+          "transformations": [
+            {
+              "id": "filterFieldsByName",
+              "options": { "include": { "pattern": "^(Time|($workload))$" } }
+            }
+          ]
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "title": "CPU % of limit by workload",
+          "description": "Vicino a 100% → rischio throttling / OOM-adjacent pressure. Molto basso in modo stabile → limit troppo alto.",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 },
+          "id": 4,
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "drawStyle": "line",
+                "fillOpacity": 5,
+                "lineWidth": 1,
+                "showPoints": "never",
+                "thresholdsStyle": { "mode": "line+area" }
+              },
+              "unit": "percent",
+              "min": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "transparent", "value": null },
+                  { "color": "red", "value": 90 }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true, "sortBy": "Max", "sortDesc": true },
+            "tooltip": { "mode": "multi", "sort": "desc" }
+          },
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "editorMode": "code",
+              "expr": "(sum by (workload) (sum by (namespace, pod) (rate(container_cpu_usage_seconds_total{namespace=~\"$namespace\",container!=\"\",container!=\"POD\"}[$__rate_interval])) * on(namespace,pod) group_left(workload) (label_replace(kube_pod_owner{namespace=~\"$namespace\",owner_kind=\"ReplicaSet\"},\"workload\",\"$1\",\"owner_name\",\"^(.*)-[a-z0-9]{5,10}$\") or label_replace(kube_pod_owner{namespace=~\"$namespace\",owner_kind=~\"StatefulSet|DaemonSet\"},\"workload\",\"$1\",\"owner_name\",\"(.*)\")))) / clamp_min(sum by (workload) (sum by (namespace, pod, container) (kube_pod_container_resource_limits{namespace=~\"$namespace\",resource=\"cpu\"}) * on(namespace,pod) group_left(workload) (label_replace(kube_pod_owner{namespace=~\"$namespace\",owner_kind=\"ReplicaSet\"},\"workload\",\"$1\",\"owner_name\",\"^(.*)-[a-z0-9]{5,10}$\") or label_replace(kube_pod_owner{namespace=~\"$namespace\",owner_kind=~\"StatefulSet|DaemonSet\"},\"workload\",\"$1\",\"owner_name\",\"(.*)\"))), 1e-9) * 100",
+              "legendFormat": "{{ "{{workload}}" }}",
+              "range": true,
+              "refId": "A"
+            }
+          ],
+          "transformations": [
+            {
+              "id": "filterFieldsByName",
+              "options": { "include": { "pattern": "^(Time|($workload))$" } }
+            }
+          ]
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "title": "Memory % of limit by workload",
+          "description": "Vicino a 100% → rischio OOMKill. Stabile e basso → puoi ridurre il limit memory.",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 24 },
+          "id": 5,
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "drawStyle": "line",
+                "fillOpacity": 5,
+                "lineWidth": 1,
+                "showPoints": "never",
+                "thresholdsStyle": { "mode": "line+area" }
+              },
+              "unit": "percent",
+              "min": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "transparent", "value": null },
+                  { "color": "red", "value": 90 }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true, "sortBy": "Max", "sortDesc": true },
+            "tooltip": { "mode": "multi", "sort": "desc" }
+          },
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "editorMode": "code",
+              "expr": "(sum by (workload) (sum by (namespace, pod) (container_memory_working_set_bytes{namespace=~\"$namespace\",container!=\"\",container!=\"POD\"}) * on(namespace,pod) group_left(workload) (label_replace(kube_pod_owner{namespace=~\"$namespace\",owner_kind=\"ReplicaSet\"},\"workload\",\"$1\",\"owner_name\",\"^(.*)-[a-z0-9]{5,10}$\") or label_replace(kube_pod_owner{namespace=~\"$namespace\",owner_kind=~\"StatefulSet|DaemonSet\"},\"workload\",\"$1\",\"owner_name\",\"(.*)\")))) / clamp_min(sum by (workload) (sum by (namespace, pod, container) (kube_pod_container_resource_limits{namespace=~\"$namespace\",resource=\"memory\"}) * on(namespace,pod) group_left(workload) (label_replace(kube_pod_owner{namespace=~\"$namespace\",owner_kind=\"ReplicaSet\"},\"workload\",\"$1\",\"owner_name\",\"^(.*)-[a-z0-9]{5,10}$\") or label_replace(kube_pod_owner{namespace=~\"$namespace\",owner_kind=~\"StatefulSet|DaemonSet\"},\"workload\",\"$1\",\"owner_name\",\"(.*)\"))), 1) * 100",
+              "legendFormat": "{{ "{{workload}}" }}",
+              "range": true,
+              "refId": "A"
+            }
+          ],
+          "transformations": [
+            {
+              "id": "filterFieldsByName",
+              "options": { "include": { "pattern": "^(Time|($workload))$" } }
+            }
+          ]
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "title": "CPU throttling % by workload",
+          "description": "Percentuale di periodi CFS throttled. Alto = limit CPU troppo basso (es. 50m su sonarr/prowlarr).",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 24, "x": 0, "y": 32 },
+          "id": 6,
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "drawStyle": "line",
+                "fillOpacity": 15,
+                "lineWidth": 1,
+                "showPoints": "never",
+                "thresholdsStyle": { "mode": "line+area" }
+              },
+              "unit": "percent",
+              "min": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "transparent", "value": null },
+                  { "color": "orange", "value": 10 },
+                  { "color": "red", "value": 25 }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "right", "showLegend": true, "sortBy": "Max", "sortDesc": true },
+            "tooltip": { "mode": "multi", "sort": "desc" }
+          },
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "editorMode": "code",
+              "expr": "(sum by (workload) (rate(container_cpu_cfs_throttled_periods_total{namespace=~\"$namespace\",container!=\"\",container!=\"POD\"}[$__rate_interval]) * on(namespace,pod) group_left(workload) (label_replace(kube_pod_owner{namespace=~\"$namespace\",owner_kind=\"ReplicaSet\"},\"workload\",\"$1\",\"owner_name\",\"^(.*)-[a-z0-9]{5,10}$\") or label_replace(kube_pod_owner{namespace=~\"$namespace\",owner_kind=~\"StatefulSet|DaemonSet\"},\"workload\",\"$1\",\"owner_name\",\"(.*)\")))) / clamp_min(sum by (workload) (rate(container_cpu_cfs_periods_total{namespace=~\"$namespace\",container!=\"\",container!=\"POD\"}[$__rate_interval]) * on(namespace,pod) group_left(workload) (label_replace(kube_pod_owner{namespace=~\"$namespace\",owner_kind=\"ReplicaSet\"},\"workload\",\"$1\",\"owner_name\",\"^(.*)-[a-z0-9]{5,10}$\") or label_replace(kube_pod_owner{namespace=~\"$namespace\",owner_kind=~\"StatefulSet|DaemonSet\"},\"workload\",\"$1\",\"owner_name\",\"(.*)\"))), 1e-9) * 100",
+              "legendFormat": "{{ "{{workload}}" }}",
+              "range": true,
+              "refId": "A"
+            }
+          ],
+          "transformations": [
+            {
+              "id": "filterFieldsByName",
+              "options": { "include": { "pattern": "^(Time|($workload))$" } }
+            }
+          ]
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "title": "Detail — CPU usage / request / limit",
+          "description": "Filtra uno o pochi workload sopra. Confronto diretto per tarare i valori nel deployment.",
+          "type": "timeseries",
+          "gridPos": { "h": 9, "w": 12, "x": 0, "y": 40 },
+          "id": 7,
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "drawStyle": "line",
+                "fillOpacity": 0,
+                "lineWidth": 2,
+                "showPoints": "never"
+              },
+              "unit": "cpucores",
+              "min": 0
+            },
+            "overrides": [
+              {
+                "matcher": { "id": "byRegexp", "options": ".*req.*" },
+                "properties": [{ "id": "custom.lineStyle", "value": { "fill": "dash", "dash": [10, 10] } }]
+              },
+              {
+                "matcher": { "id": "byRegexp", "options": ".*lim.*" },
+                "properties": [
+                  { "id": "custom.lineStyle", "value": { "fill": "dash", "dash": [4, 4] } },
+                  { "id": "color", "value": { "fixedColor": "red", "mode": "fixed" } }
+                ]
+              }
+            ]
+          },
+          "options": {
+            "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+            "tooltip": { "mode": "multi", "sort": "desc" }
+          },
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "editorMode": "code",
+              "expr": "sum by (workload) (sum by (namespace, pod) (rate(container_cpu_usage_seconds_total{namespace=~\"$namespace\",container!=\"\",container!=\"POD\"}[$__rate_interval])) * on(namespace,pod) group_left(workload) (label_replace(kube_pod_owner{namespace=~\"$namespace\",owner_kind=\"ReplicaSet\"},\"workload\",\"$1\",\"owner_name\",\"^(.*)-[a-z0-9]{5,10}$\") or label_replace(kube_pod_owner{namespace=~\"$namespace\",owner_kind=~\"StatefulSet|DaemonSet\"},\"workload\",\"$1\",\"owner_name\",\"(.*)\")))",
+              "legendFormat": "{{ "{{workload}}" }} usage",
+              "range": true,
+              "refId": "A"
+            },
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "editorMode": "code",
+              "expr": "sum by (workload) (sum by (namespace, pod, container) (kube_pod_container_resource_requests{namespace=~\"$namespace\",resource=\"cpu\"}) * on(namespace,pod) group_left(workload) (label_replace(kube_pod_owner{namespace=~\"$namespace\",owner_kind=\"ReplicaSet\"},\"workload\",\"$1\",\"owner_name\",\"^(.*)-[a-z0-9]{5,10}$\") or label_replace(kube_pod_owner{namespace=~\"$namespace\",owner_kind=~\"StatefulSet|DaemonSet\"},\"workload\",\"$1\",\"owner_name\",\"(.*)\")))",
+              "legendFormat": "{{ "{{workload}}" }} req",
+              "range": true,
+              "refId": "B"
+            },
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "editorMode": "code",
+              "expr": "sum by (workload) (sum by (namespace, pod, container) (kube_pod_container_resource_limits{namespace=~\"$namespace\",resource=\"cpu\"}) * on(namespace,pod) group_left(workload) (label_replace(kube_pod_owner{namespace=~\"$namespace\",owner_kind=\"ReplicaSet\"},\"workload\",\"$1\",\"owner_name\",\"^(.*)-[a-z0-9]{5,10}$\") or label_replace(kube_pod_owner{namespace=~\"$namespace\",owner_kind=~\"StatefulSet|DaemonSet\"},\"workload\",\"$1\",\"owner_name\",\"(.*)\")))",
+              "legendFormat": "{{ "{{workload}}" }} lim",
+              "range": true,
+              "refId": "C"
+            }
+          ],
+          "transformations": [
+            {
+              "id": "filterFieldsByName",
+              "options": { "include": { "pattern": "^(Time|($workload)( usage| req| lim)?)$" } }
+            }
+          ]
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "title": "Detail — Memory usage / request / limit",
+          "description": "Filtra uno o pochi workload sopra.",
+          "type": "timeseries",
+          "gridPos": { "h": 9, "w": 12, "x": 12, "y": 40 },
+          "id": 8,
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "drawStyle": "line",
+                "fillOpacity": 0,
+                "lineWidth": 2,
+                "showPoints": "never"
+              },
+              "unit": "bytes",
+              "min": 0
+            },
+            "overrides": [
+              {
+                "matcher": { "id": "byRegexp", "options": ".*req.*" },
+                "properties": [{ "id": "custom.lineStyle", "value": { "fill": "dash", "dash": [10, 10] } }]
+              },
+              {
+                "matcher": { "id": "byRegexp", "options": ".*lim.*" },
+                "properties": [
+                  { "id": "custom.lineStyle", "value": { "fill": "dash", "dash": [4, 4] } },
+                  { "id": "color", "value": { "fixedColor": "red", "mode": "fixed" } }
+                ]
+              }
+            ]
+          },
+          "options": {
+            "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+            "tooltip": { "mode": "multi", "sort": "desc" }
+          },
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "editorMode": "code",
+              "expr": "sum by (workload) (sum by (namespace, pod) (container_memory_working_set_bytes{namespace=~\"$namespace\",container!=\"\",container!=\"POD\"}) * on(namespace,pod) group_left(workload) (label_replace(kube_pod_owner{namespace=~\"$namespace\",owner_kind=\"ReplicaSet\"},\"workload\",\"$1\",\"owner_name\",\"^(.*)-[a-z0-9]{5,10}$\") or label_replace(kube_pod_owner{namespace=~\"$namespace\",owner_kind=~\"StatefulSet|DaemonSet\"},\"workload\",\"$1\",\"owner_name\",\"(.*)\")))",
+              "legendFormat": "{{ "{{workload}}" }} usage",
+              "range": true,
+              "refId": "A"
+            },
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "editorMode": "code",
+              "expr": "sum by (workload) (sum by (namespace, pod, container) (kube_pod_container_resource_requests{namespace=~\"$namespace\",resource=\"memory\"}) * on(namespace,pod) group_left(workload) (label_replace(kube_pod_owner{namespace=~\"$namespace\",owner_kind=\"ReplicaSet\"},\"workload\",\"$1\",\"owner_name\",\"^(.*)-[a-z0-9]{5,10}$\") or label_replace(kube_pod_owner{namespace=~\"$namespace\",owner_kind=~\"StatefulSet|DaemonSet\"},\"workload\",\"$1\",\"owner_name\",\"(.*)\")))",
+              "legendFormat": "{{ "{{workload}}" }} req",
+              "range": true,
+              "refId": "B"
+            },
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "editorMode": "code",
+              "expr": "sum by (workload) (sum by (namespace, pod, container) (kube_pod_container_resource_limits{namespace=~\"$namespace\",resource=\"memory\"}) * on(namespace,pod) group_left(workload) (label_replace(kube_pod_owner{namespace=~\"$namespace\",owner_kind=\"ReplicaSet\"},\"workload\",\"$1\",\"owner_name\",\"^(.*)-[a-z0-9]{5,10}$\") or label_replace(kube_pod_owner{namespace=~\"$namespace\",owner_kind=~\"StatefulSet|DaemonSet\"},\"workload\",\"$1\",\"owner_name\",\"(.*)\")))",
+              "legendFormat": "{{ "{{workload}}" }} lim",
+              "range": true,
+              "refId": "C"
+            }
+          ],
+          "transformations": [
+            {
+              "id": "filterFieldsByName",
+              "options": { "include": { "pattern": "^(Time|($workload)( usage| req| lim)?)$" } }
+            }
+          ]
+        }
+      ]
+    }
