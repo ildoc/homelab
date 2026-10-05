@@ -21,7 +21,7 @@ spec:
     spec:
       containers:
         - name: nginx
-          image: nginx:1.27.4-alpine@sha256:4ff102c5d78d254a6f0da062b3cf39eaf07f01eec0927fd21e219d0af8bc0591
+          image: nginx:1.31.6-alpine@sha256:df221db836e1754089190208cee7eeda94f233197056426eda74a43ab1abeac2
           ports:
             - containerPort: 8080
               name: http

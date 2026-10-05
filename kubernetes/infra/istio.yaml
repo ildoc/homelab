@@ -49,7 +49,7 @@ spec:
   project: default
   source:
     repoURL: https://istio-release.storage.googleapis.com/charts
-    targetRevision: 1.24.2
+    targetRevision: 1.30.5
     chart: istiod
     helm:
       values: |
