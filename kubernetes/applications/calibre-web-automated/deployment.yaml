@@ -45,9 +45,12 @@ spec:
             - name: books-ingest
               mountPath: /cwa-book-ingest
           resources:
+            requests:
+              cpu: 20m
+              memory: 256Mi
             limits:
-              cpu: 500m
-              memory: 1Gi
+              cpu: 250m
+              memory: 512Mi
       volumes:
         - name: data
           persistentVolumeClaim:
