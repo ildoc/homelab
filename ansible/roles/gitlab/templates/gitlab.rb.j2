@@ -132,33 +132,37 @@ gitlab_rails['housekeeping_incremental_repack_period'] = 10  # Incremental ogni 
 ## Puma Settings (Application Server)
 ################################################################################
 
-# Numero di worker Puma - ridotto per ambienti con memoria limitata
-# Raccomandato: 1 worker ogni 1GB di RAM disponibile
-# Con 1 worker + memory killer attivo, si ottimizza l'uso della RAM
-puma['worker_processes'] = 1
+# 4 core / 8 GB: la documentazione Puma indica 4 worker.
+# Minimo ammesso: 2. Un solo worker accoda le richieste parallele della UI.
+puma['worker_processes'] = 4
 
-# Thread per worker - bilanciamento tra performance e memoria
+# 4 thread sopra i 2 GB di RAM. Più thread aumentano lo swap e peggiorano la latenza.
 puma['min_threads'] = 4
 puma['max_threads'] = 4
 
 # Worker timeout aumentato per operazioni lente
 puma['worker_timeout'] = 60
 
-# Abilita memory killer per prevenire memory leak
-puma['per_worker_max_memory_mb'] = 1024  # 1GB per worker
+# Default Omnibus: 1500 MB. 1200 MB evita ricicli continui (il vecchio tetto era 1024)
+# e tiene 4 worker entro circa 4.8 GB sulla VM da 8 GB.
+puma['per_worker_max_memory_mb'] = 1200
 
 ################################################################################
 ## PostgreSQL Settings
 ################################################################################
 
-# Aumenta connessioni massime per evitare errori "connection slots reserved"
-# Formula: (puma_workers * puma_threads) + (sidekiq_concurrency * 2) + 20 buffer
-# Con 1 worker Puma (4 thread) + 10 Sidekiq = 4 + 20 + 20 = ~44, quindi 100 è sicuro
-postgresql['max_connections'] = 100
+# GitLab 16+ apre due pool (main e ci). Domanda frontend:
+# Puma:  2 * worker * (thread + 10 headroom) = 2 * 4 * 14 = 112
+# Sidekiq: 2 * (concurrency + 1 + 10 headroom) = 2 * 21 = 42
+# Totale circa 154. 200 lascia margine senza inseguire il minimo da 400 delle installazioni grandi.
+postgresql['max_connections'] = 200
 
-# Shared buffers - raccomandato 1/4 della RAM totale (max 14GB)
-# Per container Docker, il default di 256MB è adeguato
-postgresql['shared_buffers'] = "256MB"
+# Il pacchetto usa il 25% della RAM (circa 2 GB qui) e toglierebbe memoria a Puma.
+# 512 MB è il compromesso sull'all-in-one da 8 GB. Richiede shm_size >= 768m nel compose.
+postgresql['shared_buffers'] = "512MB"
+
+# Hint per il planner: non alloca RAM. Allineato alla cache disponibile sulla VM.
+postgresql['effective_cache_size'] = "2GB"
 
 # Work memory per query complesse
 postgresql['work_mem'] = "16MB"
@@ -205,11 +209,11 @@ gitaly['configuration'] = {
   concurrency: [
     {
       rpc: "/gitaly.SmartHTTPService/PostReceivePack",
-      max_per_repo: 20,
+      max_per_repo: 4,
     },
     {
       rpc: "/gitaly.SSHService/SSHUploadPack",
-      max_per_repo: 20,
+      max_per_repo: 4,
     },
   ],
 }
@@ -218,15 +222,9 @@ gitaly['configuration'] = {
 ## Sidekiq Settings (Background Jobs)
 ################################################################################
 
-# Numero di worker Sidekiq - ridotto per ambienti con poca memoria
-sidekiq['max_concurrency'] = 10
-
-# Database connection pool per Sidekiq
-# Dovrebbe essere >= a max_concurrency
-sidekiq['db_pool_size'] = 15
-
-# Memory killer per Sidekiq
-sidekiq['memory_killer_max_memory_growth_kb'] = 300000  # ~300MB
+# max_concurrency è stato rimosso in GitLab 17. Senza questa chiave Omnibus
+# lascia il default a 20 thread, che competono con Puma sugli stessi 4 core.
+sidekiq['concurrency'] = 10
 
 ################################################################################
 ## Monitoring & Telemetry
@@ -293,15 +291,10 @@ gitlab_rails['suggested_reviewers_enabled'] = false
 ## Advanced Performance Tuning
 ################################################################################
 
-# Shared memory - importante per Docker
-# Il valore 256m nel docker-compose corrisponde a questa impostazione
-
-# Garbage collection per Ruby (migliora gestione memoria)
+# jemalloc rilascia la memoria prima. Documentato per ambienti con RAM contenuta.
+# Le variabili RUBY_GC_* aumentano la frequenza del garbage collector e la latenza delle richieste.
 gitlab_rails['env'] = {
-  'MALLOC_CONF' => 'dirty_decay_ms:1000,muzzy_decay_ms:1000',
-  'RUBY_GC_HEAP_GROWTH_FACTOR' => '1.1',
-  'RUBY_GC_MALLOC_LIMIT' => '16000000',
-  'RUBY_GC_OLDMALLOC_LIMIT' => '16000000'
+  'MALLOC_CONF' => 'dirty_decay_ms:1000,muzzy_decay_ms:1000'
 }
 
 # Applica le stesse impostazioni a Gitaly

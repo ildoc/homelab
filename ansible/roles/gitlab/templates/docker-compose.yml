@@ -34,7 +34,8 @@ services:
       - ./gitlab/data:/var/opt/gitlab
       - ./gitlab/entrypoint.sh:/entrypoint.sh
     command: ["/entrypoint.sh"]
-    shm_size: '256m'
+    # PostgreSQL shared_buffers è 512MB: /dev/shm deve contenerlo insieme a wal_buffers.
+    shm_size: '768m'
     restart: unless-stopped
     networks:
       - traefik
