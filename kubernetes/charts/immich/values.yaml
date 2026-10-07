@@ -5,7 +5,7 @@ immich:
       containers:
         main:
           image:
-            tag: "v3.2.4"
+            tag: "v3.3.0"
           env:
             # Configurazione database PostgreSQL esterno
             DB_HOSTNAME: "192.168.0.30"
