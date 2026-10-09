@@ -1,0 +1,128 @@
+---
+# Job one-shot syn2mas — versionato in git, NON gestito da ArgoCD (ApplicationSet).
+#
+# Perché non è sotto applications/?
+# - È una migrazione monouso: sync/prune automatici la rieseguirebbero o la cancellerebbero.
+# - Lo stato stabile (MAS + Synapse) resta in applications/; questo Job è un "runbook eseguibile".
+#
+# Prerequisiti (tutti via GitOps tranne l'apply di questo Job):
+# 1. Fase 1 syncata (MAS up, Synapse ancora OIDC)
+# 2. Commit/sync con matrix-synapse replicas: 0 (PVC libero, RWO)
+# 3. Secret MAS già creati da ExternalSecrets
+#
+# Esecuzione (unico passo kubectl, manifesto da git):
+#   kubectl -n apps delete job matrix-mas-syn2mas --ignore-not-found
+#   kubectl apply -f docs/kubernetes/matrix/manifests/mas-syn2mas-job.yaml
+#   kubectl -n apps wait --for=condition=complete job/matrix-mas-syn2mas --timeout=600s
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: matrix-mas-syn2mas
+  namespace: apps
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 86400
+  template:
+    metadata:
+      labels:
+        app: matrix-mas-syn2mas
+    spec:
+      restartPolicy: Never
+      securityContext:
+        fsGroup: 65532
+      initContainers:
+        - name: prepare-config
+          image: alpine:3.21@sha256:ce64758a109eb420d874a118f87920e625e12d3634e03b4a5573fd9f6e5d3507
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -e
+              apk add --no-cache gettext >/dev/null
+              export MAS_POSTGRES_PASSWORD MAS_OIDC_CLIENT_SECRET
+              envsubst '${MAS_POSTGRES_PASSWORD} ${MAS_OIDC_CLIENT_SECRET}' \
+                < /config-template/config.yaml > /data/config.yaml
+              umask 077
+              {
+                printf '%s\n' "secrets:"
+                printf '%s\n' "  encryption: ${MAS_ENCRYPTION}"
+                printf '%s\n' "  keys:"
+                sed 's/^/    /' /raw-secrets/keys.yaml
+                printf '%s\n' "matrix:"
+                printf '%s\n' "  secret: ${MAS_MATRIX_SECRET}"
+              } > /data/secrets.yaml
+
+              if [ ! -f /synapse-data/homeserver.yaml ]; then
+                echo "ERROR: /synapse-data/homeserver.yaml mancante. Synapse deve essere a replicas=0 e il PVC montato."
+                exit 1
+              fi
+              cp /synapse-data/homeserver.yaml /data/homeserver.yaml
+              chown -R 65532:65532 /data
+              echo "✓ config ready"
+          env:
+            - name: MAS_POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: matrix-mas-cross-secrets
+                  key: postgres-password
+            - name: MAS_OIDC_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: matrix-mas-secrets
+                  key: oidc-client-secret
+            - name: MAS_ENCRYPTION
+              valueFrom:
+                secretKeyRef:
+                  name: matrix-mas-secrets
+                  key: encryption
+            - name: MAS_MATRIX_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: matrix-mas-secrets
+                  key: matrix-secret
+          securityContext:
+            runAsUser: 0
+          volumeMounts:
+            - name: config-template
+              mountPath: /config-template
+              readOnly: true
+            - name: raw-secrets
+              mountPath: /raw-secrets
+              readOnly: true
+            - name: synapse-data
+              mountPath: /synapse-data
+              readOnly: true
+            - name: data
+              mountPath: /data
+      containers:
+        - name: syn2mas
+          image: ghcr.io/element-hq/matrix-authentication-service:1.23.0@sha256:e82b2e4a5f9c7ca74096743349160795f5b5a792556fb85c6b5166a9180a5985
+          args:
+            - syn2mas
+            - migrate
+            - --config=/data/config.yaml
+            - --config=/data/secrets.yaml
+            - --synapse-config=/data/homeserver.yaml
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65532
+            runAsGroup: 65532
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      volumes:
+        - name: config-template
+          configMap:
+            name: matrix-mas-config
+        - name: raw-secrets
+          secret:
+            secretName: matrix-mas-secrets
+            items:
+              - key: keys.yaml
+                path: keys.yaml
+        - name: synapse-data
+          persistentVolumeClaim:
+            claimName: matrix-synapse
+            readOnly: true
+        - name: data
+          emptyDir: {}
