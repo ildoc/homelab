@@ -1,0 +1,52 @@
+---
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: homemanager-db-secret
+  namespace: apps
+spec:
+  refreshInterval: "1h"
+  secretStoreRef:
+    name: vault-cross-secret-store
+    kind: ClusterSecretStore
+  target:
+    name: homemanager-db-secret
+    creationPolicy: Owner
+  data:
+    - secretKey: db-password
+      remoteRef:
+        key: cross/data/apps/homemanager
+        property: postgres_password
+
+---
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: homemanager-secret
+  namespace: apps
+spec:
+  refreshInterval: "1h"
+  secretStoreRef:
+    name: vault-kubernetes-secret-store
+    kind: ClusterSecretStore
+  target:
+    name: homemanager-secret
+    creationPolicy: Owner
+  data:
+    - secretKey: jwt-key
+      remoteRef:
+        key: kubernetes/data/apps/homemanager
+        property: jwt_key
+    - secretKey: resend-api-key
+      remoteRef:
+        key: kubernetes/data/apps/homemanager
+        property: resend_api_key
+    - secretKey: admin-email
+      remoteRef:
+        key: kubernetes/data/apps/homemanager
+        property: admin_email
+    - secretKey: admin-password
+      remoteRef:
+        key: kubernetes/data/apps/homemanager
+        property: admin_password
+

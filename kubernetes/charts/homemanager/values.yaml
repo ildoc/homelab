@@ -1,0 +1,69 @@
+homemanager:
+  hostname: homemanager.local.ildoc.com
+
+  imagePullSecrets:
+    - name: regcred
+
+  httpRoute:
+    enabled: true
+    parentRefs:
+      - name: cilium-gateway
+        namespace: kube-system
+        sectionName: https
+    apiPathPrefix: /api
+    routeApiDocs: true
+
+  api:
+    replicaCount: 1
+    image:
+      repository: registry.example.com/homemanager-api
+      tag: "0.1.0"
+      pullPolicy: IfNotPresent
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+
+  frontend:
+    replicaCount: 1
+    image:
+      repository: registry.example.com/homemanager-webapp
+      tag: "0.1.0"
+      pullPolicy: IfNotPresent
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 200m
+        memory: 128Mi
+
+  secrets:
+    # Lasciare vuoto per far creare il Secret al chart.
+    # In alternativa: nome di un Secret già presente con
+    # JWT_SECRET, ADMIN_EMAIL, ADMIN_PASSWORD, POSTGRES_PASSWORD
+    # e, se il database è esterno, DATABASE_URL.
+    existingSecret: ""
+    jwtSecret: "change-me-min-32-chars-secret-key!!"
+    adminEmail: admin@home.local
+    adminPassword: "change-me-admin-password"
+    postgresPassword: "change-me-db-password"
+
+  postgres:
+    enabled: true
+    auth:
+      username: postgres
+      database: homemanager
+    persistence:
+      enabled: true
+      storageClass: ""
+      size: 8Gi
+
+  # Database esterno: disabilitare Postgres nel cluster e impostare la connection string Npgsql.
+  # postgres:
+  #   enabled: false
+  # database:
+  #   url: "Host=mydb.example.com;Port=5432;Database=homemanager;Username=homemanager;Password=change-me-db-password"

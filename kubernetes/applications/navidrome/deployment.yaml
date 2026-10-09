@@ -1,0 +1,48 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: navidrome
+  namespace: apps
+spec:
+  selector:
+    matchLabels:
+      app: navidrome
+  strategy:
+    type: Recreate
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      labels:
+        app: navidrome
+    spec:
+      containers:
+        - name: navidrome
+          image: lscr.io/linuxserver/navidrome
+          env:
+            - name: PUID
+              value: "1000"
+            - name: PGID
+              value: "1000"
+            - name: TZ
+              value: "Europe/Rome"
+          volumeMounts:
+            - name: config
+              mountPath: /data
+            - name: music
+              mountPath: /music            
+          resources:
+            requests:
+              cpu: 50m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 1Gi
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: navidrome
+        - name: music
+          nfs:
+            server: 192.168.0.123
+            path: /mnt/mediadisk/music        
