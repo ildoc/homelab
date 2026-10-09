@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
         - name: navidrome
-          image: lscr.io/linuxserver/navidrome
+          image: deluan/navidrome
           env:
             - name: PUID
               value: "1000"
