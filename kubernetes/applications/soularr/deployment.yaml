@@ -37,10 +37,6 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /data
-            - name: config
-              mountPath: /data/config.ini
-              subPath: config.ini
-              readOnly: true
             - name: downloads
               mountPath: /downloads
           resources:
