@@ -1,0 +1,71 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: slskd
+  namespace: apps
+spec:
+  selector:
+    matchLabels:
+      app: slskd
+  strategy:
+    type: Recreate
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      labels:
+        app: slskd
+    spec:
+      initContainers:
+        - name: init-dirs
+          image: alpine:3.22
+          command:
+            - /bin/sh
+            - -c
+            - mkdir -p /downloads/slskd /downloads/slskd-incomplete
+          volumeMounts:
+            - name: downloads
+              mountPath: /downloads
+      containers:
+        - name: slskd
+          image: slskd/slskd:latest
+          env:
+            - name: PUID
+              value: "1000"
+            - name: PGID
+              value: "1000"
+            - name: TZ
+              value: "Europe/Rome"
+            - name: SLSKD_DOWNLOADS_DIR
+              value: /downloads/slskd
+            - name: SLSKD_INCOMPLETE_DIR
+              value: /downloads/slskd-incomplete
+            - name: SLSKD_SHARED_DIR
+              value: /music
+          volumeMounts:
+            - name: config
+              mountPath: /app
+            - name: downloads
+              mountPath: /downloads
+            - name: music
+              mountPath: /music
+              readOnly: true
+          resources:
+            requests:
+              cpu: 50m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 2Gi
+      volumes:
+        - name: config
+          persistentVolumeClaim:
+            claimName: slskd
+        - name: downloads
+          nfs:
+            server: 192.168.0.123
+            path: /mnt/mediadisk/downloads
+        - name: music
+          nfs:
+            server: 192.168.0.123
+            path: /mnt/mediadisk/music

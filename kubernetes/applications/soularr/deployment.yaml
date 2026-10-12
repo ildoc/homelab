@@ -1,0 +1,60 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: soularr
+  namespace: apps
+spec:
+  selector:
+    matchLabels:
+      app: soularr
+  strategy:
+    type: Recreate
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      labels:
+        app: soularr
+    spec:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+        - name: soularr
+          image: mrusse08/soularr:latest
+          env:
+            - name: PUID
+              value: "1000"
+            - name: PGID
+              value: "1000"
+            - name: TZ
+              value: "Europe/Rome"
+            - name: SCRIPT_INTERVAL
+              value: "300"
+            - name: WEBUI_ENABLED
+              value: "true"
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: config
+              mountPath: /data/config.ini
+              subPath: config.ini
+              readOnly: true
+            - name: downloads
+              mountPath: /downloads
+          resources:
+            requests:
+              cpu: 10m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: soularr
+        - name: downloads
+          nfs:
+            server: 192.168.0.123
+            path: /mnt/mediadisk/downloads
