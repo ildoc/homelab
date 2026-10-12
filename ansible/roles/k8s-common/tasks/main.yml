@@ -32,7 +32,42 @@
       - net-tools
       - iputils-ping
       - nfs-common
+      - open-iscsi
+      - cryptsetup
+      - dmsetup
     state: present
+
+# Longhorn V1: iscsiadm/iscsid sul host, modulo iscsi_tcp caricato prima di iscsid.
+# https://longhorn.io/docs/1.13.0/deploy/install/#install-open-iscsi
+- name: Persist iscsi_tcp kernel module
+  ansible.builtin.copy:
+    dest: /etc/modules-load.d/iscsi.conf
+    content: |
+      iscsi_tcp
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Load iscsi_tcp kernel module
+  ansible.builtin.command: modprobe iscsi_tcp
+
+- name: Enable and start iscsid
+  ansible.builtin.systemd:
+    name: iscsid
+    enabled: true
+    state: started
+
+- name: Check if multipathd is installed
+  ansible.builtin.stat:
+    path: /lib/systemd/system/multipathd.service
+  register: multipathd_unit
+
+- name: Stop and disable multipathd
+  ansible.builtin.systemd:
+    name: multipathd
+    enabled: false
+    state: stopped
+  when: multipathd_unit.stat.exists
 
 - name: Set alias
   become: true

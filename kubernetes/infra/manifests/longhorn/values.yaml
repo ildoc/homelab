@@ -1,0 +1,56 @@
+---
+# Longhorn 1.13.0
+# https://longhorn.io/docs/1.13.0/deploy/install/install-with-helm/
+# https://longhorn.io/docs/1.13.0/deploy/install/install-with-argocd/
+#
+# Il chart va installato solo nel namespace longhorn-system.
+
+longhorn:
+  # Il Job di pre-upgrade è un Helm hook: Argo CD non lo esegue in modo affidabile.
+  # Il controllo di versione resta attivo dentro longhorn-manager.
+  preUpgradeChecker:
+    jobEnabled: false
+    upgradeVersionCheck: true
+
+  # nfs-csi è già la StorageClass di default del cluster.
+  persistence:
+    defaultClass: false
+    defaultFsType: ext4
+    reclaimPolicy: Delete
+    volumeBindingMode: Immediate
+    # Con replicaSoftAntiAffinity disabilitato, 3 repliche non vengono mai piazzate.
+    # Riportare a 3 quando kube03 torna Ready.
+    defaultClassReplicaCount: 3
+
+  defaultSettings:
+    defaultDataPath: /var/lib/longhorn/
+    # Disco root rilevato sui nodi: 210238414848 byte (~195.8 GiB).
+    # Riservare il 74% lascia a Longhorn ~50.9 GiB per nodo
+    # (210238414848 * 26 / 100). La percentuale intera più vicina a 50 GiB.
+    # Vale solo alla creazione del disco di default; un cambio successivo
+    # non ridimensiona i dischi già presenti.
+    # https://longhorn.io/docs/1.13.0/references/settings/#storage-reserved-percentage-for-default-disk
+    storageReservedPercentageForDefaultDisk: 74
+    storageOverProvisioningPercentage: 100
+    defaultReplicaCount:
+      v1: "2"
+      v2: "2"
+
+  # UI sul Gateway Cilium già usato dalle altre app infra.
+  # La UI non ha autenticazione: è raggiungibile da chi arriva sul gateway.
+  ingress:
+    enabled: false
+  httproute:
+    enabled: true
+    hostnames:
+      - longhorn.local.ildoc.it
+    parentRefs:
+      - name: cilium-gateway
+        namespace: kube-system
+        sectionName: https
+    path: /
+    pathType: PathPrefix
+
+  metrics:
+    serviceMonitor:
+      enabled: true
