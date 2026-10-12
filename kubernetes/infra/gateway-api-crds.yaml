@@ -1,0 +1,28 @@
+---
+# CRD Gateway API richiesti da Cilium 1.20 (Gateway API v1.6.1, canale standard).
+# https://docs.cilium.io/en/stable/network/servicemesh/gateway-api/gateway-api/
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: gateway-api-crds
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    argocd.argoproj.io/sync-wave: "-110"  # Prima di cilium, che è a -100
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/kubernetes-sigs/gateway-api
+    targetRevision: v1.6.1
+    path: config/crd/standard
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: default
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=false
+      - ServerSideApply=true
+    automated:
+      prune: false  # Non eliminare i CRD: cancellerebbero Gateway e HTTPRoute
+      selfHeal: true
