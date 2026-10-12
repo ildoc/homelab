@@ -29,13 +29,10 @@ externalServices:
     skipVerify: true
     loadBalancer: ROUND_ROBIN
     
-    # pve02/pve03 (.11/.12) attualmente down: lasciarli in pool fa fare
-    # ROUND_ROBIN verso host morti e porta la UI a ~6s di latenza.
-    # Riabilitare quando i nodi tornano up.
     endpoints:
       - address: "192.168.0.10"
-      # - address: "192.168.0.11"
-      # - address: "192.168.0.12"
+      - address: "192.168.0.11"
+      - address: "192.168.0.12"
     
     # Connection pool settings
     connectionPool:
