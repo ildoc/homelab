@@ -16,9 +16,27 @@ spec:
       labels:
         app: navidrome
     spec:
+      initContainers:
+        - name: fetch-lyrics-plugin
+          image: alpine:3.22
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -e
+              mkdir -p /data/plugins
+              wget -q -O /data/plugins/nd-lyrics.ndp \
+                https://github.com/J0R6IT0/navidrome-lyrics-plugin/releases/latest/download/nd-lyrics.ndp
+              chown 1000:1000 /data/plugins /data/plugins/nd-lyrics.ndp
+              chmod 644 /data/plugins/nd-lyrics.ndp
+          securityContext:
+            runAsUser: 0
+          volumeMounts:
+            - name: data
+              mountPath: /data
       containers:
         - name: navidrome
-          image: deluan/navidrome
+          image: deluan/navidrome:latest
           env:
             - name: PUID
               value: "1000"
@@ -26,6 +44,10 @@ spec:
               value: "1000"
             - name: TZ
               value: "Europe/Rome"
+            - name: ND_PLUGINS_FOLDER
+              value: "/data/plugins"
+            - name: ND_LYRICSPRIORITY
+              value: ".ttml,.yaml,.yml,.elrc,.lrc,.srt,.txt,embedded,nd-lyrics"
           volumeMounts:
             - name: data
               mountPath: /data
