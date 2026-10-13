@@ -36,6 +36,33 @@ spec:
               value: "1000"
             - name: TZ
               value: "Europe/Rome"
+            - name: SLSKD_USERNAME
+              value: filippo
+            - name: SLSKD_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: slskd-secrets
+                  key: web-password
+            - name: SLSKD_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: slskd-secrets
+                  key: api-key
+            - name: SLSKD_JWT_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: slskd-secrets
+                  key: jwt-key
+            - name: SLSKD_SLSK_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: slskd-secrets
+                  key: soulseek-username
+            - name: SLSKD_SLSK_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: slskd-secrets
+                  key: soulseek-password
             - name: SLSKD_DOWNLOADS_DIR
               value: /downloads/slskd
             - name: SLSKD_INCOMPLETE_DIR
