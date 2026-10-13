@@ -3,6 +3,6 @@ apiVersion: v2
 name: split
 version: 1.0.0
 dependencies:
-  - name: split-backend
+  - name: split
     version: "0.0.0-alpha007"
     repository: oci://registry.gitlab.local.ildoc.it/split/split
