@@ -34,9 +34,23 @@ spec:
               value: "300"
             - name: WEBUI_ENABLED
               value: "true"
+            - name: LIDARR_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: soularr-secrets
+                  key: lidarr-api-key
+            - name: SLSKD_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: soularr-secrets
+                  key: slskd-api-key
           volumeMounts:
             - name: data
               mountPath: /data
+            - name: config
+              mountPath: /data/config.ini
+              subPath: config.ini
+              readOnly: true
             - name: downloads
               mountPath: /downloads
           resources:
@@ -50,6 +64,9 @@ spec:
         - name: data
           persistentVolumeClaim:
             claimName: soularr
+        - name: config
+          configMap:
+            name: soularr
         - name: downloads
           nfs:
             server: 192.168.0.123
