@@ -35,7 +35,7 @@ data:
     minimum_peer_upload_speed = 0
     minimum_filename_match_ratio = 0.8
     minimum_search_interval = 5
-    allowed_filetypes = flac,mp3
+    allowed_filetypes = mp3 320,mp3
     ignored_users =
     album_prepend_artist = False
     search_type = incrementing_page
