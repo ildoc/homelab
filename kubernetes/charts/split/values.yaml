@@ -1,5 +1,8 @@
 split-backend:
 
+  imagePullSecrets:
+    - name: split-registry-creds
+
   # ── Gateway API ──────────────────────────────────────────────────────────────
   httpRoute:
     enabled: false
