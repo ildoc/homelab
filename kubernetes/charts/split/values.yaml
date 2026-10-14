@@ -41,3 +41,8 @@ split-backend:
       secretName: split-secret
       emailKey: admin-email
       passwordKey: admin-password
+    packageRegistry:
+      secretName: split-registry-creds
+      usernameKey: username
+      tokenKey: token
+    
