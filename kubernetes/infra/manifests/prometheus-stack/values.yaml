@@ -127,14 +127,35 @@ kube-prometheus-stack:
       accessModes:
         - ReadWriteOnce
     
-    # Resources
+    # Resources — Grafana 13 needs more headroom; 200m/256Mi caused probe timeouts
+    # and CrashLoopBackOff under load (MCP/API, sidecar reloads).
     resources:
       limits:
-        cpu: 200m
-        memory: 256Mi
+        cpu: 1000m
+        memory: 1Gi
       requests:
-        cpu: 100m
-        memory: 128Mi
+        cpu: 200m
+        memory: 512Mi
+
+    # Give startup time on NFS-backed SQLite + unified storage init
+    livenessProbe:
+      httpGet:
+        path: /api/health
+        port: grafana
+      initialDelaySeconds: 120
+      periodSeconds: 10
+      timeoutSeconds: 30
+      failureThreshold: 10
+      successThreshold: 1
+    readinessProbe:
+      httpGet:
+        path: /api/health
+        port: grafana
+      initialDelaySeconds: 60
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 6
+      successThreshold: 1
     
     # Grafana configuration
     grafana.ini:
