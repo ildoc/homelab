@@ -46,6 +46,5 @@ split-backend:
       secretKey: categorization-api-key
     packageRegistry:
       secretName: split-secret
-      usernameKey: package-registry-username
-      tokenKey: package-registry-token
+      tokenKey: project-access-token
     
