@@ -11,7 +11,13 @@ update_invidious:
     SERVICE_SSH_SERVER_IP: invidious
     SERVICE_PLAYBOOK: "invidious.yml"
   rules:
-    - if: '$CI_COMMIT_BRANCH == "master"'
+    # Deploy su merge/push al default branch
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+      changes:
+        - ansible/roles/invidious/templates/docker-compose.yml.j2
+      when: on_success
+    # Deploy già dalla MR Renovate (prima del merge)
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_SOURCE_BRANCH_NAME =~ /^renovate\//'
       changes:
         - ansible/roles/invidious/templates/docker-compose.yml.j2
       when: on_success

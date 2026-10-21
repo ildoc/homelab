@@ -1,8 +1,14 @@
 #!/bin/bash
+set -euo pipefail
 
-# Sistema i permessi delle chiavi SSH
-chmod 600 /etc/gitlab/ssh_host_*_key || true
-chown root:root /etc/gitlab/ssh_host_*_key || true
+# sshd rifiuta host key con permessi troppo aperti (es. 0755).
+shopt -s nullglob
+for key in /etc/gitlab/ssh_host_*_key; do
+  chmod 600 "${key}"
+  chown root:root "${key}"
+done
+for pub in /etc/gitlab/ssh_host_*_key.pub; do
+  chmod 644 "${pub}"
+done
 
-# Avvia GitLab normalmente
 exec /assets/init-container

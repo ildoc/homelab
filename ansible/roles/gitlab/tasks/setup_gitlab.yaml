@@ -4,21 +4,19 @@
     path: ~/gitlab/data
     state: directory
     mode: '0755'
-    recurse: true
 
 - name: Create config folder
   ansible.builtin.file:
+    # NON usare recurse+mode qui: riduceva le ssh_host_*_key a 0755 e sshd andava in crash-loop.
     path: ~/gitlab/config
     state: directory
     mode: '0755'
-    recurse: true
 
 - name: Create logs folder
   ansible.builtin.file:
     path: ~/gitlab/logs
     state: directory
     mode: '0755'
-    recurse: true
 
 - name: Create runnerconfig folder
   ansible.builtin.file:
@@ -69,12 +67,27 @@
         (remote_gitlab_rb_content.content | b64decode).strip() != gitlab_rb_template_rendered.strip()
       }}
 
+- name: Check pending reconfigure marker
+  ansible.builtin.stat:
+    path: ~/gitlab/config/.reconfigure_pending
+  register: gitlab_reconfigure_pending
+
+- name: Decide if GitLab reconfigure is required
+  ansible.builtin.set_fact:
+    gitlab_reconfigure_required: >-
+      {{
+        (gitlab_rb_different | bool) or
+        (gitlab_reconfigure_pending.stat.exists | default(false))
+      }}
+
 - name: Are they different?
   ansible.builtin.debug:
-    msg: "GitLab.rb needs update: {{ gitlab_rb_different }}"
+    msg: >-
+      GitLab.rb needs update: {{ gitlab_rb_different }},
+      reconfigure required: {{ gitlab_reconfigure_required }}
 
-- name: Actions to do if files are different
-  when: gitlab_rb_different
+- name: Deploy gitlab.rb when content changed
+  when: gitlab_rb_different | bool
   block:
     - name: Backup existing gitlab.rb if exists
       ansible.builtin.copy:
@@ -90,33 +103,102 @@
         mode: '0644'
         backup: true
 
+    # Se il reconfigure fallisce, al run successivo il file è già allineato:
+    # il marker forza il retry senza dover ritoccare il template.
+    - name: Mark reconfigure as pending
+      ansible.builtin.file:
+        path: ~/gitlab/config/.reconfigure_pending
+        state: touch
+        mode: '0644'
+
+- name: Reconfigure GitLab when required
+  when: gitlab_reconfigure_required | bool
+  block:
     - name: Check if GitLab container is running
       ansible.builtin.command: docker ps -q -f name=gitlab
       register: gitlab_container_running
       changed_when: false
       failed_when: false
 
-    - name: Reconfigure GitLab (only if container is running)
-      ansible.builtin.command: docker exec -t gitlab gitlab-ctl reconfigure
-      when: gitlab_container_running.stdout != ""
-      register: reconfigure_result
-      # Timeout dopo 5 minuti se la riconfigurazione si blocca
-      async: 300
-      poll: 10
+    - name: Fail when reconfigure is required but GitLab is not running
+      ansible.builtin.fail:
+        msg: "GitLab container is not running; cannot apply gitlab.rb / registry DB migrations"
+      when: gitlab_container_running.stdout == ""
 
-    - name: Fix GitLab socket and data permissions
+    - name: Fix GitLab data ownership
       ansible.builtin.command: docker exec -t gitlab update-permissions
-      when: gitlab_container_running.stdout != ""
       async: 180
       poll: 10
+
+    # update-permissions / chmod -R possono lasciare le host key a 0755 → sshd in crash-loop.
+    - name: Fix SSH host key permissions after update-permissions
+      ansible.builtin.include_tasks: fix_ssh_host_keys.yaml
+
+    # update-permissions non apre la dir del socket: senza +x l'utente registry prende EACCES.
+    - name: Ensure PostgreSQL socket directory is traversable
+      ansible.builtin.command: >-
+        docker exec -t gitlab bash -c
+        "chmod 755 /var/opt/gitlab/postgresql;
+         chmod 777 /var/opt/gitlab/postgresql/.s.PGSQL.* 2>/dev/null || true"
+
+    - name: Reconfigure GitLab
+      ansible.builtin.command: docker exec -t gitlab gitlab-ctl reconfigure
+      register: reconfigure_result
+      failed_when: false
+      async: 600
+      poll: 10
+
+    - name: Fix SSH host key permissions after reconfigure
+      ansible.builtin.include_tasks: fix_ssh_host_keys.yaml
+
+    # listen_address richiede restart di PostgreSQL; al primo apply i migrate
+    # del registry partono prima che TCP sia attivo (omnibus-gitlab#9931).
+    - name: Restart PostgreSQL after failed reconfigure
+      when: reconfigure_result.rc | default(0) != 0
+      ansible.builtin.command: docker exec -t gitlab gitlab-ctl restart postgresql
+
+    - name: Wait for PostgreSQL after restart
+      when: reconfigure_result.rc | default(0) != 0
+      ansible.builtin.pause:
+        seconds: 15
+
+    - name: Retry GitLab reconfigure after PostgreSQL restart
+      when: reconfigure_result.rc | default(0) != 0
+      ansible.builtin.command: docker exec -t gitlab gitlab-ctl reconfigure
+      register: reconfigure_retry_result
+      async: 600
+      poll: 10
+
+    - name: Fix SSH host key permissions after reconfigure retry
+      when: reconfigure_result.rc | default(0) != 0
+      ansible.builtin.include_tasks: fix_ssh_host_keys.yaml
 
     - name: Restart GitLab services after reconfigure
       ansible.builtin.command: docker exec -t gitlab gitlab-ctl restart
-      when: gitlab_container_running.stdout != ""
       async: 180
       poll: 10
+
+    - name: Clear pending reconfigure marker
+      ansible.builtin.file:
+        path: ~/gitlab/config/.reconfigure_pending
+        state: absent
 
     - name: Report reconfigure result
       ansible.builtin.debug:
         msg: "GitLab reconfigured successfully"
-      when: reconfigure_result is defined and reconfigure_result.changed
+
+# Recupero sshd anche quando gitlab.rb non cambia (es. crash-loop host key 0755).
+- name: Check if GitLab container is running for SSH key hygiene
+  ansible.builtin.command: docker ps -q -f name=gitlab
+  register: gitlab_container_for_ssh_keys
+  changed_when: false
+  failed_when: false
+
+- name: Ensure GitLab SSH host keys are not world-readable
+  when: gitlab_container_for_ssh_keys.stdout != ""
+  block:
+    - name: Fix SSH host key permissions
+      ansible.builtin.include_tasks: fix_ssh_host_keys.yaml
+
+    - name: Restart sshd after host key permission fix
+      ansible.builtin.command: docker exec -t gitlab gitlab-ctl restart sshd

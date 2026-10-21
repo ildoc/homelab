@@ -35,8 +35,14 @@ registry['enable'] = true
 # Configurazione binding del registry
 registry['registry_http_addr'] = "0.0.0.0:5000"
 
-# Disabilita NGINX interno per il registry (usiamo NGINX esterno)
-registry_nginx['enable'] = false
+# Disabilita NGINX interno per il registry (usiamo Traefik)
+registry['nginx']['enable'] = false
+
+# Metadata DB del registry via TCP loopback (evita permission denied sul socket Unix
+# in Docker/LXC quando l'utente registry non può aprire .s.PGSQL.5432).
+registry['database']['host'] = '127.0.0.1'
+registry['database']['port'] = 5432
+registry['database']['sslmode'] = 'disable'
 
 ################################################################################
 ## NGINX Settings (Internal)
@@ -151,6 +157,13 @@ puma['per_worker_max_memory_mb'] = 1200
 ## PostgreSQL Settings
 ################################################################################
 
+# TCP locale per registry metadata DB (e client che non usano peer/socket).
+# Necessario con registry['database']['host'] = 127.0.0.1; trust solo su loopback.
+postgresql['listen_address'] = '127.0.0.1'
+postgresql['port'] = 5432
+postgresql['trust_auth_cidr_addresses'] = %w(127.0.0.1/32)
+postgresql['unix_socket_permissions'] = 0777
+
 # GitLab 16+ apre due pool (main e ci). Domanda frontend:
 # Puma:  2 * worker * (thread + 10 headroom) = 2 * 4 * 14 = 112
 # Sidekiq: 2 * (concurrency + 1 + 10 headroom) = 2 * 21 = 42
@@ -249,9 +262,27 @@ geo_secondary['enable'] = false
 ################################################################################
 ## GitLab Pages (Static Sites Hosting)
 ################################################################################
-# Disabilita se non necessario per risparmiare risorse
+# TLS terminato su Cloudflare Tunnel; pages_nginx ascolta solo HTTP (come GitLab).
+# Single-domain (namespace_in_path): un solo hostname pubblico, compatibile con
+# Universal SSL (*.ildoc.it). Wildcard *.pages.ildoc.it richiederebbe cert ACM.
+# Docs: https://docs.gitlab.com/administration/pages/#configure-single-domain-sites
+# pages_external_url NON deve essere subdomain di external_url (ok: pages.ildoc.it vs gitlab.ildoc.it).
 
+{% if gitlab.pages_domain | default('') | length > 0 %}
+pages_external_url 'https://{{ gitlab.pages_domain }}'
+gitlab_pages['enable'] = true
+gitlab_pages['namespace_in_path'] = true
+
+# TLS-terminating proxy: HTTPS esterno, HTTP interno verso il daemon Pages.
+# Chiave nuova (pages_nginx[] è deprecata da Omnibus recenti).
+gitlab_pages['nginx']['enable'] = true
+gitlab_pages['nginx']['listen_port'] = 80
+gitlab_pages['nginx']['listen_https'] = false
+# false: cloudflared parla HTTP all'origin; con true si rischia un redirect loop.
+gitlab_pages['nginx']['redirect_http_to_https'] = false
+{% else %}
 gitlab_pages['enable'] = false
+{% endif %}
 
 ################################################################################
 ## GitLab KAS (Kubernetes Agent Server)

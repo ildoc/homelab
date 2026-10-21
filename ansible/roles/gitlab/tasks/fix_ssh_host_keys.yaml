@@ -1,0 +1,32 @@
+---
+# sshd rifiuta host key con mode troppo aperti (es. 0755 dopo chmod -R / reconfigure).
+- name: Restrict GitLab SSH host private keys on host volume
+  ansible.builtin.shell: |
+    set -euo pipefail
+    shopt -s nullglob
+    for key in "{{ ansible_user_dir }}/gitlab/config"/ssh_host_*_key; do
+      chmod 600 "${key}"
+    done
+    for pub in "{{ ansible_user_dir }}/gitlab/config"/ssh_host_*_key.pub; do
+      chmod 644 "${pub}"
+    done
+  args:
+    executable: /bin/bash
+  changed_when: true
+
+- name: Restrict GitLab SSH host keys inside container
+  ansible.builtin.shell: |
+    docker exec -i gitlab bash -s <<'EOF'
+    set -euo pipefail
+    shopt -s nullglob
+    for key in /etc/gitlab/ssh_host_*_key; do
+      chmod 600 "${key}"
+      chown root:root "${key}"
+    done
+    for pub in /etc/gitlab/ssh_host_*_key.pub; do
+      chmod 644 "${pub}"
+    done
+    EOF
+  args:
+    executable: /bin/bash
+  changed_when: true

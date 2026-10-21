@@ -4,6 +4,10 @@ gitlab:
   legacy_domain: gitlab.ildoc.it
   # Registry solo interno: URL invariato, non esposto sul tunnel.
   registry_domain: registry.gitlab.local.ildoc.it
+  # Pages solo via cloudflared (non Traefik). Sibling di gitlab.ildoc.it, non subdomain.
+  # namespace_in_path: un solo hostname (Universal SSL copre *.ildoc.it, non *.pages.ildoc.it).
+  # URL siti: https://pages.ildoc.it/<namespace>/<project>
+  pages_domain: pages.ildoc.it
   letsencrypt_email: "{{ _secrets.gitlab.letsencrypt_email }}"
   cloudflare_token: "{{ _secrets.gitlab.cloudflare_token }}"
   cloudflared:

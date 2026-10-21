@@ -8,4 +8,11 @@ ingress:
     service: http://gitlab:80
     originRequest:
       connectTimeout: 30s
+{% if gitlab.pages_domain | default('') | length > 0 %}
+  # Pages: Host header seleziona il vhost pages_nginx su :80 (stesso container).
+  - hostname: {{ gitlab.pages_domain }}
+    service: http://gitlab:80
+    originRequest:
+      connectTimeout: 30s
+{% endif %}
   - service: http_status:404
