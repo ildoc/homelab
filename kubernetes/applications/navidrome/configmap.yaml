@@ -1,0 +1,36 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: navidrome
+  namespace: apps
+data:
+  navidrome.toml: |
+    # https://www.navidrome.org/docs/usage/configuration/options/
+    MusicFolder = "/music"
+    DataFolder = "/data"
+    LogLevel = "info"
+    DefaultLanguage = "it"
+    ShareURL = "https://navidrome.local.ildoc.it"
+
+    # Scanner — NFS non propaga inotify in modo affidabile: disabilita il watcher
+    # e usa uno scan periodico (cron, timezone da TZ=Europe/Rome).
+    Scanner.Enabled = true
+    Scanner.Schedule = "0 4 * * *"
+    Scanner.WatcherWait = "0"
+    Scanner.ScanOnStartup = false
+    Scanner.PurgeMissing = "full"
+    Scanner.IgnoreDotFolders = true
+
+    # Cache / transcoding — allineati ai limiti del pod (500m CPU, 1Gi RAM)
+    ImageCacheSize = "200MB"
+    TranscodingCacheSize = "400MB"
+    Transcoding.MaxConcurrent = 2
+    Transcoding.EnableCancellation = true
+    EnableArtworkPrecache = true
+    EnableScheduledDBAnalyze = true
+
+    # Plugins / lyrics (ex env ND_*)
+    Plugins.Enabled = true
+    Plugins.Folder = "/data/plugins"
+    LyricsPriority = ".ttml,.yaml,.yml,.elrc,.lrc,.srt,.txt,embedded,nd-lyrics"

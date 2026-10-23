@@ -44,15 +44,16 @@ spec:
               value: "1000"
             - name: TZ
               value: "Europe/Rome"
-            - name: ND_PLUGINS_FOLDER
-              value: "/data/plugins"
-            - name: ND_LYRICSPRIORITY
-              value: ".ttml,.yaml,.yml,.elrc,.lrc,.srt,.txt,embedded,nd-lyrics"
+            - name: ND_CONFIGFILE
+              value: "/config/navidrome.toml"
           volumeMounts:
             - name: data
               mountPath: /data
             - name: music
-              mountPath: /music            
+              mountPath: /music
+            - name: config
+              mountPath: /config
+              readOnly: true
           resources:
             requests:
               cpu: 50m
@@ -67,4 +68,8 @@ spec:
         - name: music
           nfs:
             server: 192.168.0.123
-            path: /mnt/mediadisk/music        
+            path: /mnt/mediadisk/music
+        - name: config
+          configMap:
+            name: navidrome
+
