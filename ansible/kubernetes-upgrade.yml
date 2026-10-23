@@ -5,9 +5,10 @@
 # Usage: ansible-playbook -i inventory/hosts.ini kubernetes-upgrade.yml
 #
 # IMPORTANTE: Prima di eseguire:
-# 1. Aggiorna kubernetes.k8s_version in group_vars/all.yml
-# 2. Verifica che tutti i nodi siano Ready
-# 3. Leggi le release notes della nuova versione
+# 1. kubernetes.k8s_version in group_vars/all.yml è il minor (es. "1.35"): apt installa l'ultima patch
+# 2. kube-vip viene rigenerato da kubernetes.kube_vip_tag_version, un control plane alla volta
+# 3. Cilium non si aggiorna qui: è il chart ArgoCD in kubernetes/infra/manifests/cilium
+# 4. Verifica che tutti i nodi siano Ready e leggi le release notes della nuova versione
 
 # ============================================
 # STEP 1: VALIDATE UPGRADE VERSION
@@ -87,6 +88,36 @@
       when: 
         - current_major == target_major
         - (target_minor | int - current_minor | int) > 1
+
+    - name: Get apiserver image
+      ansible.builtin.command: >-
+        kubectl -n kube-system get pod kube-apiserver-{{ ansible_hostname }}
+        -o jsonpath={.spec.containers[0].image}
+      environment:
+        KUBECONFIG: /etc/kubernetes/admin.conf
+      register: apiserver_image
+      changed_when: false
+
+    - name: Extract control plane minor version
+      ansible.builtin.set_fact:
+        apiserver_minor: "{{ apiserver_image.stdout | regex_search('v[0-9]+\\.([0-9]+)\\.', '\\1') | first }}"
+
+    - name: Show kubelet and control plane versions
+      ansible.builtin.debug:
+        msg:
+          - "kubelet: v{{ current_k8s_version }}"
+          - "apiserver: {{ apiserver_image.stdout }}"
+
+    - name: Check for control plane version skip
+      ansible.builtin.fail:
+        msg: |
+          ❌ ERROR: Control plane version skip detected!
+          apiserver: {{ apiserver_image.stdout }}
+          Target: {{ kubernetes.k8s_version }}
+
+          kubeadm can only upgrade the static control plane by one minor version.
+          The kubelet version alone is not enough: this node may be ahead of kube-apiserver.
+      when: (target_minor | int - apiserver_minor | int) > 1
 
     - name: Update APT cache for version check
       ansible.builtin.apt:
@@ -201,6 +232,26 @@
         - cgroup_version.stdout != "cgroup2fs"
         - kubernetes.k8s_version is version('1.35', '>=')
 
+    - name: Look for the kubelet flag removed in 1.35
+      ansible.builtin.shell: |
+        grep -R -- "--pod-infra-container-image" \
+          /var/lib/kubelet/kubeadm-flags.env \
+          /etc/default/kubelet \
+          /var/lib/kubelet/config.yaml \
+          2>/dev/null || true
+      register: pod_infra_flag
+      changed_when: false
+
+    - name: Refuse upgrade while the removed kubelet flag is set
+      ansible.builtin.fail:
+        msg: |
+          ERROR: --pod-infra-container-image is still configured on {{ inventory_hostname }}.
+          Kubernetes 1.35 removed this kubelet flag and kubelet will not start until it is gone.
+          {{ pod_infra_flag.stdout }}
+      when:
+        - kubernetes.k8s_version is version('1.35', '>=')
+        - pod_infra_flag.stdout | trim | length > 0
+
     - name: Check disk space
       ansible.builtin.command: df -h /var/lib/kubelet
       register: disk_space
@@ -220,24 +271,21 @@
   hosts: "{{ groups['k8s'][:3] }}"
   become: true
   tasks:
-    - name: Check if etcd is running
-      ansible.builtin.command: systemctl is-active etcd
-      register: etcd_status
-      changed_when: false
-      failed_when: false
-
-    - name: Backup etcd using kubeadm
+    - name: Backup etcd snapshot from the static pod
       ansible.builtin.shell: |
-        ETCDCTL_API=3 etcdctl snapshot save \
-        /var/backups/k8s-upgrade/etcd-backup-{{ ansible_hostname }}-{{ ansible_date_time.iso8601_basic_short }}.db \
-        --cacert=/etc/kubernetes/pki/etcd/ca.crt \
-        --cert=/etc/kubernetes/pki/etcd/server.crt \
-        --key=/etc/kubernetes/pki/etcd/server.key
+        snap="/var/lib/etcd/etcd-upgrade-snapshot.db"
+        dest="/var/backups/k8s-upgrade/etcd-backup-{{ ansible_hostname }}-{{ ansible_date_time.iso8601_basic_short }}.db"
+        kubectl exec -n kube-system "etcd-{{ ansible_hostname }}" -- \
+          etcdctl snapshot save "${snap}" \
+          --cacert=/etc/kubernetes/pki/etcd/ca.crt \
+          --cert=/etc/kubernetes/pki/etcd/server.crt \
+          --key=/etc/kubernetes/pki/etcd/server.key
+        mv "${snap}" "${dest}"
+      args:
+        executable: /bin/bash
       environment:
-        ETCDCTL_ENDPOINTS: https://127.0.0.1:2379
-      register: etcd_backup
-      when: etcd_status.rc == 0 or etcd_status.stdout == "active"
-      changed_when: etcd_backup.rc == 0
+        KUBECONFIG: /etc/kubernetes/admin.conf
+      changed_when: true
 
     - name: Backup Kubernetes certificates
       ansible.builtin.command: tar -czf /var/backups/k8s-upgrade/pki-backup-{{ ansible_hostname }}-{{ ansible_date_time.iso8601_basic_short }}.tar.gz /etc/kubernetes/pki
@@ -294,6 +342,40 @@
         msg: "WARNING: There are {{ failing_pods_count.stdout }} pods not in Running/Succeeded state. Review before upgrading!"
       when: failing_pods_count.stdout | int > 0
 
+    - name: Find PodDisruptionBudgets that block eviction
+      ansible.builtin.command: >-
+        kubectl get pdb -A
+        -o jsonpath={range .items[?(@.status.disruptionsAllowed==0)]}{.metadata.namespace}/{.metadata.name}{"\n"}{end}
+      environment:
+        KUBECONFIG: /etc/kubernetes/admin.conf
+      register: blocking_pdbs
+      changed_when: false
+      failed_when: false
+
+    - name: Warn when a drain can be blocked
+      ansible.builtin.debug:
+        msg: |
+          WARNING: these PodDisruptionBudgets currently allow 0 disruptions:
+          {{ blocking_pdbs.stdout }}
+          The node drain will fall back to --disable-eviction. On Longhorn that detaches
+          instance-manager pods without waiting for a healthy replica move.
+      when: blocking_pdbs.stdout | trim | length > 0
+
+    - name: Read kubeadm ClusterConfiguration
+      ansible.builtin.command: kubectl -n kube-system get cm kubeadm-config -o jsonpath={.data.ClusterConfiguration}
+      environment:
+        KUBECONFIG: /etc/kubernetes/admin.conf
+      register: cluster_configuration
+      changed_when: false
+
+    - name: Warn when the control plane endpoint is not the VIP
+      ansible.builtin.debug:
+        msg: |
+          WARNING: controlPlaneEndpoint is not {{ kubernetes.vip_address }}.
+          kubeadm and the node admin.conf keep using that endpoint during the upgrade.
+          Clients of the VIP stay up only while kube-vip fails over; clients of the node IP do not.
+      when: "cluster_configuration.stdout is not search('controlPlaneEndpoint: ' ~ kubernetes.vip_address)"
+
     - name: Get component status
       ansible.builtin.command: kubectl get --raw='/readyz?verbose'
       environment:
@@ -327,12 +409,16 @@
         prompt: |
           
           ============================================
-          Ready to upgrade to Kubernetes {{ kubernetes.k8s_version }}
+          Ready to upgrade to Kubernetes {{ kubernetes.k8s_version }} (latest patch in the APT repo)
+          kube-vip target: {{ kubernetes.kube_vip_tag_version }}
+          Cilium expected: {{ kubernetes.cilium_tag_version }} (verified only, chart ArgoCD)
           
           This will:
           1. Upgrade first control plane node
           2. Upgrade additional control plane nodes (one at a time)
           3. Upgrade worker nodes (if any)
+          4. Roll kube-vip one control plane at a time
+          5. Verify the Cilium image matches the pinned version
           
           Press ENTER to continue or Ctrl+C to abort
           ============================================
@@ -351,7 +437,7 @@
     - k8s-upgrade-control-plane
 
 - name: Upgrade worker nodes (if any)
-  hosts: k8s_workers
+  hosts: "{{ groups['k8s_workers'] | default([]) }}"
   become: true
   serial: 1
   tasks:
@@ -366,7 +452,102 @@
       when: is_worker | default(false)
 
 # ============================================
-# STEP 4: POST-UPGRADE VALIDATION
+# STEP 4: KUBE-VIP, THEN CILIUM CHECK
+# ============================================
+- name: Upgrade kube-vip on control plane nodes
+  hosts: "{{ groups['k8s'][:3] }}"
+  become: true
+  serial: 1
+  tasks:
+    - name: Pull kube-vip image
+      ansible.builtin.command: ctr image pull ghcr.io/kube-vip/kube-vip:{{ kubernetes.kube_vip_tag_version }}
+      changed_when: false
+
+    - name: Generate kube-vip manifest
+      ansible.builtin.command: >
+        ctr run --rm --net-host ghcr.io/kube-vip/kube-vip:{{ kubernetes.kube_vip_tag_version }}
+        vip /kube-vip manifest pod
+        --interface {{ kubernetes.vip_interface }}
+        --address {{ kubernetes.vip_address }}
+        --controlplane
+        --arp
+        --leaderElection
+      register: kube_vip_manifest
+      changed_when: false
+
+    - name: Require a Pod manifest before replacing kube-vip
+      ansible.builtin.assert:
+        that:
+          - "'apiVersion:' in kube_vip_manifest.stdout"
+          - "'kind: Pod' in kube_vip_manifest.stdout"
+          - "'vip_subnet' in kube_vip_manifest.stdout or 'vip_cidr' in kube_vip_manifest.stdout"
+        fail_msg: >-
+          kube-vip {{ kubernetes.kube_vip_tag_version }} did not return a Pod manifest.
+          The current /etc/kubernetes/manifests/kube-vip.yaml was left unchanged.
+
+    - name: Install kube-vip static pod manifest
+      ansible.builtin.copy:
+        content: "{{ kube_vip_manifest.stdout }}"
+        dest: /etc/kubernetes/manifests/kube-vip.yaml
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Wait until this node's kube-vip is Ready on the target image
+      ansible.builtin.shell: |
+        kubectl -n kube-system get pod kube-vip-{{ ansible_hostname }} \
+          -o jsonpath='{.spec.containers[0].image}{" "}{.status.containerStatuses[0].ready}'
+      args:
+        executable: /bin/bash
+      environment:
+        KUBECONFIG: /etc/kubernetes/admin.conf
+      register: kube_vip_ready
+      changed_when: false
+      until: >-
+        kubernetes.kube_vip_tag_version in kube_vip_ready.stdout
+        and kube_vip_ready.stdout is search(' true')
+      retries: 36
+      delay: 5
+
+    - name: Confirm the API VIP answers before the next control plane
+      ansible.builtin.uri:
+        url: "https://{{ kubernetes.vip_address }}:6443/livez"
+        validate_certs: false
+        status_code: 200
+        timeout: 10
+      register: kube_vip_api
+      retries: 12
+      delay: 5
+      until: kube_vip_api.status == 200
+
+- name: Verify Cilium version
+  hosts: "{{ groups['k8s'][0] }}"
+  become: true
+  tasks:
+    - name: Read the Cilium agent image
+      ansible.builtin.command: >-
+        kubectl -n kube-system get ds cilium
+        -o jsonpath={.spec.template.spec.containers[0].image}
+      environment:
+        KUBECONFIG: /etc/kubernetes/admin.conf
+      register: cilium_image
+      changed_when: false
+
+    - name: Require the GitOps Cilium version
+      ansible.builtin.assert:
+        that:
+          - kubernetes.cilium_tag_version in cilium_image.stdout
+        fail_msg: |
+          Cilium is {{ cilium_image.stdout }}, expected {{ kubernetes.cilium_tag_version }}.
+          Cilium is managed by ArgoCD from kubernetes/infra/manifests/cilium.
+          Do not apply quick-install.yaml: it would replace the Gateway API and kubeProxyReplacement values.
+
+    - name: Show Cilium version
+      ansible.builtin.debug:
+        msg: "Cilium {{ cilium_image.stdout }} matches {{ kubernetes.cilium_tag_version }}"
+
+# ============================================
+# STEP 5: POST-UPGRADE VALIDATION
 # ============================================
 - name: Post-upgrade validation
   hosts: "{{ groups['k8s'][0] }}"
@@ -403,11 +584,6 @@
       delay: 10
       changed_when: false
       failed_when: false
-
-    - name: Display API readiness warning if check failed
-      ansible.builtin.debug:
-        msg: "⚠ WARNING: Could not verify API server readiness. Manual check recommended."
-      when: api_ready.rc != 0
 
     - name: Display API readiness warning if check failed
       ansible.builtin.debug:
@@ -484,7 +660,7 @@
         - wrong_version_count.stdout | int > 0
 
     - name: Get cluster version
-      ansible.builtin.command: kubectl version --short
+      ansible.builtin.command: kubectl version
       environment:
         KUBECONFIG: "{{ kube_config_path }}"
       register: cluster_version

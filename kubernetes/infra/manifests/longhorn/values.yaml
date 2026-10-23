@@ -32,9 +32,11 @@ longhorn:
     # https://longhorn.io/docs/1.13.0/references/settings/#storage-reserved-percentage-for-default-disk
     storageReservedPercentageForDefaultDisk: 74
     storageOverProvisioningPercentage: 100
+    nodeDrainPolicy: block-if-contains-last-replica
+    replicaReplenishmentWaitInterval: 0
     defaultReplicaCount:
-      v1: "2"
-      v2: "2"
+      v1: "3"
+      v2: "3"
 
   # UI sul Gateway Cilium già usato dalle altre app infra.
   # La UI non ha autenticazione: è raggiungibile da chi arriva sul gateway.

@@ -15,11 +15,15 @@ nut:
   password: "{{ lookup('community.hashi_vault.hashi_vault', 'ansible/data/nut:password') }}"
 
 kubernetes:
-  k8s_version: "1.34"
+  # Minor only. APT repo path is v1.35 and the package pin is 1.35.*.
+  # 1.35.9 is the newest patch published as of 2026-10-23 (1.35.10 was postponed and is not in the repo).
+  k8s_version: "1.35"
   vip_address: "192.168.0.80"
   vip_interface: "ens18"
-  kube_vip_tag_version: "v0.8.9"
-  cilium_tag_version: "v1.17.2"
+  kube_vip_tag_version: "v1.3.1"
+  # Latest stable Cilium tested with Kubernetes 1.35. 1.21 is still pre-release.
+  # The running install is the ArgoCD chart, not this variable.
+  cilium_tag_version: "v1.20.3"
 
 argocd:
   namespace: argocd
