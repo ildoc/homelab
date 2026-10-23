@@ -3,7 +3,7 @@ gitlab-runner:
   gitlabUrl: http://gitlab.ildoc.it/
   
   replicas: 2
-  concurrent: 5
+  concurrent: 3
   checkInterval: 30
   logLevel: info
   
@@ -37,7 +37,7 @@ gitlab-runner:
           
           # Risorse per l'helper
           helper_cpu_limit = "500m"
-          helper_cpu_request = "100m"
+          helper_cpu_request = "50m"
           helper_memory_limit = "256Mi"
           helper_memory_request = "128Mi"
           
