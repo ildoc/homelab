@@ -62,7 +62,38 @@ externalServices:
     connectionPool:
       maxPendingRequests: 512
       maxRequestsPerConnection: 10
+
+  # Jellyfin
+  jellyfin:
+    enabled: true
+    hostname: "jellyfin.local.ildoc.it"
+    protocol: HTTPS
+    port: 8096
+    skipVerify: true
+    
+    endpoints:
+      - address: "192.168.0.123"
+    
+    connectionPool:
+      maxPendingRequests: 512
+      maxRequestsPerConnection: 10
   
+  # qbittorrent
+  qbittorrent:
+    enabled: true
+    hostname: "qbittorrent.local.ildoc.it"
+    protocol: HTTPS
+    port: 30024
+    skipVerify: true
+    
+    endpoints:
+      - address: "192.168.0.123"
+    
+    connectionPool:
+      maxPendingRequests: 512
+      maxRequestsPerConnection: 10
+  
+
   # Invidious (YouTube frontend)
   invidious:
     enabled: true
