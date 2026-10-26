@@ -67,7 +67,7 @@ externalServices:
   jellyfin:
     enabled: true
     hostname: "jellyfin.local.ildoc.it"
-    protocol: HTTPS
+    protocol: HTTP
     port: 8096
     skipVerify: true
     
@@ -82,7 +82,7 @@ externalServices:
   qbittorrent:
     enabled: true
     hostname: "qbittorrent.local.ildoc.it"
-    protocol: HTTPS
+    protocol: HTTP
     port: 30024
     skipVerify: true
     
