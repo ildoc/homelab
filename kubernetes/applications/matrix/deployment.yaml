@@ -26,7 +26,7 @@ spec:
       initContainers:
         # Init container unificato: templating config + generazione chiavi
         - name: prepare-synapse
-          image: ghcr.io/element-hq/synapse:v1.163.1@sha256:41d8a4edfdc6220e4c627383c7a568dd81933e7a8d299eb2490828ce766ea095
+          image: ghcr.io/element-hq/synapse:v1.164.0@sha256:621463e2263551c3b2f13ebb8cc96c3de968855d5adbf4b0852c42a9bb42deea
           command:
             - /bin/sh
             - -c
@@ -144,7 +144,7 @@ spec:
       
       containers:
         - name: synapse
-          image: ghcr.io/element-hq/synapse:v1.163.1@sha256:41d8a4edfdc6220e4c627383c7a568dd81933e7a8d299eb2490828ce766ea095
+          image: ghcr.io/element-hq/synapse:v1.164.0@sha256:621463e2263551c3b2f13ebb8cc96c3de968855d5adbf4b0852c42a9bb42deea
           env:
             - name: SYNAPSE_SERVER_NAME
               value: "matrix.ildoc.it"
