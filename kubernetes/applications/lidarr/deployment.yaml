@@ -26,6 +26,8 @@ spec:
               value: "1000"
             - name: TZ
               value: "Europe/Rome"
+            - name: LIDARR__SERVER__ALLOWEDHOSTS
+              value: "lidarr,prowlarr,soularr,*.local.ildoc.it"
           volumeMounts:
             - name: config
               mountPath: /config
