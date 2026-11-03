@@ -4,10 +4,10 @@
   ansible.builtin.shell: |
     set -euo pipefail
     shopt -s nullglob
-    for key in "{{ ansible_user_dir }}/gitlab/config"/ssh_host_*_key; do
+    for key in "{{ ansible_facts['user_dir'] }}/gitlab/config"/ssh_host_*_key; do
       chmod 600 "${key}"
     done
-    for pub in "{{ ansible_user_dir }}/gitlab/config"/ssh_host_*_key.pub; do
+    for pub in "{{ ansible_facts['user_dir'] }}/gitlab/config"/ssh_host_*_key.pub; do
       chmod 644 "${pub}"
     done
   args:

@@ -3,6 +3,10 @@ technitium_cluster_domain: dns.local.ildoc.it
 technitium_http_port: 5380
 technitium_https_port: 53443
 technitium_install_url: https://download.technitium.com/dns/install.sh
+technitium_dotnet_install_url: https://dot.net/v1/dotnet-install.sh
+technitium_dotnet_install_dir: /opt/dotnet
+technitium_install_timeout: 1800
+technitium_install_poll_interval: 15
 technitium_dhcp_enabled: false
 # Deve essere un sottodominio di technitium_cluster_domain (vincolo Technitium).
 technitium_node_domain: "{{ inventory_hostname }}.{{ technitium_cluster_domain }}"

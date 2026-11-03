@@ -36,4 +36,3 @@
     content: |
       nameserver 1.1.1.1
       nameserver 9.9.9.9
-  when: technitium_resolv_conf.stat.islnk | default(false) or not (technitium_resolv_conf.stat.exists | default(false))

@@ -13,6 +13,7 @@
 #   - validate_compose: validate docker-compose syntax before deployment (default: true)
 #   - cleanup_resources: cleanup unused Docker resources after deployment (default: true)
 #   - full_recreate: run docker compose down before up instead of recreating only changed services (default: false)
+#   - update_compose_build: image build policy (default: policy)
 
 - name: Validate required variables
   ansible.builtin.assert:
@@ -164,6 +165,7 @@
       community.docker.docker_compose_v2:
         project_src: "{{ update_compose_project_path }}"
         state: present
+        build: "{{ update_compose_build | default('policy') }}"
         pull: never
         remove_orphans: true
       register: compose_up_result

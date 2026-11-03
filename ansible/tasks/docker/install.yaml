@@ -13,6 +13,7 @@
           - ca-certificates
           - curl
           - gpg
+          - python3-debian
         update_cache: true
 
     - name: Create keyrings directory
@@ -23,8 +24,8 @@
 
     - name: Detect OS and architecture
       ansible.builtin.set_fact:
-        docker_os: "{{ 'debian' if ansible_distribution in ['Debian', 'Raspbian'] else 'ubuntu' }}"
-        docker_arch: "{{ 'arm64' if ansible_architecture == 'aarch64' else ('armhf' if ansible_architecture in ['armv7l', 'armv6l'] else 'amd64') }}"
+        docker_os: "{{ 'debian' if ansible_facts['distribution'] in ['Debian', 'Raspbian'] else 'ubuntu' }}"
+        docker_arch: "{{ 'arm64' if ansible_facts['architecture'] == 'aarch64' else ('armhf' if ansible_facts['architecture'] in ['armv7l', 'armv6l'] else 'amd64') }}"
 
     - name: Download Docker GPG key
       ansible.builtin.get_url:
@@ -38,9 +39,20 @@
       changed_when: false
 
     - name: Add Docker repository
-      ansible.builtin.apt_repository:
-        repo: "deb [arch={{ docker_arch }} signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/{{ docker_os }} {{ os_codename.stdout }} stable"
+      ansible.builtin.deb822_repository:
+        name: docker
+        types: [deb]
+        architectures: "{{ docker_arch }}"
+        uris: "https://download.docker.com/linux/{{ docker_os }}"
+        suites: "{{ os_codename.stdout }}"
+        components: [stable]
+        signed_by: /etc/apt/keyrings/docker.asc
         state: present
+
+    - name: Remove legacy Docker repository file
+      ansible.builtin.file:
+        path: "/etc/apt/sources.list.d/download_docker_com_linux_{{ docker_os }}.list"
+        state: absent
 
     - name: Update apt cache
       ansible.builtin.apt:
@@ -63,6 +75,6 @@
         append: true
       when: ansible_user != 'root'
 
-    - name: Reset ssh connection to apply docker group
-      ansible.builtin.meta: reset_connection
-      when: ansible_user != 'root'
+- name: Apply docker group to ssh connection
+  ansible.builtin.include_tasks: reset-connection.yaml
+  when: docker_version.rc != 0 and ansible_user != 'root'

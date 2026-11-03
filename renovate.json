@@ -84,6 +84,16 @@
       "groupName": "docker digests",
       "automerge": true,
       "ignoreTests": true
+    },
+    {
+      "description": "Automerge per immagini selezionate",
+      "matchDatasources": ["docker"],
+      "matchPackageNames": [
+        "quay.io/invidious/invidious",
+        "quay.io/invidious/invidious-companion"
+      ],
+      "automerge": true,
+      "automergeType": "pr"
     }
   ]
 }

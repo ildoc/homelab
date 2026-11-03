@@ -13,13 +13,60 @@
     state: present
   when: technitium_curl.rc != 0
 
-- name: Install or update Technitium with the official script
-  ansible.builtin.shell: curl -sSL '{{ technitium_install_url }}' | bash
+- name: Check and repair .NET runtimes
+  ansible.builtin.shell: |
+    set -euo pipefail
+    dotnet_root={{ technitium_dotnet_install_dir | quote }}
+    if [ -x "${dotnet_root}/dotnet" ]; then
+      runtimes="$("${dotnet_root}/dotnet" --list-runtimes)"
+      missing_versions="$(printf '%s\n' "${runtimes}" | awk '
+        $1 == "Microsoft.NETCore.App" { core[$2] = 1 }
+        $1 == "Microsoft.AspNetCore.App" { aspnet[$2] = 1 }
+        END { for (version in aspnet) if (!(version in core)) print version }
+      ')"
+      for version in ${missing_versions}; do
+        echo "Repairing Microsoft.NETCore.App ${version}..."
+        runtime_dir="${dotnet_root}/shared/Microsoft.NETCore.App/${version}"
+        if [ -e "${runtime_dir}" ]; then
+          backup_dir="$(mktemp -d "${dotnet_root}/.incomplete-runtime-${version}.XXXXXX")"
+          mv -- "${runtime_dir}" "${backup_dir}/"
+          echo "Preserved incomplete runtime in ${backup_dir}"
+        fi
+        curl -fsSL --connect-timeout 30 --max-time 120 {{ technitium_dotnet_install_url | quote }} |
+          bash /dev/stdin --version "${version}" --runtime dotnet --no-path --install-dir "${dotnet_root}"
+        "${dotnet_root}/dotnet" --list-runtimes | awk -v version="${version}" '
+          $1 == "Microsoft.NETCore.App" && $2 == version { found = 1 }
+          END { exit !found }
+        '
+      done
+    fi
   args:
     executable: /bin/bash
+  async: "{{ technitium_install_timeout }}"
+  poll: "{{ technitium_install_poll_interval }}"
+  register: technitium_dotnet_repair
+  changed_when: >-
+    'Repairing Microsoft.NETCore.App' in (technitium_dotnet_repair.stdout | default(''))
+
+- name: Install or update Technitium with the official script
+  ansible.builtin.shell: |
+    set -euo pipefail
+    curl -fsSL --connect-timeout 30 --max-time 120 {{ technitium_install_url | quote }} | bash
+  args:
+    executable: /bin/bash
+  async: "{{ technitium_install_timeout }}"
+  poll: "{{ technitium_install_poll_interval }}"
   register: technitium_install
   # Lo script ufficiale, se dns.service esiste già, riestrae il pacchetto e fa sempre restart.
   changed_when: >-
-    'Updating Technitium DNS Server' in technitium_install.stdout
-    or 'Installing Technitium DNS Server' in technitium_install.stdout
-    or 'Restarting systemd' in technitium_install.stdout
+    'Updating Technitium DNS Server' in (technitium_install.stdout | default(''))
+    or 'Installing Technitium DNS Server' in (technitium_install.stdout | default(''))
+    or 'Restarting systemd' in (technitium_install.stdout | default(''))
+
+- name: Restore the host resolver after the official installer
+  ansible.builtin.copy:
+    dest: /etc/resolv.conf
+    mode: "0644"
+    content: |
+      nameserver 1.1.1.1
+      nameserver 9.9.9.9

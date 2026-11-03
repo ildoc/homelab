@@ -43,6 +43,7 @@
     update_compose_remote_path: "{{ remote_path }}"
     template_file_name: "{{ template_file }}"
     update_compose_project_path: "{{ project_path }}"
+    update_compose_build: never
 
 - name: Get remote gitlab.rb
   ansible.builtin.stat:
@@ -92,7 +93,7 @@
     - name: Backup existing gitlab.rb if exists
       ansible.builtin.copy:
         src: ~/gitlab/config/gitlab.rb
-        dest: ~/gitlab/config/gitlab.rb.{{ ansible_date_time.epoch }}
+        dest: ~/gitlab/config/gitlab.rb.{{ ansible_facts['date_time']['epoch'] }}
         remote_src: true
       when: remote_gitlab_rb.stat.exists
 
