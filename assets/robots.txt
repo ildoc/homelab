@@ -1,0 +1,27 @@
+---
+permalink: /robots.txt
+# The robots rules
+---
+User-agent: GPTBot
+Disallow: /
+User-agent: ChatGPT-User
+Disallow: /
+User-agent: Google-Extended
+Disallow: /
+User-agent: CCBot
+Disallow: /
+User-agent: PerplexityBot
+Disallow: /
+
+User-agent: mauibot
+Disallow: /
+User-agent: semrushbot
+Disallow: /
+User-agent: ahrefsbot
+Disallow: /
+User-agent: blexbot
+Disallow: /
+User-agent: seo spider
+Disallow: /
+
+Sitemap: https://homelab.ildoc.it/sitemap.xml
