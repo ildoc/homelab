@@ -26,6 +26,10 @@ spec:
               value: "1000"
             - name: TZ
               value: "Europe/Rome"
+            - name: ASPNETCORE_URLS
+              value: "http://+:8080"
+            - name: Pickarr__DataPath
+              value: "/config"
             - name: Pickarr__Settings__sonarr__url
               value: "http://sonarr:8989"
             - name: Pickarr__Settings__radarr__url
