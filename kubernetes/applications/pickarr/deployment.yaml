@@ -1,70 +1,70 @@
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: pickarr
-  namespace: apps
-spec:
-  selector:
-    matchLabels:
-      app: pickarr
-  strategy:
-    type: Recreate
-  revisionHistoryLimit: 3
-  template:
-    metadata:
-      labels:
-        app: pickarr
-    spec:
-      containers:
-        - name: pickarr
-          image: ghcr.io/ildoc/pickarr:0.0.0.5
-          env:
-            - name: PUID
-              value: "1000"
-            - name: PGID
-              value: "1000"
-            - name: TZ
-              value: "Europe/Rome"
-            - name: ASPNETCORE_URLS
-              value: "http://+:8080"
-            - name: Pickarr__DataPath
-              value: "/config"
-            - name: Pickarr__Settings__sonarr__url
-              value: "http://sonarr:8989"
-            - name: Pickarr__Settings__radarr__url
-              value: "http://radarr:7878"
-            - name: Pickarr__Settings__watchmode__apiKey
-              valueFrom:
-                secretKeyRef:
-                  name: pickarr-secrets
-                  key: watchmode-api-key
-            - name: Pickarr__Settings__tmdb__token
-              valueFrom:
-                secretKeyRef:
-                  name: pickarr-secrets
-                  key: tmdb-token
-            - name: Pickarr__Settings__sonarr__apiKey
-              valueFrom:
-                secretKeyRef:
-                  name: pickarr-secrets
-                  key: sonarr-api-key
-            - name: Pickarr__Settings__radarr__apiKey
-              valueFrom:
-                secretKeyRef:
-                  name: pickarr-secrets
-                  key: radarr-api-key
-          volumeMounts:
-            - name: config
-              mountPath: /config
-          resources:
-            requests:
-              cpu: 50m
-              memory: 256Mi
-            limits:
-              cpu: 500m
-              memory: 1Gi
-      volumes:
-        - name: config
-          persistentVolumeClaim:
-            claimName: pickarr
+# ---
+# apiVersion: apps/v1
+# kind: Deployment
+# metadata:
+#   name: pickarr
+#   namespace: apps
+# spec:
+#   selector:
+#     matchLabels:
+#       app: pickarr
+#   strategy:
+#     type: Recreate
+#   revisionHistoryLimit: 3
+#   template:
+#     metadata:
+#       labels:
+#         app: pickarr
+#     spec:
+#       containers:
+#         - name: pickarr
+#           image: ghcr.io/ildoc/pickarr:0.0.0.5
+#           env:
+#             - name: PUID
+#               value: "1000"
+#             - name: PGID
+#               value: "1000"
+#             - name: TZ
+#               value: "Europe/Rome"
+#             - name: ASPNETCORE_URLS
+#               value: "http://+:8080"
+#             - name: Pickarr__DataPath
+#               value: "/config"
+#             - name: Pickarr__Settings__sonarr__url
+#               value: "http://sonarr:8989"
+#             - name: Pickarr__Settings__radarr__url
+#               value: "http://radarr:7878"
+#             - name: Pickarr__Settings__watchmode__apiKey
+#               valueFrom:
+#                 secretKeyRef:
+#                   name: pickarr-secrets
+#                   key: watchmode-api-key
+#             - name: Pickarr__Settings__tmdb__token
+#               valueFrom:
+#                 secretKeyRef:
+#                   name: pickarr-secrets
+#                   key: tmdb-token
+#             - name: Pickarr__Settings__sonarr__apiKey
+#               valueFrom:
+#                 secretKeyRef:
+#                   name: pickarr-secrets
+#                   key: sonarr-api-key
+#             - name: Pickarr__Settings__radarr__apiKey
+#               valueFrom:
+#                 secretKeyRef:
+#                   name: pickarr-secrets
+#                   key: radarr-api-key
+#           volumeMounts:
+#             - name: config
+#               mountPath: /config
+#           resources:
+#             requests:
+#               cpu: 50m
+#               memory: 256Mi
+#             limits:
+#               cpu: 500m
+#               memory: 1Gi
+#       volumes:
+#         - name: config
+#           persistentVolumeClaim:
+#             claimName: pickarr
