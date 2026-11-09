@@ -20,7 +20,7 @@ spec:
         fsGroup: 1654
       containers:
         - name: pickarr
-          image: ghcr.io/ildoc/pickarr:0.0.0.6
+          image: ghcr.io/ildoc/pickarr:0.0.0.7
           ports:
             - containerPort: 8080
           env:
@@ -35,11 +35,11 @@ spec:
                 secretKeyRef:
                   name: pickarr-secrets
                   key: watchmode-api-key
-            - name: TMDB_TOKEN
+            - name: TMDB_API_KEY
               valueFrom:
                 secretKeyRef:
                   name: pickarr-secrets
-                  key: tmdb-token
+                  key: tmdb-api-key
             - name: SONARR_API_KEY
               valueFrom:
                 secretKeyRef:
