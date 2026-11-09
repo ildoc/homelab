@@ -1,70 +1,78 @@
-# ---
-# apiVersion: apps/v1
-# kind: Deployment
-# metadata:
-#   name: pickarr
-#   namespace: apps
-# spec:
-#   selector:
-#     matchLabels:
-#       app: pickarr
-#   strategy:
-#     type: Recreate
-#   revisionHistoryLimit: 3
-#   template:
-#     metadata:
-#       labels:
-#         app: pickarr
-#     spec:
-#       containers:
-#         - name: pickarr
-#           image: ghcr.io/ildoc/pickarr:0.0.0.5
-#           env:
-#             - name: PUID
-#               value: "1000"
-#             - name: PGID
-#               value: "1000"
-#             - name: TZ
-#               value: "Europe/Rome"
-#             - name: ASPNETCORE_URLS
-#               value: "http://+:8080"
-#             - name: Pickarr__DataPath
-#               value: "/config"
-#             - name: Pickarr__Settings__sonarr__url
-#               value: "http://sonarr:8989"
-#             - name: Pickarr__Settings__radarr__url
-#               value: "http://radarr:7878"
-#             - name: Pickarr__Settings__watchmode__apiKey
-#               valueFrom:
-#                 secretKeyRef:
-#                   name: pickarr-secrets
-#                   key: watchmode-api-key
-#             - name: Pickarr__Settings__tmdb__token
-#               valueFrom:
-#                 secretKeyRef:
-#                   name: pickarr-secrets
-#                   key: tmdb-token
-#             - name: Pickarr__Settings__sonarr__apiKey
-#               valueFrom:
-#                 secretKeyRef:
-#                   name: pickarr-secrets
-#                   key: sonarr-api-key
-#             - name: Pickarr__Settings__radarr__apiKey
-#               valueFrom:
-#                 secretKeyRef:
-#                   name: pickarr-secrets
-#                   key: radarr-api-key
-#           volumeMounts:
-#             - name: config
-#               mountPath: /config
-#           resources:
-#             requests:
-#               cpu: 50m
-#               memory: 256Mi
-#             limits:
-#               cpu: 500m
-#               memory: 1Gi
-#       volumes:
-#         - name: config
-#           persistentVolumeClaim:
-#             claimName: pickarr
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pickarr
+  namespace: apps
+spec:
+  selector:
+    matchLabels:
+      app: pickarr
+  strategy:
+    type: Recreate
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      labels:
+        app: pickarr
+    spec:
+      securityContext:
+        fsGroup: 1654
+      containers:
+        - name: pickarr
+          image: ghcr.io/ildoc/pickarr:0.0.0.6
+          ports:
+            - containerPort: 8080
+          env:
+            - name: TZ
+              value: "Europe/Rome"
+            - name: SONARR_URL
+              value: "http://sonarr:8989"
+            - name: RADARR_URL
+              value: "http://radarr:7878"
+            - name: WATCHMODE_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: pickarr-secrets
+                  key: watchmode-api-key
+            - name: TMDB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: pickarr-secrets
+                  key: tmdb-token
+            - name: SONARR_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: pickarr-secrets
+                  key: sonarr-api-key
+            - name: RADARR_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: pickarr-secrets
+                  key: radarr-api-key
+          volumeMounts:
+            - name: config
+              mountPath: /config
+          resources:
+            requests:
+              cpu: 50m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 1Gi
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 30
+      volumes:
+        - name: config
+          persistentVolumeClaim:
+            claimName: pickarr
