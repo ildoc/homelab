@@ -20,7 +20,7 @@ spec:
         fsGroup: 1654
       containers:
         - name: pickarr
-          image: ghcr.io/ildoc/pickarr:0.0.0.9
+          image: ghcr.io/ildoc/pickarr:0.0.0.10
           ports:
             - containerPort: 8080
           env:
