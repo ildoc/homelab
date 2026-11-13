@@ -1,0 +1,23 @@
+---
+# Usage (from ansible/): ansible-playbook -i inventory/hosts.ini kubernetes-api-endpoint.yml -K
+# Migrate the existing cluster to kubernetes.vip_address without upgrading components
+# or renewing certificates. The VIP must already answer with a trusted certificate.
+# ClusterConfiguration and kubeconfigs are backed up before changes.
+# --check validates prerequisites and previews changes; temporary credentials are removed.
+- name: Align kubeadm configuration with the API VIP
+  hosts: k8s[0]
+  become: true
+  any_errors_fatal: true
+  tasks:
+    - name: Migrate the kubeadm control plane endpoint
+      ansible.builtin.include_role:
+        name: kubeadm_api_endpoint
+        tasks_from: cluster
+
+- name: Migrate control plane kubeconfigs to the API VIP
+  hosts: k8s
+  become: true
+  serial: 1
+  any_errors_fatal: true
+  roles:
+    - kubeadm_api_endpoint

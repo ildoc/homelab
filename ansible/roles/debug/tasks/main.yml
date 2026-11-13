@@ -1,4 +1,4 @@
 ---
 - name: Debug
   ansible.builtin.debug:
-    msg: "ansible_env.USER: {{ansible_env.USER}} - ansible_user: {{ ansible_user }} - ansible_user_id: {{ ansible_user_id }}  - ansible_user_dir: {{ ansible_user_dir }}"
+    msg: "env.USER: {{ ansible_facts['env']['USER'] }} - ansible_user: {{ ansible_user }} - user_id: {{ ansible_facts['user_id'] }} - user_dir: {{ ansible_facts['user_dir'] }}"

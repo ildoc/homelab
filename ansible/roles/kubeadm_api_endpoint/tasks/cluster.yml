@@ -1,0 +1,191 @@
+---
+- name: Require a healthy VIP with the existing cluster CA
+  ansible.builtin.command:
+    argv:
+      - kubectl
+      - --kubeconfig
+      - /etc/kubernetes/admin.conf
+      - --server
+      - "https://{{ kubernetes.vip_address }}:6443"
+      - --request-timeout=10s
+      - get
+      - --raw=/readyz
+  register: kubeadm_endpoint_vip_health
+  changed_when: false
+  check_mode: false
+  until: kubeadm_endpoint_vip_health.rc == 0
+  retries: 12
+  delay: 5
+
+- name: Require Ready control planes before endpoint migration
+  ansible.builtin.command:
+    argv:
+      - kubectl
+      - --kubeconfig
+      - /etc/kubernetes/admin.conf
+      - --server
+      - "https://{{ kubernetes.vip_address }}:6443"
+      - --request-timeout=10s
+      - get
+      - nodes
+      - --selector=node-role.kubernetes.io/control-plane
+      - -o
+      - jsonpath={range .items[*]}{.status.conditions[?(@.type=="Ready")].status}{"\n"}{end}
+  register: kubeadm_endpoint_node_health
+  changed_when: false
+  check_mode: false
+  until: >-
+    kubeadm_endpoint_node_health.rc == 0
+    and kubeadm_endpoint_node_health.stdout.split() | length > 0
+    and kubeadm_endpoint_node_health.stdout.split() | reject('equalto', 'True') | list | length == 0
+  retries: 24
+  delay: 5
+
+- name: Read the existing kubeadm ClusterConfiguration through the VIP
+  ansible.builtin.command:
+    argv:
+      - kubectl
+      - --kubeconfig
+      - /etc/kubernetes/admin.conf
+      - --server
+      - "https://{{ kubernetes.vip_address }}:6443"
+      - --request-timeout=10s
+      - -n
+      - kube-system
+      - get
+      - configmap
+      - kubeadm-config
+      - -o
+      - jsonpath={.data.ClusterConfiguration}
+  register: kubeadm_endpoint_original
+  changed_when: false
+  check_mode: false
+
+- name: Parse the existing kubeadm ClusterConfiguration
+  ansible.builtin.set_fact:
+    kubeadm_endpoint_cluster: "{{ kubeadm_endpoint_original.stdout | from_yaml }}"
+
+- name: Validate the existing kubeadm configuration before migration
+  ansible.builtin.assert:
+    that:
+      - kubeadm_endpoint_cluster is mapping
+      - kubeadm_endpoint_cluster.kind == 'ClusterConfiguration'
+      - kubeadm_endpoint_cluster.apiVersion == 'kubeadm.k8s.io/v1beta4'
+      - kubeadm_endpoint_cluster.kubernetesVersion is defined
+      - kubeadm_endpoint_cluster.controlPlaneEndpoint is defined
+    fail_msg: "Expected an existing kubeadm v1beta4 ClusterConfiguration; no configuration was replaced."
+
+- name: Prepare the kubeadm configuration with only the endpoint changed
+  ansible.builtin.set_fact:
+    kubeadm_endpoint_desired: >-
+      {{ kubeadm_endpoint_cluster | combine({'controlPlaneEndpoint': kubernetes.vip_address ~ ':6443'}) }}
+
+- name: Migrate kubeadm cluster metadata when its endpoint differs
+  when: kubeadm_endpoint_cluster.controlPlaneEndpoint != kubeadm_endpoint_desired.controlPlaneEndpoint
+  block:
+    - name: Create a secure ClusterConfiguration backup directory
+      ansible.builtin.file:
+        path: /var/backups/kubeadm-api-endpoint
+        state: directory
+        owner: root
+        group: root
+        mode: "0700"
+      when: not ansible_check_mode
+
+    - name: Back up the original ClusterConfiguration
+      ansible.builtin.copy:
+        content: "{{ kubeadm_endpoint_original.stdout }}\n"
+        dest: "/var/backups/kubeadm-api-endpoint/cluster-configuration-{{ ansible_facts['date_time']['iso8601_basic_short'] }}.yaml"
+        owner: root
+        group: root
+        mode: "0600"
+      when: not ansible_check_mode
+
+    - name: Save the migrated kubeadm configuration
+      ansible.builtin.copy:
+        content: "{{ kubeadm_endpoint_desired | to_nice_yaml }}"
+        dest: /etc/kubernetes/kubeadm-api-endpoint.yaml
+        owner: root
+        group: root
+        mode: "0600"
+
+    - name: Create a temporary kubeadm client kubeconfig
+      ansible.builtin.tempfile:
+        suffix: .conf
+      register: kubeadm_endpoint_client
+      check_mode: false
+
+    - name: Upload the endpoint through the kubeadm lifecycle
+      block:
+        - name: Copy existing administrator credentials for the temporary client
+          ansible.builtin.copy:
+            src: /etc/kubernetes/admin.conf
+            dest: "{{ kubeadm_endpoint_client.path }}"
+            remote_src: true
+            mode: "0600"
+          no_log: true
+          check_mode: false
+
+        - name: Point only the temporary kubeadm client at the VIP
+          ansible.builtin.include_tasks:
+            file: kubeconfigs.yml
+            apply:
+              check_mode: false
+          vars:
+            kubeadm_endpoint_kubeconfig_paths:
+              - "{{ kubeadm_endpoint_client.path }}"
+            kubeadm_endpoint_required_paths:
+              - "{{ kubeadm_endpoint_client.path }}"
+            kubeadm_endpoint_backup: false
+
+        - name: Upload the migrated ClusterConfiguration without renewing certificates
+          ansible.builtin.command:
+            argv:
+              - kubeadm
+              - init
+              - phase
+              - upload-config
+              - kubeadm
+              - --config
+              - /etc/kubernetes/kubeadm-api-endpoint.yaml
+              - --kubeconfig
+              - "{{ kubeadm_endpoint_client.path }}"
+          changed_when: true
+          when: not ansible_check_mode
+      always:
+        - name: Remove the temporary administrator kubeconfig
+          ansible.builtin.file:
+            path: "{{ kubeadm_endpoint_client.path }}"
+            state: absent
+          check_mode: false
+
+- name: Verify the persisted kubeadm ClusterConfiguration
+  when: not ansible_check_mode
+  block:
+    - name: Read the kubeadm configuration after endpoint migration
+      ansible.builtin.command:
+        argv:
+          - kubectl
+          - --kubeconfig
+          - /etc/kubernetes/admin.conf
+          - --server
+          - "https://{{ kubernetes.vip_address }}:6443"
+          - --request-timeout=10s
+          - -n
+          - kube-system
+          - get
+          - configmap
+          - kubeadm-config
+          - -o
+          - jsonpath={.data.ClusterConfiguration}
+      register: kubeadm_endpoint_verified
+      changed_when: false
+
+    - name: Require preservation of every existing kubeadm configuration field
+      ansible.builtin.assert:
+        that:
+          - (kubeadm_endpoint_verified.stdout | from_yaml)[item.key] == item.value
+        fail_msg: "Persisted kubeadm field {{ item.key }} differs from the requested configuration."
+      loop: "{{ kubeadm_endpoint_desired | dict2items }}"
+      loop_control:
+        label: "{{ item.key }}"

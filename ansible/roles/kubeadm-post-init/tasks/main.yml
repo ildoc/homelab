@@ -1,13 +1,12 @@
 ---
-- name: Set kubeadm_init_primary_ip
-  ansible.builtin.set_fact:
-    kubeadm_init_primary_ip: "{{ ansible_default_ipv4.address }}"
+- name: Persist the API VIP after kube-vip is running
+  ansible.builtin.include_role:
+    name: kubeadm_api_endpoint
+    tasks_from: cluster
 
-- name: Replace kubeconfig server IP with VIP
-  ansible.builtin.replace:
-    path: /etc/kubernetes/admin.conf
-    regexp: 'https://{{ ansible_default_ipv4.address }}:6443'
-    replace: 'https://{{ kubernetes.vip_address }}:6443'
+- name: Migrate bootstrap kubeconfigs to the API VIP
+  ansible.builtin.include_role:
+    name: kubeadm_api_endpoint
 
 - name: Get join token
   ansible.builtin.command: kubeadm token create --print-join-command

@@ -1,9 +1,10 @@
 ---
 - name: Set kubeadm_init_primary_ip
   ansible.builtin.set_fact:
-    kubeadm_init_primary_ip: "{{ ansible_default_ipv4.address }}"
+    kubeadm_init_primary_ip: "{{ ansible_facts['default_ipv4']['address'] }}"
 
 - name: Initialize Kubernetes
+  # kube-vip starts after init; post-init then persists the VIP for subsequent joins/upgrades.
   ansible.builtin.command: >
     kubeadm init
     --control-plane-endpoint "{{ kubeadm_init_primary_ip }}:6443"

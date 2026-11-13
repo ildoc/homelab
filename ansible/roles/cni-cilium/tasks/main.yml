@@ -11,7 +11,7 @@
 
 - name: Determine architecture
   ansible.builtin.set_fact:
-    cli_arch: "{{ 'arm64' if ansible_architecture == 'aarch64' else 'amd64' }}"
+    cli_arch: "{{ 'arm64' if ansible_facts['architecture'] == 'aarch64' else 'amd64' }}"
 
 - name: Check installed Cilium CLI version
   ansible.builtin.command: cilium version --client

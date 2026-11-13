@@ -16,14 +16,12 @@ nut:
 
 kubernetes:
   # Minor only. APT repo path is v1.35 and the package pin is 1.35.*.
-  # 1.35.9 is the newest patch published as of 2026-10-23 (1.35.10 was postponed and is not in the repo).
-  k8s_version: "1.35"
+  k8s_version: "1.37"
   vip_address: "192.168.0.80"
   vip_interface: "ens18"
   kube_vip_tag_version: "v1.3.1"
-  # Latest stable Cilium tested with Kubernetes 1.35. 1.21 is still pre-release.
-  # The running install is the ArgoCD chart, not this variable.
-  cilium_tag_version: "v1.20.3"
+  # The running install is managed by ArgoCD; this is the bootstrap/check version.
+  cilium_tag_version: "v1.20.4"
 
 argocd:
   namespace: argocd

@@ -1,7 +1,0 @@
----
-- name: Configure gitea
-  hosts: gitea
-  become: true
-  gather_facts: true
-  roles:
-    - role: gitea

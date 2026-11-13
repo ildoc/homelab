@@ -83,7 +83,7 @@
 
 - name: Get pods running on this node
   ansible.builtin.shell: |
-    kubectl get pods -A --field-selector spec.nodeName={{ ansible_hostname }} -o custom-columns=NAMESPACE:.metadata.namespace,NAME:.metadata.name,STATUS:.status.phase --no-headers
+    kubectl get pods -A --field-selector spec.nodeName={{ hostvars[inventory_hostname]['ansible_facts']['hostname'] }} -o custom-columns=NAMESPACE:.metadata.namespace,NAME:.metadata.name,STATUS:.status.phase --no-headers
   delegate_to: "{{ groups['k8s'][0] }}"
   environment:
     KUBECONFIG: /etc/kubernetes/admin.conf
@@ -92,11 +92,11 @@
 
 - name: Display pods on node
   ansible.builtin.debug:
-    msg: "Pods on {{ ansible_hostname }}:\n{{ node_pods.stdout }}"
+    msg: "Pods on {{ ansible_facts['hostname'] }}:\n{{ node_pods.stdout }}"
 
 - name: Drain control plane node (attempt 1 - graceful)
   ansible.builtin.command: >
-    kubectl drain {{ ansible_hostname }}
+    kubectl drain {{ hostvars[inventory_hostname]['ansible_facts']['hostname'] }}
     --ignore-daemonsets
     --delete-emptydir-data
     --timeout=300s
@@ -120,7 +120,7 @@
 
 - name: Drain control plane node (attempt 2 - force if needed)
   ansible.builtin.command: >
-    kubectl drain {{ ansible_hostname }}
+    kubectl drain {{ hostvars[inventory_hostname]['ansible_facts']['hostname'] }}
     --ignore-daemonsets
     --delete-emptydir-data
     --force
@@ -148,7 +148,7 @@
 
 - name: Verify drain succeeded
   ansible.builtin.fail:
-    msg: "Failed to drain node {{ ansible_hostname }}. Both graceful and force drain attempts failed."
+    msg: "Failed to drain node {{ ansible_facts['hostname'] }}. Both graceful and force drain attempts failed."
   when: 
     - drain_result.rc != 0
     - drain_force_result is defined
@@ -178,7 +178,7 @@
     state: restarted
 
 - name: Uncordon control plane node
-  ansible.builtin.command: kubectl uncordon {{ ansible_hostname }}
+  ansible.builtin.command: kubectl uncordon {{ hostvars[inventory_hostname]['ansible_facts']['hostname'] }}
   delegate_to: "{{ groups['k8s'][0] }}"
   environment:
     KUBECONFIG: /etc/kubernetes/admin.conf
@@ -188,7 +188,7 @@
   changed_when: true
 
 - name: Wait for node to be ready
-  ansible.builtin.command: kubectl get nodes {{ ansible_hostname }} -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}'
+  ansible.builtin.command: kubectl get nodes {{ hostvars[inventory_hostname]['ansible_facts']['hostname'] }} -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}'
   delegate_to: "{{ groups['k8s'][0] }}"
   environment:
     KUBECONFIG: /etc/kubernetes/admin.conf

@@ -100,9 +100,54 @@
   ansible.builtin.debug:
     msg: "Will upgrade to version: {{ installed_kubeadm_version.stdout }}"
 
+- name: List images required by the target kubeadm version
+  ansible.builtin.command:
+    argv:
+      - kubeadm
+      - config
+      - images
+      - list
+      - --kubernetes-version
+      - "v{{ installed_kubeadm_version.stdout }}"
+  register: target_kubeadm_images
+  changed_when: false
+
+- name: Require exactly one pause image for the upgrade health check
+  ansible.builtin.assert:
+    that:
+      - target_kubeadm_images.stdout_lines | select('search', '(^|/)pause:') | list | length == 1
+    fail_msg: "Could not identify the pause image required by kubeadm from {{ target_kubeadm_images.stdout_lines }}"
+
+- name: Set the upgrade health check image
+  ansible.builtin.set_fact:
+    upgrade_health_check_image: "{{ target_kubeadm_images.stdout_lines | select('search', '(^|/)pause:') | first }}"
+
+- name: Check the Kubernetes image cache on every upgrade node
+  ansible.builtin.command: ctr --namespace k8s.io images list --quiet
+  delegate_to: "{{ item }}"
+  loop: "{{ (groups['k8s'] + (groups['k8s_workers'] | default([]))) | unique | list }}"
+  register: upgrade_image_cache
+  changed_when: false
+
+- name: Pre-pull the upgrade health check image before draining
+  ansible.builtin.command:
+    argv:
+      - ctr
+      - --namespace
+      - k8s.io
+      - images
+      - pull
+      - "{{ upgrade_health_check_image }}"
+  delegate_to: "{{ item.item }}"
+  loop: "{{ upgrade_image_cache.results }}"
+  loop_control:
+    label: "{{ item.item }}"
+  when: upgrade_health_check_image not in item.stdout_lines
+  changed_when: true
+
 - name: Get pods running on this node
   ansible.builtin.shell: |
-    kubectl get pods -A --field-selector spec.nodeName={{ ansible_hostname }} -o custom-columns=NAMESPACE:.metadata.namespace,NAME:.metadata.name,STATUS:.status.phase --no-headers
+    kubectl get pods -A --field-selector spec.nodeName={{ ansible_facts['hostname'] }} -o custom-columns=NAMESPACE:.metadata.namespace,NAME:.metadata.name,STATUS:.status.phase --no-headers
   environment:
     KUBECONFIG: /etc/kubernetes/admin.conf
   register: node_pods
@@ -110,11 +155,11 @@
 
 - name: Display pods on node
   ansible.builtin.debug:
-    msg: "Pods on {{ ansible_hostname }}:\n{{ node_pods.stdout }}"
+    msg: "Pods on {{ ansible_facts['hostname'] }}:\n{{ node_pods.stdout }}"
 
 - name: Drain first control plane node (attempt 1 - graceful)
   ansible.builtin.command: >
-    kubectl drain {{ ansible_hostname }}
+    kubectl drain {{ ansible_facts['hostname'] }}
     --ignore-daemonsets
     --delete-emptydir-data
     --timeout=300s
@@ -137,7 +182,7 @@
 
 - name: Drain first control plane node (attempt 2 - force if needed)
   ansible.builtin.command: >
-    kubectl drain {{ ansible_hostname }}
+    kubectl drain {{ ansible_facts['hostname'] }}
     --ignore-daemonsets
     --delete-emptydir-data
     --force
@@ -164,7 +209,7 @@
 
 - name: Verify drain succeeded
   ansible.builtin.fail:
-    msg: "Failed to drain node {{ ansible_hostname }}. Both graceful and force drain attempts failed."
+    msg: "Failed to drain node {{ ansible_facts['hostname'] }}. Both graceful and force drain attempts failed."
   when: 
     - drain_result.rc != 0
     - drain_force_result is defined
@@ -194,7 +239,7 @@
     state: restarted
 
 - name: Uncordon first control plane node
-  ansible.builtin.command: kubectl uncordon {{ ansible_hostname }}
+  ansible.builtin.command: kubectl uncordon {{ ansible_facts['hostname'] }}
   environment:
     KUBECONFIG: /etc/kubernetes/admin.conf
 
@@ -203,7 +248,7 @@
   changed_when: true
 
 - name: Wait for node to be ready
-  ansible.builtin.command: kubectl get nodes {{ ansible_hostname }} -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}'
+  ansible.builtin.command: kubectl get nodes {{ ansible_facts['hostname'] }} -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}'
   environment:
     KUBECONFIG: /etc/kubernetes/admin.conf
   register: node_status

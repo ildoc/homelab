@@ -1,0 +1,45 @@
+---
+- name: Migrate generated and operator kubeconfigs to the VIP
+  ansible.builtin.include_tasks: kubeconfigs.yml
+  vars:
+    kubeadm_endpoint_kubeconfig_paths:
+      - /etc/kubernetes/admin.conf
+      - /etc/kubernetes/super-admin.conf
+      - /etc/kubernetes/kubelet.conf
+      - /etc/kubernetes/bootstrap-kubelet.conf
+      - /root/.kube/config
+      - "/home/{{ ansible_user }}/.kube/config"
+    kubeadm_endpoint_required_paths:
+      - /etc/kubernetes/admin.conf
+      - /etc/kubernetes/kubelet.conf
+
+- name: Restart kubelet only when its client endpoint changed
+  ansible.builtin.systemd:
+    name: kubelet
+    state: restarted
+  when:
+    - not ansible_check_mode
+    - >-
+      kubeadm_endpoint_rewrites.results
+      | selectattr('changed')
+      | selectattr('item.item.item', 'equalto', '/etc/kubernetes/kubelet.conf')
+      | list | length > 0
+
+- name: Require this control plane to remain Ready through the VIP
+  ansible.builtin.command:
+    argv:
+      - kubectl
+      - --kubeconfig
+      - /etc/kubernetes/admin.conf
+      - --request-timeout=10s
+      - get
+      - node
+      - "{{ ansible_facts['hostname'] }}"
+      - -o
+      - jsonpath={.status.conditions[?(@.type=="Ready")].status}
+  register: kubeadm_endpoint_node_ready
+  changed_when: false
+  until: kubeadm_endpoint_node_ready.stdout == 'True'
+  retries: 24
+  delay: 5
+  when: not ansible_check_mode
