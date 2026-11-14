@@ -1,0 +1,58 @@
+---
+# k8s/infra/manifests/cloudflared/configmap.yaml — FRAMMENTO cutover
+# Dopo syn2mas: matrix.ildoc.it deve passare dal gateway (login → MAS).
+# Copia l'intero file cloudflared aggiornato, oppure sostituisci solo il blocco matrix.
+#
+# Blocco da usare al posto di "Matrix Synapse (FASE 1...)":
+#
+#      - hostname: matrix.ildoc.it
+#        service: http://matrix-gateway.apps.svc.cluster.local:80
+#        ...
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cloudflared-config
+  namespace: cloudflared
+data:
+  config.yaml: |
+    tunnel: dcfc87de-eefc-4543-9b52-44c7a4ecae32
+    credentials-file: /etc/cloudflared/credentials/credentials.json
+    
+    metrics: 0.0.0.0:2000
+    
+    ingress:
+      - hostname: auth.ildoc.it
+        service: http://authentik-server.authentik.svc.cluster.local:80
+        originRequest:
+          noTLSVerify: false
+          connectTimeout: 30s
+          tlsTimeout: 10s
+      
+      - hostname: element.ildoc.it
+        service: http://element-web.apps.svc.cluster.local:80
+        originRequest:
+          noTLSVerify: false
+          connectTimeout: 30s
+
+      - hostname: mas.ildoc.it
+        service: http://matrix-mas.apps.svc.cluster.local:8080
+        originRequest:
+          noTLSVerify: false
+          connectTimeout: 30s
+          tlsTimeout: 10s
+      
+      # CUTOVER: gateway (login/logout/refresh → MAS)
+      - hostname: matrix.ildoc.it
+        service: http://matrix-gateway.apps.svc.cluster.local:80
+        originRequest:
+          noTLSVerify: false
+          connectTimeout: 30s
+          tlsTimeout: 10s
+
+      - hostname: split.ildoc.it
+        service: http://split-split-backend-webapp.apps.svc.cluster.local:80
+        originRequest:
+          noTLSVerify: false
+          connectTimeout: 30s
+
+      - service: http_status:404
