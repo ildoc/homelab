@@ -52,7 +52,7 @@ db:
         lc_ctype: en_US.UTF-8
         extensions:
           - name: vector
-            version: "0.8.2"
+            version: "0.8.7"
           - cube
           - earthdistance
         
