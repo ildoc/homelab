@@ -1,0 +1,95 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: muzikr
+  namespace: apps
+spec:
+  selector:
+    matchLabels:
+      app: muzikr
+  strategy:
+    type: Recreate
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      labels:
+        app: muzikr
+    spec:
+      securityContext:
+        fsGroup: 1654
+      containers:
+        - name: muzikr
+          image: registry.gitlab.local.ildoc.it/ildoc/muzikr:0.0.0.1
+          ports:
+            - containerPort: 8080
+          env:
+            - name: TZ
+              value: "Europe/Rome"
+            - name: PUBLIC_BASE_URL
+              value: "http://muzikr.local.ildoc.it"
+            - name: LIDARR_URL
+              value: "http://lidarr:8686"
+            - name: NAVIDROME_URL
+              value: "http://navidrome:4533"
+            - name: LIDARR_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: muzikr-secrets
+                  key: lidarr-api-key
+            - name: NAVIDROME_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: muzikr-secrets
+                  key: navidrome-username
+            - name: NAVIDROME_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: muzikr-secrets
+                  key: navidrome-password
+            - name: MUSICBRAINZ_USERAGENTCONTACT
+              valueFrom:
+                secretKeyRef:
+                  name: muzikr-secrets
+                  key: musicbrainz-useragentcontact
+            - name: SPOTIFY_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: muzikr-secrets
+                  key: spotify-client-id
+            - name: AUTH_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: muzikr-secrets
+                  key: auth-username
+            - name: AUTH_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: muzikr-secrets
+                  key: auth-password
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          resources:
+            requests:
+              cpu: 50m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 1Gi
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 30
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: muzikr
