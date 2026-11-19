@@ -27,7 +27,7 @@ spec:
             - name: TZ
               value: "Europe/Rome"
             - name: PUBLIC_BASE_URL
-              value: "http://muzikr.local.ildoc.it"
+              value: "https://muzikr.local.ildoc.it"
             - name: LIDARR_URL
               value: "http://lidarr:8686"
             - name: NAVIDROME_URL
