@@ -20,7 +20,7 @@ spec:
         fsGroup: 1654
       containers:
         - name: muzikr
-          image: registry.gitlab.local.ildoc.it/ildoc/muzikr:0.0.0.2
+          image: registry.gitlab.local.ildoc.it/ildoc/muzikr:0.0.0.3
           ports:
             - containerPort: 8080
           env:
