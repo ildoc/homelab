@@ -21,7 +21,7 @@ services:
       - traefik
 
   gitlab:
-    image: gitlab/gitlab-ce:19.5.6-ce.0@sha256:0f93f5fdb28a5ae0f2713ef5d40d9438615b8b21a42841a2fe7bd56813934e0b
+    image: gitlab/gitlab-ce:19.6.1-ce.0@sha256:d3727f8b1a1ee6de44916bb9113f3dc40339dba2d6a6ad6ef331d0f239004056
     container_name: gitlab
     hostname: 'gitlab'
     depends_on:
