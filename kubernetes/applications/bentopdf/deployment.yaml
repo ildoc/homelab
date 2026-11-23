@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: bentopdf
-          image: ghcr.io/alam00000/bentopdf-simple:2.8.11
+          image: ghcr.io/alam00000/bentopdf-simple:2.8.12@sha256:f96da8c4a347880b891d66aa2ebfa6b63f76277dafcfcdfa40c8e6b92c59ef44
           resources:
             requests:
               cpu: 10m
