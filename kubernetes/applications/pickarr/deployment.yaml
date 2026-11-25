@@ -27,9 +27,9 @@ spec:
             - name: TZ
               value: "Europe/Rome"
             - name: SONARR_URL
-              value: "http://sonarr:8989"
+              value: "https://sonarr.local.ildoc.it"
             - name: RADARR_URL
-              value: "http://radarr:7878"
+              value: "https://radarr.local.ildoc.it"
             - name: WATCHMODE_API_KEY
               valueFrom:
                 secretKeyRef:
