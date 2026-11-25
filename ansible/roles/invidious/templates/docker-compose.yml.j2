@@ -49,6 +49,10 @@ services:
     image: quay.io/invidious/invidious-companion:2026.11.07-f4cdf76
     environment:
       SERVER_SECRET_KEY: {{ invidious.companion_key }}
+      NETWORKING_FETCH_RETRY_ENABLED: "true"
+      NETWORKING_FETCH_RETRY_TIMES: "3"
+      NETWORKING_FETCH_RETRY_INITIAL_DEBOUNCE: "100"
+      NETWORKING_FETCH_RETRY_DEBOUNCE_MULTIPLIER: "1"
     restart: unless-stopped
     logging:
       options:
