@@ -21,7 +21,7 @@ spec:
           # Lite: no bundled Chromium; relies on cluster FlareSolverr/Byparr.
           # AA Direct Download needs a bypasser that can clear DDoS-Guard —
           # stock FlareSolverr reports success but still returns the challenge.
-          image: ghcr.io/calibrain/shelfmark-lite:latest
+          image: ghcr.io/calibrain/shelfmark-lite:1.7.2
           ports:
             - containerPort: 8084
               name: http
